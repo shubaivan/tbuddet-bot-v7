@@ -5,7 +5,7 @@ namespace App\Telegram\Location\Command;
 use App\Telegram\Location\Repository\OfficeRepository;
 use SergiX44\Nutgram\Handlers\Type\Command;
 use SergiX44\Nutgram\Nutgram;
-use SergiX44\Nutgram\Telegram\Attributes\ParseMode;
+use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 
 class LocationCommand extends Command
 {
@@ -34,8 +34,8 @@ class LocationCommand extends Command
             );
 
             $bot->sendMessage(
-                $reply,
-                ['parse_mode' => ParseMode::MARKDOWN,]
+                text: $reply,
+                parse_mode: ParseMode::MARKDOWN
             );
 
             $bot->sendLocation(
