@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class TelegramWebhookController extends AbstractController
 {
-    #[Route('/hook/%telegram_bot_token%', name: 'app_webhook')]
+    #[Route('/hook', name: 'app_webhook')]
     public function hook(Nutgram $bot): Response
     {
         $bot->run();
