@@ -7,11 +7,7 @@ use SergiX44\Nutgram\Nutgram;
 
 class RouteCommand extends Command
 {
-    // Called on command "/start"
     protected string $command = 'route';
-
-    // It's possible to set a description for the current command
-    // this WILL be automatically registered
     protected ?string $description = 'Show route';
 
     public function handle(Nutgram $bot): void
