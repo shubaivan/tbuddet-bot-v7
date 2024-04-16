@@ -16,8 +16,8 @@ class BuyRingCommand extends Command
     public function handle(Nutgram $bot): void
     {
         $bot->sendMessage(
-            text: "*Вітаю, чекайте повідомлення як буде готове*",
-            parse_mode: ParseMode::MARKDOWN
+            text: '<b>Вітаємо</b>, чекайте повідомлення як буде готове <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>',
+            parse_mode: ParseMode::HTML
         );
     }
 }
