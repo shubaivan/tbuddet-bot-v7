@@ -45,14 +45,15 @@ class PriceRingConversation extends Conversation
             '<b>Ваше замовлення</b>: <strong>кільця</strong>: <u>'.$this->askDiameter.'</u> діаметром, в <b>кількості</b>: <u>'.$quantity.'штук</u>',
             parse_mode: ParseMode::HTML
         );
-        $this->end();
 
         $bot->sendMessage(
-            text: 'Якщо згодні - натисніть *Підтверджую*',
+            text: 'Якщо згодні натисніть *Підтверджую*',
             parse_mode: ParseMode::MARKDOWN,
             reply_markup: InlineKeyboardMarkup::make()->addRow(
                 InlineKeyboardButton::make('Підтверджую', null, null, 'type:product:ring:buy'),
             )
         );
+
+        $this->end();
     }
 }

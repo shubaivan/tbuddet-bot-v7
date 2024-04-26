@@ -31,16 +31,16 @@ class RingCommand extends Command
         if (is_file($file) && is_readable($file)) {
             $photo = fopen($file, 'r+');
 
+            /** @var Message $message */
+            $message = $bot->sendPhoto(
+                photo: InputFile::make($photo)
+            );
+
             $bot->sendMessage(
                 text: 'Кільце',
                 reply_markup: InlineKeyboardMarkup::make()->addRow(
                     InlineKeyboardButton::make('Ціна', null, null, 'type:product:ring:price'),
                 )
-            );
-
-            /** @var Message $message */
-            $message = $bot->sendPhoto(
-                photo: InputFile::make($photo)
             );
         }
     }
