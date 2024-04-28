@@ -30,10 +30,10 @@ class BuyRingCommand extends Command
         $res = $liqpay->api("request", array(
             'action'    => 'invoice_send',
             'version'   => '3',
-            'email'     => 'shuba.ivan.vikt@gmail.com',
+            'phone' => '+380633022666',
             'amount'    => '2',
             'currency'  => 'UAH',
-            'order_id'  => 'order_id_2',
+            'order_id'  => 'order_id_7',
             'server_url' => 'https://shuba-chalova-26-2.tplinkdns.com/liq/pay'
         ));
 

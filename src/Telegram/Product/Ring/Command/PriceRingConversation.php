@@ -7,6 +7,8 @@ use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\KeyboardButton;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardMarkup;
 
 class PriceRingConversation extends Conversation
 {
@@ -28,7 +30,7 @@ class PriceRingConversation extends Conversation
     public function askDiameter(Nutgram $bot)
     {
         if (!$bot->isCallbackQuery()) {
-            $this->askCupSize($bot);
+            $this->askParameters($bot);
             return;
         }
 
@@ -46,6 +48,19 @@ class PriceRingConversation extends Conversation
             parse_mode: ParseMode::HTML
         );
 
+        $bot->sendMessage(
+            text: 'Ваш Номер',
+            reply_markup: ReplyKeyboardMarkup::make()->addRow(
+                KeyboardButton::make('Підтвердіть ВАШ телефон', true),
+            )
+        );
+
+        $this->next('approveAction');
+    }
+
+    public function approveAction(Nutgram $bot)
+    {
+        $phone_number = $bot->message()->contact->phone_number;
         $bot->sendMessage(
             text: 'Якщо згодні натисніть *Підтверджую*',
             parse_mode: ParseMode::MARKDOWN,
