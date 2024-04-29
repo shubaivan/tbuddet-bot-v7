@@ -32,6 +32,9 @@ class UserOrder
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $liqPayResponse;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $liqPayOrderId;
+
     #[ORM\ManyToOne(targetEntity: TelegramUser::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'telegram_user_id', referencedColumnName: 'id')]
     private TelegramUser $telegramUserId;
@@ -130,6 +133,18 @@ class UserOrder
     public function setLiqPayResponse(?string $liqPayResponse): UserOrder
     {
         $this->liqPayResponse = $liqPayResponse;
+
+        return $this;
+    }
+
+    public function getLiqPayOrderId(): ?string
+    {
+        return $this->liqPayOrderId;
+    }
+
+    public function setLiqPayOrderId(?string $liqPayOrderId): UserOrder
+    {
+        $this->liqPayOrderId = $liqPayOrderId;
 
         return $this;
     }

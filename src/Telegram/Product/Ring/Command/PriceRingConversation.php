@@ -146,17 +146,19 @@ class PriceRingConversation extends Conversation
 
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
 
+        $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
         $res = $liqpay->api("request", array(
             'action'    => 'invoice_send',
             'version'   => '3',
             'phone' => $userOrder->getTelegramUserId()->getPhoneNumber(),
             'amount'    => $userOrder->getTotalAmount(),
             'currency'  => 'UAH',
-            'order_id'  => $userOrder->getId(),
+            'order_id'  => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
         ));
         $userOrder->setLiqPayResponse(json_encode($res));
+        $userOrder->setLiqPayOrderId($liqPayOrderID);
         $this->em->flush();
 
         $bot->sendMessage(
