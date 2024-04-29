@@ -23,12 +23,12 @@ class TelegramUser
     private ?string $telegram_id;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $phone_number;
-    #[ORM\Column(type: 'string', length: 255, nullable: false)]
-    private string $first_name;
-    #[ORM\Column(type: 'string', length: 255, nullable: false)]
-    private string $last_name;
-    #[ORM\Column(type: 'string', length: 255, nullable: false)]
-    private string $username;
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $first_name;
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $last_name;
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $username;
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
     private string $language_code;
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegramUserId', cascade: ["persist"])]
@@ -76,36 +76,36 @@ class TelegramUser
         return $this;
     }
 
-    public function getFirstName(): string
+    public function getFirstName(): ?string
     {
         return $this->first_name;
     }
 
-    public function setFirstName(string $first_name): TelegramUser
+    public function setFirstName(?string $first_name): TelegramUser
     {
         $this->first_name = $first_name;
 
         return $this;
     }
 
-    public function getLastName(): string
+    public function getLastName(): ?string
     {
         return $this->last_name;
     }
 
-    public function setLastName(string $last_name): TelegramUser
+    public function setLastName(?string $last_name): TelegramUser
     {
         $this->last_name = $last_name;
 
         return $this;
     }
 
-    public function getUsername(): string
+    public function getUsername(): ?string
     {
         return $this->username;
     }
 
-    public function setUsername(string $username): TelegramUser
+    public function setUsername(?string $username): TelegramUser
     {
         $this->username = $username;
 
@@ -129,10 +129,10 @@ class TelegramUser
         return $this->orders;
     }
 
-    public function addOrder(UserOrder $order): void
+    public function setOrders(Collection $orders): TelegramUser
     {
-        if (!$this->orders->contains($order)) {
-            $this->orders->add($order);
-        }
+        $this->orders = $orders;
+
+        return $this;
     }
 }
