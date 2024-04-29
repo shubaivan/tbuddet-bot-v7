@@ -37,6 +37,7 @@ class TelegramUser
     public function __construct()
     {
         $this->orders = new ArrayCollection();
+        $this->phone_number = null;
     }
 
     public function getId(): ?int

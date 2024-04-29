@@ -22,8 +22,8 @@ class PriceRingConversation extends Conversation
 {
     protected ?string $step = 'askParameters';
 
-    private Product $product;
-    private UserOrder $userOrder;
+    public ?int $productId;
+    public ?int $quantity;
 
     public function __construct(
         private TelegramUserService $telegramUserService,
@@ -58,9 +58,7 @@ class PriceRingConversation extends Conversation
             return;
         }
 
-        $this->product = $this->productRepository->find($bot->callbackQuery()->data);
-        $this->userOrder = new UserOrder();
-        $this->userOrder->setProductId($this->product);
+        $this->productId = $bot->callbackQuery()->data;
 
         $bot->sendMessage('Введіть кількість');
         $this->next('quantity');
@@ -68,43 +66,60 @@ class PriceRingConversation extends Conversation
 
     public function quantity(Nutgram $bot)
     {
-        $quantity = $bot->message()->text;
-        $this->userOrder->setQuantityProduct($quantity);
+        $this->quantity = (int)$bot->message()->text;
 
         $bot->sendMessage(
-            '<b>Ваше замовлення</b>: <strong>кільця</strong>: <u>'.$this->product->getProductName().'</u> діаметром, в <b>кількості</b>: <u>'.$quantity.' штук</u>',
+            '<b>Ваше замовлення</b>: <strong>кільця</strong>: <u>'.$this->getProduct()->getProductName().'</u> діаметром, в <b>кількості</b>: <u>'.$this->quantity.' штук</u>',
             parse_mode: ParseMode::HTML
         );
 
+        $totalAmount = $this->getProduct()->getPrice() * $this->quantity;
         $bot->sendMessage(
-            '<b>Кінцева ціна</b>: <strong>'.$this->userOrder->getTotalAmount().'</strong>',
+            '<b>Кінцева ціна</b>: '. $totalAmount . ' грн',
             parse_mode: ParseMode::HTML
         );
 
-        $bot->sendMessage(
-            text: 'Ваш Номер',
-            reply_markup: ReplyKeyboardMarkup::make()->addRow(
-                KeyboardButton::make('Підтвердіть ВАШ телефон', true),
-            )
-        );
+        if (!$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
+            $bot->sendMessage(
+                text: 'Ваш Номер',
+                reply_markup: ReplyKeyboardMarkup::make()->addRow(
+                    KeyboardButton::make('Підтвердіть ВАШ телефон', true),
+                )
+            );
+        } else {
+            $bot->sendMessage(
+                text: 'Оформлення покупки',
+                parse_mode: ParseMode::MARKDOWN,
+                reply_markup: InlineKeyboardMarkup::make()->addRow(
+                    InlineKeyboardButton::make(text: 'Далі', callback_data: 1),
+                    InlineKeyboardButton::make(text: 'Назад', callback_data: 0),
+                )
+            );
+        }
 
         $this->next('approveAction');
     }
 
     public function approveAction(Nutgram $bot)
     {
-        $phone_number = $bot->message()->contact->phone_number;
-        $this->telegramUserService->savePhone($phone_number);
-        $this->userOrder->setTelegramUserId($this->telegramUserService->getCurrentUser());
+        if ($bot->callbackQuery()->data !== "1") {
+            $this->askParameters($bot);
+            return;
+        }
 
-        $this->em->persist($this->userOrder);
-        $this->em->flush();
+        if (!$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
+            $phone_number = $bot->message()->contact->phone_number;
+            $this->telegramUserService->savePhone($phone_number);
+
+            $this->em->flush();
+        }
 
         $bot->sendMessage(
             text: 'Якщо згодні натисніть *Підтверджую*',
             parse_mode: ParseMode::MARKDOWN,
             reply_markup: InlineKeyboardMarkup::make()->addRow(
-                InlineKeyboardButton::make('Підтверджую'),
+                InlineKeyboardButton::make(text: 'Підтверджую', callback_data: 1),
+                InlineKeyboardButton::make(text: 'Назад', callback_data: 0),
             )
         );
 
@@ -113,16 +128,36 @@ class PriceRingConversation extends Conversation
 
     public function liqPay(Nutgram $bot)
     {
+        if ($bot->callbackQuery()->data !== "1") {
+            $this->askParameters($bot);
+            return;
+        }
+
+        $userOrder = new UserOrder();
+        $userOrder->setProductId($this->getProduct());
+        $userOrder->setQuantityProduct($this->quantity);
+        $userOrder->setTelegramUserId($this->telegramUserService->getCurrentUser());
+        $userOrder->setTotalAmount($this->getProduct()->getPrice() * $this->quantity);
+        $description = 'Ваше замовлення: кільця: ' . $this->getProduct()->getProductName() . ' діаметром, в кількості: ' . $this->quantity . ' штук';
+        $userOrder->setDescription($description);
+
+        $this->em->persist($userOrder);
+        $this->em->flush();
+
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
+
         $res = $liqpay->api("request", array(
             'action'    => 'invoice_send',
             'version'   => '3',
-            'phone' => $this->userOrder->getTelegramUserId()->getPhoneNumber(),
-            'amount'    => $this->userOrder->getTotalAmount(),
+            'phone' => $userOrder->getTelegramUserId()->getPhoneNumber(),
+            'amount'    => $userOrder->getTotalAmount(),
             'currency'  => 'UAH',
-            'order_id'  => $this->userOrder->getId(),
-            'server_url' => $this->liqpayServerUrl
+            'order_id'  => $userOrder->getId(),
+            'server_url' => $this->liqpayServerUrl,
+            'description' => $description
         ));
+        $userOrder->setLiqPayResponse(json_encode($res));
+        $this->em->flush();
 
         $bot->sendMessage(
             text: '<b>Вітаємо</b>, чекайте повідомлення як буде готове <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>',
@@ -130,5 +165,10 @@ class PriceRingConversation extends Conversation
         );
 
         $this->end();
+    }
+
+    private function getProduct(): Product
+    {
+        return $this->productRepository->find($this->productId);
     }
 }

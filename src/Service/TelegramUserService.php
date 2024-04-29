@@ -35,6 +35,8 @@ class TelegramUserService
             }
 
             $this->telegramUserRepository->save($telegramUser);
+
+            $this->currentUser = $telegramUser;
         }
 
         return $this->currentUser;

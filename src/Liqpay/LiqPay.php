@@ -80,7 +80,10 @@ class LiqPay
         ));
 
         $server_output = $this->curlRequester->make_curl_request($url, $postfields, $timeout);
-        return json_decode($server_output);
+        $toArray = json_decode($server_output, true);
+        $this->logger->info('server_output', $toArray);
+
+        return $toArray;
     }
 
     /**

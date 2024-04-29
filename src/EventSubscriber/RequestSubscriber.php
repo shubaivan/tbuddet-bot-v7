@@ -3,7 +3,6 @@
 namespace App\EventSubscriber;
 
 use App\Service\TelegramUserService;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -24,6 +23,8 @@ class RequestSubscriber implements EventSubscriberInterface
 
     public function onKernelRequest(RequestEvent $event): void
     {
+        $this->graylogLogger->info('catch request');
+
         if (!$event->isMainRequest()) {
             // don't do anything if it's not the main request
             return;
@@ -44,10 +45,18 @@ class RequestSubscriber implements EventSubscriberInterface
             return;
         }
 
+        $from = null;
         if (isset($content['message']['from'])) {
-            $this->telegramUserService->initUser($content['message']['from']);
+            $from = $content['message']['from'];
         }
 
+        if (isset($content['callback_query']['from'])) {
+            $from = $content['callback_query']['from'];
+        }
+
+        if ($from) {
+            $this->telegramUserService->initUser($from);
+        }
         $this->graylogLogger->info('Pure request', ['request' => $content]);
     }
 }

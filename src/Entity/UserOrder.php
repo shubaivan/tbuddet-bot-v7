@@ -18,13 +18,19 @@ class UserOrder
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
-    private string $totalAmount;
+    private int $totalAmount;
+
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $description;
 
     #[ORM\Column(type: 'integer', nullable: false)]
     private string $quantityProduct;
 
-    #[ORM\Column(type: 'string')]
-    private string $liqPayStatus;
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $liqPayStatus;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $liqPayResponse;
 
     #[ORM\ManyToOne(targetEntity: TelegramUser::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'telegram_user_id', referencedColumnName: 'id')]
@@ -36,8 +42,8 @@ class UserOrder
 
     public function __construct() {
         $this->quantityProduct = 1;
+        $this->liqPayStatus = null;
     }
-
 
     public function getId(): ?int
     {
@@ -92,14 +98,38 @@ class UserOrder
         return $this;
     }
 
-    public function getLiqPayStatus(): string
+    public function getLiqPayStatus(): ?string
     {
         return $this->liqPayStatus;
     }
 
-    public function setLiqPayStatus(string $liqPayStatus): UserOrder
+    public function setLiqPayStatus(?string $liqPayStatus): UserOrder
     {
         $this->liqPayStatus = $liqPayStatus;
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): UserOrder
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    public function getLiqPayResponse(): ?string
+    {
+        return $this->liqPayResponse;
+    }
+
+    public function setLiqPayResponse(?string $liqPayResponse): UserOrder
+    {
+        $this->liqPayResponse = $liqPayResponse;
 
         return $this;
     }
