@@ -19,8 +19,7 @@ class ProductCommand extends Command
         $bot->sendMessage(
             text: 'Оберіть продукт',
             reply_markup: InlineKeyboardMarkup::make()
-                ->addRow(InlineKeyboardButton::make('Кільце', callback_data: 'type:product:ring'), InlineKeyboardButton::make('Кришка', callback_data: 'Кришка'))
-                ->addRow(InlineKeyboardButton::make('Дно', callback_data: 'Дно'), InlineKeyboardButton::make('Бетон', callback_data: 'Бетон')),
+                ->addRow(InlineKeyboardButton::make('Кільце', callback_data: 'type:product:ring'))
         );
     }
 }

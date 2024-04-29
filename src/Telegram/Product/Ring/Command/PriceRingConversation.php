@@ -102,12 +102,12 @@ class PriceRingConversation extends Conversation
 
     public function approveAction(Nutgram $bot)
     {
-        if ($bot->callbackQuery()->data !== "1") {
+        if ($bot->isCallbackQuery() && $bot->callbackQuery()->data !== "1") {
             $this->askParameters($bot);
             return;
         }
 
-        if (!$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
+        if ($bot->message() && !$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
             $phone_number = $bot->message()->contact->phone_number;
             $this->telegramUserService->savePhone($phone_number);
 
