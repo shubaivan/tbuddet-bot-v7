@@ -4,12 +4,16 @@ namespace App\Service;
 
 use App\Entity\TelegramUser;
 use App\Repository\TelegramUserRepository;
+use Doctrine\ORM\EntityManagerInterface;
 
 class TelegramUserService
 {
     private ?TelegramUser $currentUser;
 
-    public function __construct(private TelegramUserRepository $telegramUserRepository) {}
+    public function __construct(
+        private TelegramUserRepository $telegramUserRepository,
+        private EntityManagerInterface $em
+    ) {}
 
     public function initUser(array $from)
     {
@@ -34,9 +38,18 @@ class TelegramUserService
                 $telegramUser->setLanguageCode($from['language_code']);
             }
 
+            if (isset($from['chat_id'])) {
+                $telegramUser->setChatId($from['chat_id']);
+            }
+
             $this->telegramUserRepository->save($telegramUser);
 
             $this->currentUser = $telegramUser;
+        }
+
+        if (isset($from['chat_id'])) {
+            $this->currentUser->setChatId($from['chat_id']);
+            $this->em->flush();
         }
 
         return $this->currentUser;

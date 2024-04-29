@@ -19,6 +19,8 @@ class TelegramUser
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $chatId;
     #[ORM\Column(type: 'string', length: 255, unique: true, nullable: false)]
     private ?string $telegram_id;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
@@ -38,6 +40,7 @@ class TelegramUser
     {
         $this->orders = new ArrayCollection();
         $this->phone_number = null;
+        $this->chatId = null;
     }
 
     public function getId(): ?int
@@ -132,6 +135,18 @@ class TelegramUser
     public function setOrders(Collection $orders): TelegramUser
     {
         $this->orders = $orders;
+
+        return $this;
+    }
+
+    public function getChatId(): ?string
+    {
+        return $this->chatId;
+    }
+
+    public function setChatId(?string $chatId): TelegramUser
+    {
+        $this->chatId = $chatId;
 
         return $this;
     }

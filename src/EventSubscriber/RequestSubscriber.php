@@ -48,10 +48,16 @@ class RequestSubscriber implements EventSubscriberInterface
         $from = null;
         if (isset($content['message']['from'])) {
             $from = $content['message']['from'];
+            if (isset($content['message']['chat']['id'])) {
+                $from['chat_id'] = $content['message']['chat']['id'];
+            }
         }
 
         if (isset($content['callback_query']['from'])) {
             $from = $content['callback_query']['from'];
+            if (isset($content['callback_query']['chat']['id'])) {
+                $from['chat_id'] = $content['callback_query']['chat']['id'];
+            }
         }
 
         if ($from) {

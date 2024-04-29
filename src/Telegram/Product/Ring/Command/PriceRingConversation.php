@@ -147,19 +147,41 @@ class PriceRingConversation extends Conversation
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
-        $res = $liqpay->api("request", array(
-            'action'    => 'invoice_send',
-            'version'   => '3',
+        $params = array(
+            'action' => 'invoice_send',
+            'version' => '3',
             'phone' => $userOrder->getTelegramUserId()->getPhoneNumber(),
-            'amount'    => $userOrder->getTotalAmount(),
-            'currency'  => 'UAH',
-            'order_id'  => $liqPayOrderID,
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
-        ));
+        );
+        $res = $liqpay->api("request", $params);
         $userOrder->setLiqPayResponse(json_encode($res));
         $userOrder->setLiqPayOrderId($liqPayOrderID);
         $this->em->flush();
+
+        $params = array(
+            'action' => 'pay',
+            'version' => '3',
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'description' => $description
+        );
+        $cnb_form_raw = $liqpay->cnb_form_raw($params);
+        $link = sprintf(
+            '%s?%s&%s',
+            $cnb_form_raw['url'],
+            'data='.$cnb_form_raw['data'],
+            'signature='.$cnb_form_raw['signature'],
+        );
+        $bot->sendMessage(
+            text: 'Перевірте оповіщення в телефоні або перейдіть на посилання: <a href="'.$link.'">URL</a>',
+            parse_mode: ParseMode::HTML
+        );
 
         $bot->sendMessage(
             text: '<b>Вітаємо</b>, чекайте повідомлення як буде готове <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>',

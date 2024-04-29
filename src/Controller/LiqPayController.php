@@ -5,16 +5,20 @@ namespace App\Controller;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use SergiX44\Nutgram\Telegram\Types\Message\Message;
 
 class LiqPayController extends AbstractController
 {
     #[Route('/liq/pay', name: 'app_liq_pay')]
     public function index(
+        Nutgram $bot,
         LoggerInterface $logger,
         Request $request,
         UserOrderRepository $orderRepository,
@@ -58,6 +62,15 @@ class LiqPayController extends AbstractController
 
         $userOrder->setLiqPayStatus($json_decode['status']);
         $em->flush();
+
+        if ($userOrder->getTelegramUserId()->getChatId()) {
+            /** @var Message $message */
+            $message = $bot->sendMessage(
+                text: 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами звяжется наш менеджер',
+                chat_id: $userOrder->getTelegramUserId()->getChatId(),
+                parse_mode: ParseMode::HTML
+            );
+        }
 
         return $this->json(['status' => true]);
     }
