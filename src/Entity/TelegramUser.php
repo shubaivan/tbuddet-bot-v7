@@ -2,18 +2,24 @@
 
 namespace App\Entity;
 
+use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\TelegramUserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TelegramUserRepository::class)]
+#[ORM\HasLifecycleCallbacks()]
 class TelegramUser
 {
+    use CreatedUpdatedAtAwareTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: 'string', length: 255, nullable: false)]
+    #[ORM\Column(type: 'string', length: 255, unique: true, nullable: false)]
     private ?string $telegram_id;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $phone_number;
@@ -25,6 +31,13 @@ class TelegramUser
     private string $username;
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
     private string $language_code;
+    #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegramUserId', cascade: ["persist"])]
+    private Collection $orders;
+
+    public function __construct()
+    {
+        $this->orders = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -108,5 +121,17 @@ class TelegramUser
         $this->language_code = $language_code;
 
         return $this;
+    }
+
+    public function getOrders(): Collection
+    {
+        return $this->orders;
+    }
+
+    public function addOrder(UserOrder $order): void
+    {
+        if (!$this->orders->contains($order)) {
+            $this->orders->add($order);
+        }
     }
 }
