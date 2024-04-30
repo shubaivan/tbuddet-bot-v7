@@ -90,7 +90,7 @@ class PriceRingConversation extends Conversation
             $this->confirmPhone = true;
             $bot->sendMessage(
                 text: 'Ваш Номер',
-                reply_markup: ReplyKeyboardMarkup::make()->addRow(
+                reply_markup: ReplyKeyboardMarkup::make(one_time_keyboard: true)->addRow(
                     KeyboardButton::make('Підтвердіть ВАШ телефон', true),
                 )
             );
