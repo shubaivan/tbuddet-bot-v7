@@ -64,9 +64,14 @@ class LiqPayController extends AbstractController
         $em->flush();
 
         if ($userOrder->getTelegramUserId()->getChatId()) {
+            if ($json_decode['status'] === 'success') {
+                $msg = 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами зв\'яжеться наш менеджер';
+            } else {
+                $msg = 'Статус оплати <b>'.$json_decode['status'].'</b>.';
+            }
             /** @var Message $message */
             $message = $bot->sendMessage(
-                text: 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами звяжется наш менеджер',
+                text: $msg,
                 chat_id: $userOrder->getTelegramUserId()->getChatId(),
                 parse_mode: ParseMode::HTML
             );
