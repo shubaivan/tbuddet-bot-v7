@@ -6,17 +6,18 @@ use App\Entity\Product;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Repository\ProductRepository;
-use App\Repository\UserOrderRepository;
 use App\Service\TelegramUserService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
+use SergiX44\Nutgram\Telegram\Types\Internal\InputFile;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\KeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardMarkup;
+use SergiX44\Nutgram\Telegram\Types\Message\Message;
 
 class PriceRingConversation extends Conversation
 {
@@ -24,6 +25,7 @@ class PriceRingConversation extends Conversation
 
     public ?int $productId;
     public ?int $quantity;
+    public ?bool $confirmPhone = false;
 
     public function __construct(
         private TelegramUserService $telegramUserService,
@@ -32,8 +34,12 @@ class PriceRingConversation extends Conversation
         private LoggerInterface $logger,
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
-        private string $liqpayServerUrl
-    ) {}
+        private string $liqpayServerUrl,
+        private string $projectDir
+    )
+    {
+        $this->confirmPhone = false;
+    }
 
 
     public function askParameters(Nutgram $bot)
@@ -55,6 +61,7 @@ class PriceRingConversation extends Conversation
     {
         if (!$bot->isCallbackQuery()) {
             $this->askParameters($bot);
+
             return;
         }
 
@@ -69,17 +76,18 @@ class PriceRingConversation extends Conversation
         $this->quantity = (int)$bot->message()->text;
 
         $bot->sendMessage(
-            '<b>Ваше замовлення</b>: <strong>кільця</strong>: <u>'.$this->getProduct()->getProductName().'</u> діаметром, в <b>кількості</b>: <u>'.$this->quantity.' штук</u>',
+            '<b>Ваше замовлення</b>: <strong>кільця</strong>: <u>' . $this->getProduct()->getProductName() . '</u> діаметром, в <b>кількості</b>: <u>' . $this->quantity . ' штук</u>',
             parse_mode: ParseMode::HTML
         );
 
         $totalAmount = $this->getProduct()->getPrice() * $this->quantity;
         $bot->sendMessage(
-            '<b>Кінцева ціна</b>: '. $totalAmount . ' грн',
+            '<b>Кінцева ціна</b>: ' . $totalAmount . ' грн',
             parse_mode: ParseMode::HTML
         );
 
         if (!$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
+            $this->confirmPhone = true;
             $bot->sendMessage(
                 text: 'Ваш Номер',
                 reply_markup: ReplyKeyboardMarkup::make()->addRow(
@@ -104,11 +112,41 @@ class PriceRingConversation extends Conversation
     {
         if ($bot->isCallbackQuery() && $bot->callbackQuery()->data !== "1") {
             $this->askParameters($bot);
+
             return;
         }
 
-        if ($bot->message() && !$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
-            $phone_number = $bot->message()->contact->phone_number;
+        if ($this->confirmPhone
+            && !$this->telegramUserService->getCurrentUser()->getPhoneNumber()
+            && $bot->message()
+        ) {
+            if ($bot->message()->contact && $bot->message()->contact->phone_number) {
+                $phone_number = $bot->message()->contact->phone_number;
+            } else {
+                $this->confirmPhone = true;
+                $bot->sendMessage(
+                    text: 'Подтрібно натиснути',
+                    reply_markup: ReplyKeyboardMarkup::make(one_time_keyboard: true)->addRow(
+                        KeyboardButton::make('Підтвердіть ВАШ телефон', true),
+                    )
+                );
+                $file = sprintf(
+                    '%s/assets/img/share_contact.jpeg',
+                    $this->projectDir
+                );
+                if (is_file($file) && is_readable($file)) {
+                    $photo = fopen($file, 'r+');
+
+                    /** @var Message $message */
+                    $message = $bot->sendPhoto(
+                        photo: InputFile::make($photo)
+                    );
+                }
+                $this->next('approveAction');
+
+                return;
+            }
+            $this->confirmPhone = false;
             $this->telegramUserService->savePhone($phone_number);
 
             $this->em->flush();
@@ -130,6 +168,7 @@ class PriceRingConversation extends Conversation
     {
         if ($bot->callbackQuery()->data !== "1") {
             $this->askParameters($bot);
+
             return;
         }
 
@@ -175,11 +214,11 @@ class PriceRingConversation extends Conversation
         $link = sprintf(
             '%s?%s&%s',
             $cnb_form_raw['url'],
-            'data='.$cnb_form_raw['data'],
-            'signature='.$cnb_form_raw['signature'],
+            'data=' . $cnb_form_raw['data'],
+            'signature=' . $cnb_form_raw['signature'],
         );
         $bot->sendMessage(
-            text: 'Перевірте оповіщення в телефоні або перейдіть на посилання: <a href="'.$link.'">URL</a>',
+            text: 'Перевірте оповіщення в телефоні або перейдіть на посилання: <a href="' . $link . '">URL</a>',
             parse_mode: ParseMode::HTML
         );
 
