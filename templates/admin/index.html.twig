@@ -9,7 +9,27 @@
 
 {% block body %}
     {{ parent() }}
-    Hello body
+
+    {% if th_keys|length %}
+        <!-- Table -->
+        <table id='telegramUserTable' class='display dataTable'>
+
+            <thead>
+            <tr>
+                {% for th_key in th_keys %}
+                    <th scope="col">{{ th_key }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tfoot>
+            {% for th_key in th_keys %}
+                <th scope="col">{{ th_key }}</th>
+            {% endfor %}
+            </tfoot>
+
+        </table>
+    {% endif %}
+
 {% endblock %}
 
 {% block javascripts %}
@@ -17,12 +37,13 @@
     {{ encore_entry_script_tags('index/js/admin_list.min') }}
 
     <script defer>
-        console.log('fff');
+        console.log('getJSonObject');
         function getJSonObject(value) {
             return $.parseJSON(value.replace(/&quot;/ig, '"'));
         }
 
-        let th_keys = getJSonObject("{{ sh ? sh|json_encode() : "{}" }}");
+        let th_keys = getJSonObject("{{ th_keys ? th_keys|json_encode() : "{}" }}");
+        let for_prepare_defs = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
     </script >
 
     <script src="{{ asset('simditor-2.3.28/site/assets/scripts/module.js') }}" defer></script>
