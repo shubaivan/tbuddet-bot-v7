@@ -78,8 +78,7 @@ class TelegramUserRepository extends ServiceEntityRepository
                 b.language_code,
                 b.created_at,
                 b.updated_at,
-                b.chat_id,               
-                \'edit\' as Action
+                b.chatId
                 FROM App\Entity\TelegramUser b
             ';
         }

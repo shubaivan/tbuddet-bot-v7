@@ -13,7 +13,7 @@ import * as r_bs from 'datatables.net-responsive-bs4';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
 require('@fortawesome/fontawesome-free/css/all.min.css');
-require('datatables.net-dt/css/jquery.dataTables.min.css');
+require('datatables.net-dt/css/dataTables.dataTables.min.css');
 require('datatables.net-fixedheader-bs4/css/fixedHeader.bootstrap4.min.css');
 require('datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css');
 

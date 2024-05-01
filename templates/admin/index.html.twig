@@ -42,7 +42,7 @@
             return $.parseJSON(value.replace(/&quot;/ig, '"'));
         }
 
-        let th_keys = getJSonObject("{{ th_keys ? th_keys|json_encode() : "{}" }}");
+        let th_keys = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
         let for_prepare_defs = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
     </script >
 
