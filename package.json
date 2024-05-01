@@ -11,7 +11,6 @@
         "node-sass": "^4.14.1",
         "popper.js": "^1.15.0",
         "regenerator-runtime": "^0.13.2",
-        "sass-loader": "^8.0.2",
         "webpack-notifier": "^1.6.0"
     },
     "license": "UNLICENSED",
@@ -24,6 +23,7 @@
         "heroku-postbuild": "encore production"
     },
     "dependencies": {
+        "sass-loader": "^8.0.2",
         "@symfony/webpack-encore": "^0.30.2",
         "@uppy/core": "^1.13.2",
         "@uppy/dashboard": "^1.12.8",
