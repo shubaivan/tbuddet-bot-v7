@@ -44,6 +44,7 @@
         "datatables.net-searchpanes-bs4": "^2.3.0",
         "datatables.net-select-bs4": "^2.0.1",
         "file-loader": "^3.0.1",
+        "sass": "^1.76.0",
         "select2": "^4.0.13",
         "url-loader": "^1.1.2"
     }

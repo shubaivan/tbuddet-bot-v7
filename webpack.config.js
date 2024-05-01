@@ -57,7 +57,9 @@ Encore
     })
 
     // enables Sass/SCSS support
-    .enableSassLoader()
+    .enableSassLoader(options => {
+        options.implementation = require('sass');
+    })
     .addStyleEntry('index/css/index.min', './assets/styles/app.scss')
 
     // uncomment if you use TypeScript
