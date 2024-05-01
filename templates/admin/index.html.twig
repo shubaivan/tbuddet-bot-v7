@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Hello Admin!{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" type="text/css" href="{{ asset('simditor-2.3.28/styles/simditor.css') }}" />
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    Hello body
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ encore_entry_script_tags('index/js/admin_list.min') }}
+
+    <script defer>
+        console.log('fff');
+        function getJSonObject(value) {
+            return $.parseJSON(value.replace(/&quot;/ig, '"'));
+        }
+
+        let th_keys = getJSonObject("{{ sh ? sh|json_encode() : "{}" }}");
+    </script >
+
+    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/module.js') }}" defer></script>
+    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/hotkeys.js') }}" defer></script>
+
+
+    <script src="{{ asset('simditor-2.3.28/lib/simditor.js') }}" defer></script>
+
+
+{% endblock %}
+
