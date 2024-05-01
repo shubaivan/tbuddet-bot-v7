@@ -1,4 +1,8 @@
 {
+    "engines": {
+        "node": "v12.22.9",
+        "npm": "8.5.1"
+    },
     "devDependencies": {
         "@fortawesome/fontawesome-free": "^5.8.2",
         "@symfony/webpack-encore": "^0.30.0",
