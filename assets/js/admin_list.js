@@ -2,8 +2,22 @@ import 'select2';
 
 document.addEventListener("DOMContentLoaded", function () {
     console.log("admin list!");
-    const body = $('body');
+
     let table;
+    var common_defs = [];
+    common_defs.push({
+        "targets": 10,
+        "data": 'order_info',
+        "render": function (data, type, row, meta) {
+            var divTag = $('<div/>');
+            $.each(data.split('|'), function( index, value ) {
+                var pOrder = $('<p/>').append('<i>'+value+'</i>');
+                divTag.append(pOrder);
+            });
+
+            return divTag.html();
+        }
+    });
 
     const collectionData = window.Routing
         .generate('admin-telegram-users');
@@ -20,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log('ajax data', d);
             }
         },
-        columns: th_keys
+        columns: th_keys,
+        "columnDefs": common_defs
     });
 });

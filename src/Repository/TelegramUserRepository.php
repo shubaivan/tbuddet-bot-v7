@@ -58,8 +58,8 @@ class TelegramUserRepository extends ServiceEntityRepository
         $offset = $parameterBag->get('offset');
         $sortBy = $parameterBag->get('sort_by');
         $sortOrder = $parameterBag->get('sort_order');
-        $sortBy = $this->white_list($sortBy,
-            ["id", "first_name", "last_name"], "Invalid field name " . $sortBy);
+//        $sortBy = $this->white_list($sortBy,
+//            ["id", "first_name", "last_name"], "Invalid field name " . $sortBy);
 
         if ($count) {
             $dql = '
@@ -75,11 +75,13 @@ class TelegramUserRepository extends ServiceEntityRepository
                 b.first_name,
                 b.last_name,
                 b.username,
+                GROUP_CONCAT(\'order id:\', o.id, \'-amount:\', o.totalAmount SEPARATOR \'|\') as order_info,
                 b.language_code,
                 b.created_at,
                 b.updated_at,
                 b.chatId
                 FROM App\Entity\TelegramUser b
+                LEFT JOIN b.orders o
             ';
         }
 
@@ -87,10 +89,12 @@ class TelegramUserRepository extends ServiceEntityRepository
         $condition = ' WHERE ';
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
-            $conditions[] = '
-                            ILIKE(b.phone_number, :var_search) = TRUE
-                        ';
+            $or[] = 'ILIKE(b.username, :var_search) = TRUE';
+            $or[] = 'ILIKE(b.first_name, :var_search) = TRUE';
+            $or[] = 'ILIKE(b.last_name, :var_search) = TRUE';
+            $or[] = 'ILIKE(b.phone_number, :var_search) = TRUE';
             $bindParams['var_search'] = '%'.$parameterBag->get('search').'%';
+            $conditions[] = '(' . implode(' OR ', $or) .')';
 
         }
 

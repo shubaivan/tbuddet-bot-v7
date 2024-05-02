@@ -9,6 +9,12 @@ doctrine:
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
     orm:
+        dql:
+            string_functions:
+                # other operators
+                ILIKE: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\Ilike
+
+                group_concat:   App\Doctrine\Functions\GroupConcat
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true
         report_fields_where_declared: true

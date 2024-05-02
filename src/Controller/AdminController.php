@@ -17,6 +17,7 @@ class AdminController extends AbstractController
     {
         $classMetadata = $em->getClassMetadata(TelegramUser::class);
         $fieldNames = $classMetadata->fieldNames;
+        $fieldNames[] = 'order_info';
         array_map(function ($k) use (&$dataTableColumnData) {
             $dataTableColumnData[] = ['data' => $k];
         }, $fieldNames);
