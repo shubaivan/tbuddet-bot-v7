@@ -15,6 +15,13 @@ class AdminController extends AbstractController
     #[Route('/admin', name: 'app_admin')]
     public function index(EntityManagerInterface $em): Response
     {
+        return $this->render('admin/index.html.twig', [
+        ]);
+    }
+
+    #[Route('/admin/users', name: 'app_admin_users')]
+    public function users(EntityManagerInterface $em): Response
+    {
         $classMetadata = $em->getClassMetadata(TelegramUser::class);
         $fieldNames = $classMetadata->fieldNames;
         $fieldNames[] = 'order_info';
@@ -22,7 +29,7 @@ class AdminController extends AbstractController
             $dataTableColumnData[] = ['data' => $k];
         }, $fieldNames);
 
-        return $this->render('admin/index.html.twig', [
+        return $this->render('admin/telegram-users.html.twig', [
             'controller_name' => 'AdminController',
             'th_keys' => $fieldNames,
             'dataTableKeys' => $dataTableColumnData,

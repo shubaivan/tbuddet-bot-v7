@@ -10,48 +10,40 @@
 {% block body %}
     {{ parent() }}
 
-    {% if th_keys|length %}
-        <!-- Table -->
-        <table id='telegramUserTable' class='display dataTable'>
-
+    <div class="container">
+        <table class="table table-hover">
+            <caption>Management</caption>
             <thead>
             <tr>
-                {% for th_key in th_keys %}
-                    <th scope="col">{{ th_key }}</th>
-                {% endfor %}
+                <th scope="col">#</th>
+                <th scope="col">Resource Name</th>
+                <th scope="col">Action</th>
             </tr>
             </thead>
-            <tfoot>
-            {% for th_key in th_keys %}
-                <th scope="col">{{ th_key }}</th>
-            {% endfor %}
-            </tfoot>
+            <tbody>
 
+            <tr>
+                <th scope="row">1</th>
+                <td>
+                    Users
+                </td>
+                <td>
+                    <a href="{{ path('app_admin_users') }}">
+                        List
+                    </a>
+                </td>
+
+            </tr>
+
+            </tbody>
         </table>
-    {% endif %}
+
+    </div>
 
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
     {{ encore_entry_script_tags('index/js/admin_list.min') }}
-
-    <script defer>
-        console.log('getJSonObject');
-        function getJSonObject(value) {
-            return $.parseJSON(value.replace(/&quot;/ig, '"'));
-        }
-
-        let th_keys = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
-        let for_prepare_defs = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
-    </script >
-
-    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/module.js') }}" defer></script>
-    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/hotkeys.js') }}" defer></script>
-
-
-    <script src="{{ asset('simditor-2.3.28/lib/simditor.js') }}" defer></script>
-
-
 {% endblock %}
 
