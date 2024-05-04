@@ -17,6 +17,7 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\KeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardMarkup;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardRemove;
 use SergiX44\Nutgram\Telegram\Types\Message\Message;
 
 class PriceRingConversation extends Conversation
@@ -122,6 +123,10 @@ class PriceRingConversation extends Conversation
         ) {
             if ($bot->message()->contact && $bot->message()->contact->phone_number) {
                 $phone_number = $bot->message()->contact->phone_number;
+                $bot->sendMessage(
+                    text: 'Removing keyboard...',
+                    reply_markup: ReplyKeyboardRemove::make(true),
+                )?->delete();
             } else {
                 $this->confirmPhone = true;
                 $bot->sendMessage(
