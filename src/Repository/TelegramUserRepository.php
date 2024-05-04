@@ -58,8 +58,6 @@ class TelegramUserRepository extends ServiceEntityRepository
         $offset = $parameterBag->get('offset');
         $sortBy = $parameterBag->get('sort_by');
         $sortOrder = $parameterBag->get('sort_order');
-//        $sortBy = $this->white_list($sortBy,
-//            ["id", "first_name", "last_name"], "Invalid field name " . $sortBy);
 
         if ($count) {
             $dql = '
@@ -69,17 +67,14 @@ class TelegramUserRepository extends ServiceEntityRepository
         } else {
             $dql = '
                 SELECT 
-                b.id, 
-                b.telegram_id,              
+                b.id,           
                 b.phone_number,
                 b.first_name,
                 b.last_name,
                 b.username,
                 GROUP_CONCAT(\'order id:\', o.id, \'-amount:\', o.totalAmount SEPARATOR \'|\') as order_info,
-                b.language_code,
-                b.created_at,
-                b.updated_at,
-                b.chatId
+                date_format(b.created_at, \'%Y-%m-%d %H:%i:%s\') as start,
+                date_format(b.updated_at, \'%Y-%m-%d %H:%i:%s\') as last_visit
                 FROM App\Entity\TelegramUser b
                 LEFT JOIN b.orders o
             ';
@@ -131,18 +126,5 @@ class TelegramUserRepository extends ServiceEntityRepository
         }
 
         return $result;
-    }
-
-    function white_list(&$value, $allowed, $message)
-    {
-        if ($value === null) {
-            return $allowed[0];
-        }
-        $key = array_search($value, $allowed, true);
-        if ($key === false) {
-            throw new BadRequestHttpException($message);
-        } else {
-            return $value;
-        }
     }
 }

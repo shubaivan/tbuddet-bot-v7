@@ -32,7 +32,18 @@
                         List
                     </a>
                 </td>
+            </tr>
 
+            <tr>
+                <th scope="row">2</th>
+                <td>
+                    Orders
+                </td>
+                <td>
+                    <a href="{{ path('app_admin_orders') }}">
+                        List
+                    </a>
+                </td>
             </tr>
 
             </tbody>
@@ -44,6 +55,5 @@
 
 {% block javascripts %}
     {{ parent() }}
-    {{ encore_entry_script_tags('index/js/admin_list.min') }}
 {% endblock %}
 

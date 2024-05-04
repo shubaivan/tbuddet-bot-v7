@@ -5,9 +5,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let table;
     var common_defs = [];
+
     common_defs.push({
-        "targets": 10,
+        "targets": 7,
         "data": 'order_info',
+        "orderable": false,
         "render": function (data, type, row, meta) {
             var divTag = $('<div/>');
             $.each(data.split('|'), function( index, value ) {
@@ -20,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     const collectionData = window.Routing
-        .generate('admin-telegram-users');
+        .generate('admin-users-data-table');
 
     table = $('#telegramUserTable').DataTable({
         'responsive': true,

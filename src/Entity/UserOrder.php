@@ -12,6 +12,17 @@ class UserOrder
 {
     use CreatedUpdatedAtAwareTrait;
 
+    public static array $dataTableFields = [
+        'id',
+        'totalAmount',
+        'description',
+        'quantityProduct',
+        'liqPayStatus',
+        'liqPayOrderId',
+        'product_info',
+        'user_info'
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

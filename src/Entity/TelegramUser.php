@@ -14,6 +14,18 @@ class TelegramUser
 {
     use CreatedUpdatedAtAwareTrait;
 
+    public static array $dataTableFields = [
+        'id',
+        'phone_number',
+        'first_name',
+        'last_name',
+        'username',
+        'start',
+        'last_visit',
+        'order_info'
+    ];
+
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
