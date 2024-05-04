@@ -20,7 +20,9 @@ class UserOrder
         'liqPayStatus',
         'liqPayOrderId',
         'product_info',
-        'user_info'
+        'user_info',
+        'created_at',
+        'updated_at'
     ];
 
     #[ORM\Id]

@@ -15,9 +15,14 @@ trait DataTablesApproachRepository
     {
         $parameterBag = new ParameterBag();
 
-        $columnIndex = $params['order'][0]['column']; // Column index
-        $columnName = $params['columns'][$columnIndex]['data']; // Column name
-        $columnSortOrder = $params['order'][0]['dir']; // asc or desc
+        if (isset($params['order'])) {
+            $columnIndex = $params['order'][0]['column']; // Column index
+            $columnName = $params['columns'][$columnIndex]['data']; // Column name
+            $columnSortOrder = $params['order'][0]['dir']; // asc or desc
+        } else {
+            $columnName = 'id';
+            $columnSortOrder = 'desc';
+        }
 
         $parameterBag->set('sort_by', $columnName);
         $parameterBag->set('sort_order', $columnSortOrder);
