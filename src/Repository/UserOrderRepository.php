@@ -64,12 +64,12 @@ class UserOrderRepository extends ServiceEntityRepository
             $dql = '
                 SELECT 
                 o.id, 
-                o.totalAmount,              
+                o.total_amount,              
                 o.description,
-                o.quantityProduct,
-                o.liqPayStatus,          
-                o.liqPayOrderId,
-                GROUP_CONCAT(p.productName, \' діаметр:\', p.diameter, \' ціна за шт:\', p.price, \' грн\') as product_info,
+                o.quantity_product,
+                o.liq_pay_status,          
+                o.liq_pay_order_id,
+                GROUP_CONCAT(p.product_name, \' ціна за шт:\', p.price, \' грн\') as product_info,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username, \' \') as user_info,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at
@@ -83,7 +83,7 @@ class UserOrderRepository extends ServiceEntityRepository
         $condition = ' WHERE ';
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
-            $or[] = 'ILIKE(p.productName, :var_search) = TRUE';
+            $or[] = 'ILIKE(p.product_name, :var_search) = TRUE';
             $or[] = 'ILIKE(p.price, :var_search) = TRUE';
 
             $or[] = 'ILIKE(o.description, :var_search) = TRUE';

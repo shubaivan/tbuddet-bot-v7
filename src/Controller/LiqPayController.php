@@ -60,10 +60,10 @@ class LiqPayController extends AbstractController
             return $this->json(['sign' => false], Response::HTTP_BAD_REQUEST);
         }
 
-        $userOrder->setLiqPayStatus($json_decode['status']);
+        $userOrder->setLiqPaystatus($json_decode['status']);
         $em->flush();
 
-        if ($userOrder->getTelegramUserId()->getChatId()) {
+        if ($userOrder->getTelegramUserid()->getChatId()) {
             if ($json_decode['status'] === 'success') {
                 $msg = 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами зв\'яжеться наш менеджер';
             } else {
@@ -72,7 +72,7 @@ class LiqPayController extends AbstractController
             /** @var Message $message */
             $message = $bot->sendMessage(
                 text: $msg,
-                chat_id: $userOrder->getTelegramUserId()->getChatId(),
+                chat_id: $userOrder->getTelegramUserid()->getChatId(),
                 parse_mode: ParseMode::HTML
             );
         }

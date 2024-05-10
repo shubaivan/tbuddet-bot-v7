@@ -1,0 +1,88 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Hello Admin!{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" type="text/css" href="{{ asset('simditor-2.3.28/styles/simditor.css') }}" />
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+        Create Product
+    </button>
+    {% if th_keys|length %}
+        <!-- Table -->
+        <table id='telegramUserTable' class='display dataTable'>
+
+            <thead>
+            <tr>
+                {% for th_key in th_keys %}
+                    <th scope="col">{{ th_key }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tfoot>
+            {% for th_key in th_keys %}
+                <th scope="col">{{ th_key }}</th>
+            {% endfor %}
+            </tfoot>
+
+        </table>
+    {% endif %}
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="createProduct">
+                        <div class="form-group">
+                            <label for="recipient-name" class="col-form-label">Recipient:</label>
+                            <input type="text" class="form-control" id="recipient-name">
+                        </div>
+                        <div class="form-group">
+                            <label for="message-text" class="col-form-label">Message:</label>
+                            <textarea class="form-control" id="message-text"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {{ encore_entry_script_tags('index/js/products.min') }}
+
+    <script defer>
+        console.log('getJSonObject');
+        function getJSonObject(value) {
+            return $.parseJSON(value.replace(/&quot;/ig, '"'));
+        }
+
+        let th_keys = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
+        let for_prepare_defs = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
+    </script >
+
+    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/module.js') }}" defer></script>
+    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/hotkeys.js') }}" defer></script>
+
+
+    <script src="{{ asset('simditor-2.3.28/lib/simditor.js') }}" defer></script>
+
+
+{% endblock %}
+

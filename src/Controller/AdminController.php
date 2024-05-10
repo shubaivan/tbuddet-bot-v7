@@ -2,8 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\Product;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
+use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -80,6 +82,45 @@ class AdminController extends AbstractController
 
     #[Route('/admin/orders/data-table', name: 'admin-orders-data-table', options: ['expose' => true])]
     public function ordersDatTable(UserOrderRepository $repository, Request $request)
+    {
+        $dataTable = $repository
+            ->getDataTablesData($request->request->all());
+
+        return $this->json(
+            array_merge(
+                [
+                    "draw" => $request->request->get('draw'),
+                    "recordsTotal" => $repository
+                        ->getDataTablesData($request->request->all(), true, true),
+                    "recordsFiltered" => $repository
+                        ->getDataTablesData($request->request->all(), true)
+                ],
+                ['data' => $dataTable]
+            )
+        );
+    }
+
+    #############
+    # Products
+    #############
+
+    #[Route('/admin/products', name: 'app_admin_products')]
+    public function products(EntityManagerInterface $em): Response
+    {
+        $fieldNames = Product::$dataTableFields;
+
+        array_map(function ($k) use (&$dataTableColumnData) {
+            $dataTableColumnData[] = ['data' => $k];
+        }, $fieldNames);
+
+        return $this->render('admin/products.html.twig', [
+            'th_keys' => $fieldNames,
+            'dataTableKeys' => $dataTableColumnData,
+        ]);
+    }
+
+    #[Route('/admin/products/data-table', name: 'admin-products-data-table', options: ['expose' => true])]
+    public function productsDatTable(ProductRepository $repository, Request $request)
     {
         $dataTable = $repository
             ->getDataTablesData($request->request->all());

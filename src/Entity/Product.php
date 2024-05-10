@@ -14,19 +14,29 @@ class Product
 {
     use CreatedUpdatedAtAwareTrait;
 
+    public static array $dataTableFields = [
+        'id',
+        'product_name',
+        'product_internal_name',
+        'price',
+        'product_properties',
+        'created_at',
+        'updated_at'
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255)]
-    private string $productName;
+    private string $product_name;
 
     #[ORM\Column(type: 'string', length: 255)]
-    private string $productInternalName;
+    private string $product_internal_name;
 
-    #[ORM\Column(type: 'float')]
-    private float $diameter;
+    #[ORM\Column(type: 'json', nullable: true)]
+    private array $product_properties = [];
 
     #[ORM\Column(type: 'string', length: 255)]
     private string $price;
@@ -37,14 +47,12 @@ class Product
     public function __construct(
         string $name,
         string $productInternalName,
-        int $price,
-        float $diameter
+        int $price
     ) {
         $this->orders = new ArrayCollection();
-        $this->productName = $name;
+        $this->product_name = $name;
         $this->price = $price;
-        $this->productInternalName = $productInternalName;
-        $this->diameter = $diameter;
+        $this->product_internal_name = $productInternalName;
     }
 
     public function getId(): ?int
@@ -54,36 +62,24 @@ class Product
 
     public function getProductName(): string
     {
-        return $this->productName;
+        return $this->product_name;
     }
 
-    public function setProductName(string $productName): Product
+    public function setProductName(string $product_name): Product
     {
-        $this->productName = $productName;
+        $this->product_name = $product_name;
 
         return $this;
     }
 
-    public function getProductInternalName(): string
+    public function getProductInternalname(): string
     {
-        return $this->productInternalName;
+        return $this->product_internal_name;
     }
 
-    public function setProductInternalName(string $productInternalName): Product
+    public function setProductInternalname(string $product_internal_name): Product
     {
-        $this->productInternalName = $productInternalName;
-
-        return $this;
-    }
-
-    public function getDiameter(): float
-    {
-        return $this->diameter;
-    }
-
-    public function setDiameter(float $diameter): Product
-    {
-        $this->diameter = $diameter;
+        $this->product_internal_name = $product_internal_name;
 
         return $this;
     }
@@ -108,6 +104,18 @@ class Product
     public function setOrders(Collection $orders): Product
     {
         $this->orders = $orders;
+
+        return $this;
+    }
+
+    public function getProductProperties(): array
+    {
+        return $this->product_properties;
+    }
+
+    public function setProductProperties(array $product_properties): Product
+    {
+        $this->product_properties = $product_properties;
 
         return $this;
     }

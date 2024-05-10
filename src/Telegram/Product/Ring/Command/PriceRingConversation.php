@@ -180,7 +180,7 @@ class PriceRingConversation extends Conversation
         $userOrder = new UserOrder();
         $userOrder->setProductId($this->getProduct());
         $userOrder->setQuantityProduct($this->quantity);
-        $userOrder->setTelegramUserId($this->telegramUserService->getCurrentUser());
+        $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
         $userOrder->setTotalAmount($this->getProduct()->getPrice() * $this->quantity);
         $description = 'Ваше замовлення: кільця: ' . $this->getProduct()->getProductName() . ' діаметром, в кількості: ' . $this->quantity . ' штук';
         $userOrder->setDescription($description);
@@ -194,7 +194,7 @@ class PriceRingConversation extends Conversation
         $params = array(
             'action' => 'invoice_send',
             'version' => '3',
-            'phone' => $userOrder->getTelegramUserId()->getPhoneNumber(),
+            'phone' => $userOrder->getTelegramUserid()->getPhoneNumber(),
             'amount' => $userOrder->getTotalAmount(),
             'currency' => 'UAH',
             'order_id' => $liqPayOrderID,
@@ -202,8 +202,8 @@ class PriceRingConversation extends Conversation
             'description' => $description
         );
         $res = $liqpay->api("request", $params);
-        $userOrder->setLiqPayResponse(json_encode($res));
-        $userOrder->setLiqPayOrderId($liqPayOrderID);
+        $userOrder->setLiqPayresponse(json_encode($res));
+        $userOrder->setLiqPayorderid($liqPayOrderID);
         $this->em->flush();
 
         $params = array(

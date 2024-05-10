@@ -31,34 +31,34 @@ class UserOrder
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
-    private int $totalAmount;
+    private int $total_amount;
 
     #[ORM\Column(type: 'string', nullable: true)]
     private ?string $description;
 
     #[ORM\Column(type: 'integer', nullable: false)]
-    private string $quantityProduct;
+    private string $quantity_product;
 
     #[ORM\Column(type: 'string', nullable: true)]
-    private ?string $liqPayStatus;
+    private ?string $liq_pay_status;
 
     #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $liqPayResponse;
+    private ?string $liq_pay_response;
 
     #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $liqPayOrderId;
+    private ?string $liq_pay_order_id;
 
     #[ORM\ManyToOne(targetEntity: TelegramUser::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'telegram_user_id', referencedColumnName: 'id')]
-    private TelegramUser $telegramUserId;
+    private TelegramUser $telegram_user_id;
 
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id')]
-    private Product $productId;
+    private Product $product_id;
 
     public function __construct() {
-        $this->quantityProduct = 1;
-        $this->liqPayStatus = null;
+        $this->quantity_product = 1;
+        $this->liq_pay_status = null;
     }
 
     public function getId(): ?int
@@ -68,60 +68,60 @@ class UserOrder
 
     public function getTotalAmount(): string
     {
-        return $this->totalAmount;
+        return $this->total_amount;
     }
 
-    public function setTotalAmount(string $totalAmount): UserOrder
+    public function setTotalAmount(string $total_amount): UserOrder
     {
-        $this->totalAmount = $totalAmount;
+        $this->total_amount = $total_amount;
 
         return $this;
     }
 
     public function getQuantityProduct(): string
     {
-        return $this->quantityProduct;
+        return $this->quantity_product;
     }
 
-    public function setQuantityProduct(string $quantityProduct): UserOrder
+    public function setQuantityProduct(string $quantity_product): UserOrder
     {
-        $this->quantityProduct = $quantityProduct;
-        $this->totalAmount = $this->productId->getPrice() * $quantityProduct;
+        $this->quantity_product = $quantity_product;
+        $this->total_amount = $this->product_id->getPrice() * $quantity_product;
         return $this;
     }
 
-    public function getTelegramUserId(): TelegramUser
+    public function getTelegramUserid(): TelegramUser
     {
-        return $this->telegramUserId;
+        return $this->telegram_user_id;
     }
 
-    public function setTelegramUserId(TelegramUser $telegramUserId): UserOrder
+    public function setTelegramUserid(TelegramUser $telegram_user_id): UserOrder
     {
-        $this->telegramUserId = $telegramUserId;
+        $this->telegram_user_id = $telegram_user_id;
 
         return $this;
     }
 
     public function getProductId(): Product
     {
-        return $this->productId;
+        return $this->product_id;
     }
 
-    public function setProductId(Product $productId): UserOrder
+    public function setProductId(Product $product_id): UserOrder
     {
-        $this->productId = $productId;
+        $this->product_id = $product_id;
 
         return $this;
     }
 
-    public function getLiqPayStatus(): ?string
+    public function getLiqPaystatus(): ?string
     {
-        return $this->liqPayStatus;
+        return $this->liq_pay_status;
     }
 
-    public function setLiqPayStatus(?string $liqPayStatus): UserOrder
+    public function setLiqPaystatus(?string $liq_pay_status): UserOrder
     {
-        $this->liqPayStatus = $liqPayStatus;
+        $this->liq_pay_status = $liq_pay_status;
 
         return $this;
     }
@@ -138,26 +138,26 @@ class UserOrder
         return $this;
     }
 
-    public function getLiqPayResponse(): ?string
+    public function getLiqPayresponse(): ?string
     {
-        return $this->liqPayResponse;
+        return $this->liq_pay_response;
     }
 
-    public function setLiqPayResponse(?string $liqPayResponse): UserOrder
+    public function setLiqPayresponse(?string $liq_pay_response): UserOrder
     {
-        $this->liqPayResponse = $liqPayResponse;
+        $this->liq_pay_response = $liq_pay_response;
 
         return $this;
     }
 
-    public function getLiqPayOrderId(): ?string
+    public function getLiqPayorderid(): ?string
     {
-        return $this->liqPayOrderId;
+        return $this->liq_pay_order_id;
     }
 
-    public function setLiqPayOrderId(?string $liqPayOrderId): UserOrder
+    public function setLiqPayorderid(?string $liq_pay_order_id): UserOrder
     {
-        $this->liqPayOrderId = $liqPayOrderId;
+        $this->liq_pay_order_id = $liq_pay_order_id;
 
         return $this;
     }

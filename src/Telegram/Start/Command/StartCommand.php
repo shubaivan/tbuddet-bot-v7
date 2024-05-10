@@ -19,8 +19,8 @@ class StartCommand extends Command
         $bot->sendMessage(
             text: 'Оберіть питання:',
             reply_markup: InlineKeyboardMarkup::make()->addRow(
-                InlineKeyboardButton::make('Як доїхати на завод?', callback_data: 'type:route'),
                 InlineKeyboardButton::make('Продукія', callback_data: 'type:product'),
+                InlineKeyboardButton::make('Як доїхати на завод?', callback_data: 'type:route'),
             )
         );
     }
