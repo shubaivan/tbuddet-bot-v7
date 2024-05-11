@@ -166,7 +166,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             let small1 = $("<small>", {
                 'class': 'form-text text-muted'
-            }).text('назва властивості');
+            }).text('значення властивості');
 
             let label2 = $("<label>");
             label2.attr({'for': 'property_name'});
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             let small2 = $("<small>", {
                 'class': 'form-text text-muted'
-            }).text('значення властивості');
+            }).text('назва властивості');
 
             divTag.append(label1).append(input1).append(small1);
             divTag.append(label2).append(input2).append(small2);
