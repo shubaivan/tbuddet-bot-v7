@@ -94,7 +94,7 @@ class Product
     {
         $prop = [];
         foreach ($this->product_properties as $property) {
-            $prop[] = implode('; ', $property);
+            $prop[] = implode('; ', array_reverse($property));
         }
 
         return implode(PHP_EOL, $prop);
