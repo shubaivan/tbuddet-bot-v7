@@ -90,6 +90,16 @@ class Product
         return $this->product_properties;
     }
 
+    public function getProductPropertiesMessage(): string
+    {
+        $prop = [];
+        foreach ($this->product_properties as $property) {
+            $prop[] = implode('; ', $property);
+        }
+
+        return implode(PHP_EOL, $prop);
+    }
+
     public function setProductProperties(array $product_properties): Product
     {
         $this->product_properties = $product_properties;

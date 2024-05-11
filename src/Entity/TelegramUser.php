@@ -45,7 +45,7 @@ class TelegramUser
     private ?string $username;
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
     private string $language_code;
-    #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegramUserId', cascade: ["persist"])]
+    #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
 
     public function __construct()

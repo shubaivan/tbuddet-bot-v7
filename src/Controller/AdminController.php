@@ -10,6 +10,7 @@ use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use mysql_xdevapi\XSession;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,8 +24,6 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 class AdminController extends AbstractController
 {
-
-
     public function __construct(
         protected readonly DenormalizerInterface $denormalizer,
         protected readonly SerializerInterface $serializer
@@ -161,16 +160,40 @@ class AdminController extends AbstractController
         EntityManagerInterface $em
     ) {
         $params = $request->request->all();
+        $context = [
+            AbstractNormalizer::CALLBACKS => [
+                'product_properties' => function(?array $product_properties): ?array {
+                    if (!$product_properties) {
+                        return $product_properties;
+                    }
+
+                    return array_values($product_properties);
+                },
+            ]
+        ];
+        if ($request->request->get('product_id')) {
+            $currentProduct = $repository->find($request->request->get('product_id'));
+            $context += [
+                AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct,
+            ];
+        }
 
         $product = $this->denormalizer->denormalize(
             $params,
-            Product::class
+            Product::class,
+            null,
+            $context
         );
 
         $em->persist($product);
         $em->flush();
 
-        return $this->json($product);
+        $response = $this->serializer->serialize(
+            $product, 'json',
+            [AbstractNormalizer::IGNORED_ATTRIBUTES => ['orders']]
+        );
+
+        return new JsonResponse($response, Response::HTTP_OK, [], true);
     }
 
     #[Route('/admin/product/{id}', name: 'admin-product-get', options: ['expose' => true])]

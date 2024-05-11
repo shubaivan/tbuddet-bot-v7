@@ -24,14 +24,12 @@ class ProductRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param string $productInternalName
      * @return Product[]
      */
-    public function getAllByProductInternalName($productInternalName): array
+    public function getAllByProducts(): array
     {
         return $this->createQueryBuilder('p')
-            ->andWhere('p.productInternalName = :productInternalName')
-            ->setParameter('productInternalName', $productInternalName)
+            ->orderBy('p.updated_at')
             ->getQuery()
             ->getResult();
     }

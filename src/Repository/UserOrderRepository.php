@@ -57,8 +57,8 @@ class UserOrderRepository extends ServiceEntityRepository
             $dql = '
                 SELECT COUNT(DISTINCT o)
                 FROM App\Entity\UserOrder o
-                LEFT JOIN o.productId as p
-                LEFT JOIN o.telegramUserId as tu
+                LEFT JOIN o.product_id as p
+                LEFT JOIN o.telegram_user_id as tu
             ';
         } else {
             $dql = '
@@ -74,8 +74,8 @@ class UserOrderRepository extends ServiceEntityRepository
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at
                 FROM App\Entity\UserOrder o
-                LEFT JOIN o.productId as p
-                LEFT JOIN o.telegramUserId as tu
+                LEFT JOIN o.product_id as p
+                LEFT JOIN o.telegram_user_id as tu
             ';
         }
 

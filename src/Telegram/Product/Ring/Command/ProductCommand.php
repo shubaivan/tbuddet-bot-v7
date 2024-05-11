@@ -16,10 +16,6 @@ class ProductCommand extends Command
 
     public function handle(Nutgram $bot): void
     {
-        $bot->sendMessage(
-            text: 'Оберіть продукт',
-            reply_markup: InlineKeyboardMarkup::make()
-                ->addRow(InlineKeyboardButton::make('Кільце', callback_data: 'type:product:ring'))
-        );
+        PriceRingConversation::begin($bot);
     }
 }

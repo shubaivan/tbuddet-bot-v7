@@ -12,12 +12,8 @@ document.addEventListener("DOMContentLoaded", function () {
             var divTag = $('<div/>');
             if (Object.keys(data).length) {
                 $.each(data, function( index, value ) {
-                    if (Object.keys(value).length) {
-                        $.each(data, function( index, value ) {
-                            var pOrder = $('<p/>').append('<b>' + value.property_name + ':</b> ').append('<i>'+value.property_value+'</i>');
-                            divTag.append(pOrder);
-                        })
-                    }
+                    var pOrder = $('<p/>').append('<b>' + value.property_name + ':</b> ').append('<i>'+value.property_value+'</i>');
+                    divTag.append(pOrder);
                 });
             }
 
@@ -61,11 +57,25 @@ document.addEventListener("DOMContentLoaded", function () {
         let form = modal.find("form");
 
         modal.find('#save_product').remove();
-        modal.find('.row').remove();
+        modal.find('.prop_conf').remove();
+        modal.find('.prop_set').remove();
         form.find('input').val('');
+
+        var divPropConf = $('<div/>', {'class': "prop_conf"});
+        divPropConf.attr('order', 0);
+
+        var divPropSet = $('<div/>', {'class': "prop_set"});
+
+        var divTagColPlus = $('<div/>', {'class': "col text-right remove_block"});
+        divTagColPlus.append('<i class="fas fa-plus-circle"></i>');
+        divPropConf.append(divTagColPlus);
+
+        form.append(divPropSet);
+        form.append(divPropConf);
 
         var button = $(event.relatedTarget); // Button that triggered the modal
         let productId = button.data('productId');
+
         if (productId !== undefined) {
             $.ajax({
                 type: "GET",
@@ -76,17 +86,31 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 success: (data) => {
                     console.log(data);
+                    form.find('#exampleModalLabel').text('Редагування')
+                    form.find('#product_name').val(data.productName)
+                    form.find('#product_price').val(data.price)
+
+                    let product_id_input = $('<input>').attr({
+                        type: 'hidden',
+                        id: 'product_id',
+                        name: 'product_id'
+                    });
+                    product_id_input.val(data.id);
+                    form.append(product_id_input);
+
+                    if (Object.keys(data.productProperties).length) {
+                        $.each(data.productProperties, function( index, productProperty ) {
+                            if (Object.keys(productProperty).length) {
+                                let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
+                                divPropSet.append(addPropertiesBlock(order, productProperty.property_value, productProperty.property_name));
+                                $('#createProduct .prop_conf').attr('order', order )
+                            }
+                        });
+                    }
                 }
             })
         } else {
-            var divTagRow = $('<div/>', {'class': "row"});
-            divTagRow.attr('order', 0);
-
-            var divTagColPlus = $('<div/>', {'class': "col text-right remove_block"});
-            divTagColPlus.append('<i class="fas fa-plus-circle"></i>');
-            divTagRow.append(divTagColPlus);
-
-            form.append(divTagRow);
+            form.find('#exampleModalLabel').text('Створити новий продукт')
         }
 
         modal.on('click', '.remove_block .fa-minus-square', function () {
@@ -95,10 +119,10 @@ document.addEventListener("DOMContentLoaded", function () {
             block.remove();
         });
 
-        divTagRow.on('click', function () {
-            let order = parseInt($('#createProduct .row').attr('order')) + 1;
-            form.append(addPropertiesBlock(order));
-            $('#createProduct .row').attr('order', order);
+        divPropConf.on('click', function () {
+            let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
+            divPropSet.append(addPropertiesBlock(order));
+            $('#createProduct .prop_conf').attr('order', order);
         })
 
         form.append('<button id="save_product" type="button" class="btn btn-primary">Зберегти</button>')
@@ -126,7 +150,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
 
-        function addPropertiesBlock(order)
+        function addPropertiesBlock(order, inputName = null, inputValue = null)
         {
             var divTag = $('<div/>', {'class': "form-group"});
 
@@ -137,6 +161,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 'class': 'form-control',
                 'name': 'product_properties['+order+'][property_value]'
             });
+            if (inputValue !== null) {
+                input1.val(inputValue)
+            }
             let small1 = $("<small>", {
                 'class': 'form-text text-muted'
             }).text('назва властивості');
@@ -148,6 +175,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 'class': 'form-control',
                 'name': 'product_properties['+order+'][property_name]'
             });
+            if (inputName !== null) {
+                input2.val(inputName)
+            }
             let small2 = $("<small>", {
                 'class': 'form-text text-muted'
             }).text('значення властивості');

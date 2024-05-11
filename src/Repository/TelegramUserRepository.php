@@ -72,7 +72,7 @@ class TelegramUserRepository extends ServiceEntityRepository
                 b.first_name,
                 b.last_name,
                 b.username,
-                GROUP_CONCAT(\'order id:\', o.id, \'-amount:\', o.totalAmount SEPARATOR \'|\') as order_info,
+                GROUP_CONCAT(\'order id:\', o.id, \'-amount:\', o.total_amount SEPARATOR \'|\') as order_info,
                 date_format(b.created_at, \'%Y-%m-%d %H:%i:%s\') as start,
                 date_format(b.updated_at, \'%Y-%m-%d %H:%i:%s\') as last_visit
                 FROM App\Entity\TelegramUser b

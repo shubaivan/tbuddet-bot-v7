@@ -14,11 +14,11 @@ class UserOrder
 
     public static array $dataTableFields = [
         'id',
-        'totalAmount',
+        'total_amount',
         'description',
-        'quantityProduct',
-        'liqPayStatus',
-        'liqPayOrderId',
+        'quantity_product',
+        'liq_pay_status',
+        'liq_pay_order_id',
         'product_info',
         'user_info',
         'created_at',

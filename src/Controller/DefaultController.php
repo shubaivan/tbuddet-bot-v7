@@ -21,8 +21,6 @@ class DefaultController extends AbstractController
 //            parse_mode: ParseMode::HTML
 //        );
 
-        return $this->render('default/index.html.twig', [
-            'controller_name' => 'DefaultController',
-        ]);
+        return $this->redirectToRoute('app_admin');
     }
 }

@@ -45,20 +45,33 @@ class PriceRingConversation extends Conversation
 
     public function askParameters(Nutgram $bot)
     {
-        $inlineKeyboardMarkup = InlineKeyboardMarkup::make();
-
-        foreach ($this->productRepository->getAllByProductInternalName('Ring') as $ring) {
-            $inlineKeyboardMarkup->addRow(InlineKeyboardButton::make(sprintf('%s, %s грн', $ring->getProductName(), $ring->getPrice()), callback_data: $ring->getId()));
+        $bot->sendMessage(
+            text: 'Оберіть продукт:',
+        );
+        foreach ($this->productRepository->getAllByProducts() as $product) {
+            $bot->sendMessage(
+                text: sprintf('
+                        Продукт: %s, ціна: %s
+                        <pre>%s</pre> 
+                        ',
+                    $product->getProductName(),
+                    $product->getPrice(),
+                    $product->getProductPropertiesMessage()
+                ),
+                parse_mode: ParseMode::HTML,
+                reply_markup: InlineKeyboardMarkup::make()
+                    ->addRow(
+                        InlineKeyboardButton::make(
+                            'Обрати', callback_data: $product->getId()
+                        ),
+                    )
+            );
         }
 
-        $bot->sendMessage(
-            text: 'Який діаметр?',
-            reply_markup: $inlineKeyboardMarkup,
-        );
-        $this->next('askDiameter');
+        $this->next('askProduct');
     }
 
-    public function askDiameter(Nutgram $bot)
+    public function askProduct(Nutgram $bot)
     {
         if (!$bot->isCallbackQuery()) {
             $this->askParameters($bot);
@@ -67,6 +80,18 @@ class PriceRingConversation extends Conversation
         }
 
         $this->productId = $bot->callbackQuery()->data;
+
+        $bot->sendMessage(
+            text: sprintf('
+                        Продукт: %s, ціна: %s
+                        <pre>%s</pre> 
+                        ',
+                $this->getProduct()->getProductName(),
+                $this->getProduct()->getPrice(),
+                $this->getProduct()->getProductPropertiesMessage()
+            ),
+            parse_mode: ParseMode::HTML,
+        );
 
         $bot->sendMessage('Введіть кількість');
         $this->next('quantity');
@@ -77,7 +102,10 @@ class PriceRingConversation extends Conversation
         $this->quantity = (int)$bot->message()->text;
 
         $bot->sendMessage(
-            '<b>Ваше замовлення</b>: <strong>кільця</strong>: <u>' . $this->getProduct()->getProductName() . '</u> діаметром, в <b>кількості</b>: <u>' . $this->quantity . ' штук</u>',
+            sprintf('<b>Ваше замовлення</b>: <strong>%s</strong>: в <b>кількості</b>: <u>%s одиниць</u>',
+                $this->getProduct()->getProductName(),
+                $this->quantity
+            ),
             parse_mode: ParseMode::HTML
         );
 
@@ -182,7 +210,10 @@ class PriceRingConversation extends Conversation
         $userOrder->setQuantityProduct($this->quantity);
         $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
         $userOrder->setTotalAmount($this->getProduct()->getPrice() * $this->quantity);
-        $description = 'Ваше замовлення: кільця: ' . $this->getProduct()->getProductName() . ' діаметром, в кількості: ' . $this->quantity . ' штук';
+        $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
+            $this->getProduct()->getProductName(),
+            $this->quantity
+        );
         $userOrder->setDescription($description);
 
         $this->em->persist($userOrder);
