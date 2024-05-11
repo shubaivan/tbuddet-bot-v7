@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .generate('admin-orders-data-table');
 
     table = $('#telegramUserTable').DataTable({
-        'order': [[1, 'desc']],
+        'order': [[0, 'desc']],
         'responsive': true,
         'fixedHeader': true,
         'processing': true,

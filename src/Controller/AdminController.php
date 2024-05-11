@@ -3,19 +3,33 @@
 namespace App\Controller;
 
 use App\Entity\Product;
+use App\Entity\Store;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class AdminController extends AbstractController
 {
+
+
+    public function __construct(
+        protected readonly DenormalizerInterface $denormalizer,
+        protected readonly SerializerInterface $serializer
+    ) {}
+
     #[Route('/admin', name: 'app_admin')]
     public function index(EntityManagerInterface $em): Response
     {
@@ -108,6 +122,7 @@ class AdminController extends AbstractController
     public function products(EntityManagerInterface $em): Response
     {
         $fieldNames = Product::$dataTableFields;
+        $fieldNames[] = 'action';
 
         array_map(function ($k) use (&$dataTableColumnData) {
             $dataTableColumnData[] = ['data' => $k];
@@ -137,5 +152,37 @@ class AdminController extends AbstractController
                 ['data' => $dataTable]
             )
         );
+    }
+
+    #[Route('/admin/products/create', name: 'admin-products-create', options: ['expose' => true])]
+    public function productCreate(
+        Request $request,
+        ProductRepository $repository,
+        EntityManagerInterface $em
+    ) {
+        $params = $request->request->all();
+
+        $product = $this->denormalizer->denormalize(
+            $params,
+            Product::class
+        );
+
+        $em->persist($product);
+        $em->flush();
+
+        return $this->json($product);
+    }
+
+    #[Route('/admin/product/{id}', name: 'admin-product-get', options: ['expose' => true])]
+    public function getProduct(
+        #[MapEntity(id: 'id')] Product $product,
+    ): JsonResponse
+    {
+        $response = $this->serializer->serialize(
+            $product, 'json',
+            [AbstractNormalizer::IGNORED_ATTRIBUTES => ['orders']]
+        );
+
+        return new JsonResponse($response, Response::HTTP_OK, [], true);
     }
 }

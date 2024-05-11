@@ -67,11 +67,11 @@ class ProductRepository extends ServiceEntityRepository
                 SELECT 
                 o.id, 
                 o.product_name,              
-                o.product_internal_name,
                 o.price,
                 o.product_properties,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
-                date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at
+                date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at,
+                \'edit\' as action
                 FROM App\Entity\Product o
             ';
         }
@@ -80,7 +80,7 @@ class ProductRepository extends ServiceEntityRepository
         $condition = ' WHERE ';
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
-            $or[] = 'ILIKE(o.productName, :var_search) = TRUE';
+            $or[] = 'ILIKE(o.product_name, :var_search) = TRUE';
             $or[] = 'ILIKE(o.price, :var_search) = TRUE';
 
             $bindParams['var_search'] = '%'.$parameterBag->get('search').'%';

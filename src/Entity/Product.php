@@ -17,7 +17,6 @@ class Product
     public static array $dataTableFields = [
         'id',
         'product_name',
-        'product_internal_name',
         'price',
         'product_properties',
         'created_at',
@@ -32,9 +31,6 @@ class Product
     #[ORM\Column(type: 'string', length: 255)]
     private string $product_name;
 
-    #[ORM\Column(type: 'string', length: 255)]
-    private string $product_internal_name;
-
     #[ORM\Column(type: 'json', nullable: true)]
     private array $product_properties = [];
 
@@ -44,15 +40,8 @@ class Product
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'productId', cascade: ["persist"])]
     private Collection $orders;
 
-    public function __construct(
-        string $name,
-        string $productInternalName,
-        int $price
-    ) {
+    public function __construct() {
         $this->orders = new ArrayCollection();
-        $this->product_name = $name;
-        $this->price = $price;
-        $this->product_internal_name = $productInternalName;
     }
 
     public function getId(): ?int
@@ -68,18 +57,6 @@ class Product
     public function setProductName(string $product_name): Product
     {
         $this->product_name = $product_name;
-
-        return $this;
-    }
-
-    public function getProductInternalname(): string
-    {
-        return $this->product_internal_name;
-    }
-
-    public function setProductInternalname(string $product_internal_name): Product
-    {
-        $this->product_internal_name = $product_internal_name;
 
         return $this;
     }
