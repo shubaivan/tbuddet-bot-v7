@@ -51,11 +51,12 @@ class PriceRingConversation extends Conversation
         foreach ($this->productRepository->getAllByProducts() as $product) {
             $bot->sendMessage(
                 text: sprintf('
-                        Продукт: %s, ціна: %s
-                        <pre>%s</pre> 
+Продукт: %s, ціна: %s;%s
+%s
                         ',
                     $product->getProductName(),
                     $product->getPrice(),
+                    PHP_EOL,
                     $product->getProductPropertiesMessage()
                 ),
                 parse_mode: ParseMode::HTML,
@@ -83,8 +84,8 @@ class PriceRingConversation extends Conversation
 
         $bot->sendMessage(
             text: sprintf('
-                        Продукт: %s, ціна: %s
-                        <pre>%s</pre> 
+Продукт: %s, ціна: %s;
+%s 
                         ',
                 $this->getProduct()->getProductName(),
                 $this->getProduct()->getPrice(),

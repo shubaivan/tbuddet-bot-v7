@@ -37,7 +37,9 @@ class Product
     #[ORM\Column(type: 'string', length: 255)]
     private string $price;
 
-    #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'productId', cascade: ["persist"])]
+    #[ORM\OneToMany(
+        targetEntity: UserOrder::class,
+        mappedBy: 'product_id', cascade: ["persist", "remove"], orphanRemoval: true)]
     private Collection $orders;
 
     public function __construct() {
@@ -94,7 +96,13 @@ class Product
     {
         $prop = [];
         foreach ($this->product_properties as $property) {
-            $prop[] = implode('; ', array_reverse($property));
+            $i = 1;
+            $map = array_map(function ($p) use (&$i) {
+                $str = $i == 1 ? '<b>' . $p . '</b>' : $p;
+                $i++;
+                return $str;
+            }, $property);
+            $prop[] = implode(': ', $map);
         }
 
         return implode(PHP_EOL, $prop);

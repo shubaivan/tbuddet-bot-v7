@@ -196,7 +196,7 @@ class AdminController extends AbstractController
         return new JsonResponse($response, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/admin/product/{id}', name: 'admin-product-get', options: ['expose' => true])]
+    #[Route('/admin/product/{id}', name: 'admin-product-get', options: ['expose' => true], methods: [Request::METHOD_GET])]
     public function getProduct(
         #[MapEntity(id: 'id')] Product $product,
     ): JsonResponse
@@ -207,5 +207,17 @@ class AdminController extends AbstractController
         );
 
         return new JsonResponse($response, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('/admin/product/{id}', name: 'admin-product-delete', options: ['expose' => true], methods: [Request::METHOD_DELETE])]
+    public function deleteProduct(
+        #[MapEntity(id: 'id')] Product $product,
+        EntityManagerInterface $em
+    ): JsonResponse
+    {
+        $em->remove($product);
+        $em->flush();
+
+        return new JsonResponse([], Response::HTTP_NO_CONTENT);
     }
 }

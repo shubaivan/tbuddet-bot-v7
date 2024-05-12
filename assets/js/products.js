@@ -2,7 +2,23 @@ import 'select2';
 
 document.addEventListener("DOMContentLoaded", function () {
     console.log("admin list!");
-
+    $(document).on('click', '.delete-product', function () {
+        alert('Видалти?')
+        var button = $(this); // Button that triggered the modal
+        let productId = button.data('productId');
+        $.ajax({
+            type: "DELETE",
+            url: window.Routing
+                .generate('admin-product-delete') + '/' + productId,
+            error: (result) => {
+                console.log(result);
+            },
+            success: (data) => {
+                console.log(data);
+                table.ajax.reload(null, false);
+            }
+        })
+    });
     let table;
     var common_defs = [];
     common_defs.push({
@@ -28,7 +44,9 @@ document.addEventListener("DOMContentLoaded", function () {
             return '    <!-- Button trigger modal -->\n' +
                 '    <button type="button" class="btn btn-primary" data-product-id="' + row.id + '" data-toggle="modal" data-target="#exampleModal">\n' +
                 '        Редагувати\n' +
-                '    </button>';
+                '    </button>' +
+                '    <button class="btn btn-danger delete-product" data-product-id="' + row.id + '">Видалити</button>   '
+                ;
         }
     });
 
@@ -82,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 url: window.Routing
                     .generate('admin-product-get') + '/' + productId,
                 error: (result) => {
-                    console.log(result.responseJSON.status);
+                    console.log(result);
                 },
                 success: (data) => {
                     console.log(data);
@@ -140,8 +158,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 url: app_rest_admin_brand_editbrand,
                 data: serialize,
                 error: (result) => {
-                    createProduct.find('.required_args').remove();
-                    console.log(result.responseJSON.status);
+                    console.log(result);
                 },
                 success: (data) => {
                     exampleModal.modal('toggle');
@@ -182,8 +199,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 'class': 'form-text text-muted'
             }).text('назва властивості');
 
-            divTag.append(label1).append(input1).append(small1);
             divTag.append(label2).append(input2).append(small2);
+            divTag.append(label1).append(input1).append(small1);
+
             var divTagColMinus = $('<div/>', {'class': "col text-right remove_block"});
             divTagColMinus.append('<i class="fas fa-minus-square"></i>')
             divTag.append(divTagColMinus);

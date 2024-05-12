@@ -53,7 +53,7 @@ class UserOrder
     private TelegramUser $telegram_user_id;
 
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'orders')]
-    #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id')]
+    #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private Product $product_id;
 
     public function __construct() {
