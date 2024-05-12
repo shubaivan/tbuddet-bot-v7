@@ -20,6 +20,7 @@ class StartCommand extends Command
             text: 'Оберіть питання:',
             reply_markup: InlineKeyboardMarkup::make()->addRow(
                 InlineKeyboardButton::make('Продукія', callback_data: 'type:product'),
+                InlineKeyboardButton::make('Мої покупки', callback_data: 'type:order'),
                 InlineKeyboardButton::make('Як доїхати на завод?', callback_data: 'type:route'),
             )
         );

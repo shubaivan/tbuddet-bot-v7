@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -30,6 +31,20 @@ class UserOrderRepository extends ServiceEntityRepository
             ->setParameter('id', $id)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @param TelegramUser $user
+     * @return UserOrder[]
+     */
+    public function getOwnOrders(TelegramUser $user): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.telegram_user_id = :user')
+            ->setParameter('user', $user)
+            ->orderBy('u.created_at')
+            ->getQuery()
+            ->getResult();
     }
 
     /**

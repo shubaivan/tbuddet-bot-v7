@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\TelegramUser;
 use App\Repository\ProductRepository;
 
 class ProductService
