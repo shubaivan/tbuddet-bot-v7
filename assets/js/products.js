@@ -148,14 +148,21 @@ document.addEventListener("DOMContentLoaded", function () {
         $('.btn#save_product').on('click', function () {
             let createProduct = $('#createProduct');
 
+            let inputColumns = createProduct.find('input');
+            if (inputColumns.length) {
+                $.each(inputColumns, function (k, v) {
+                    $(v).val($.trim($(v).val()));
+                })
+            }
+
             let serialize = createProduct.serialize();
 
-            const app_rest_admin_brand_editbrand = window.Routing
+            const admin_products_create = window.Routing
                 .generate('admin-products-create');
 
             $.ajax({
                 type: "POST",
-                url: app_rest_admin_brand_editbrand,
+                url: admin_products_create,
                 data: serialize,
                 error: (result) => {
                     console.log(result);

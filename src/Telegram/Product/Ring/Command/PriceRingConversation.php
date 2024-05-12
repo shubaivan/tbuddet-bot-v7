@@ -6,6 +6,7 @@ use App\Entity\Product;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Repository\ProductRepository;
+use App\Service\ProductService;
 use App\Service\TelegramUserService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -31,6 +32,7 @@ class PriceRingConversation extends Conversation
     public function __construct(
         private TelegramUserService $telegramUserService,
         private ProductRepository $productRepository,
+        private ProductService $productService,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         private string $liqpayPublicKey,
@@ -48,25 +50,36 @@ class PriceRingConversation extends Conversation
         $bot->sendMessage(
             text: 'Оберіть продукт:',
         );
-        foreach ($this->productRepository->getAllByProducts() as $product) {
-            $bot->sendMessage(
-                text: sprintf('
+        foreach ($this->productService->getProductsForBot() as $group => $products) {
+            if ($products) {
+                $bot->sendMessage(
+                    sprintf('<b>Группа продуктів: %s</b>',
+                        $group
+                    ),
+                    parse_mode: ParseMode::HTML
+                );
+            }
+
+            foreach ($products as $product) {
+                $bot->sendMessage(
+                    text: sprintf('
 Продукт: %s, ціна: %s грн;%s
 %s
                         ',
-                    $product->getProductName(),
-                    $product->getPrice(),
-                    PHP_EOL,
-                    $product->getProductPropertiesMessage()
-                ),
-                parse_mode: ParseMode::HTML,
-                reply_markup: InlineKeyboardMarkup::make()
-                    ->addRow(
-                        InlineKeyboardButton::make(
-                            'Обрати', callback_data: $product->getId()
-                        ),
-                    )
-            );
+                        $product->getProductName(),
+                        $product->getPrice(),
+                        PHP_EOL,
+                        $product->getProductPropertiesMessage()
+                    ),
+                    parse_mode: ParseMode::HTML,
+                    reply_markup: InlineKeyboardMarkup::make()
+                        ->addRow(
+                            InlineKeyboardButton::make(
+                                'Обрати', callback_data: $product->getId()
+                            ),
+                        )
+                );
+            }
         }
 
         $this->next('askProduct');
