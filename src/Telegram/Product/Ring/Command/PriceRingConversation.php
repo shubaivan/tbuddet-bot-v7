@@ -246,8 +246,6 @@ class PriceRingConversation extends Conversation
         $this->em->flush();
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
-        $userOrder->setLiqOrderId($liqPayOrderID);
-        $this->em->flush();
 
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
 

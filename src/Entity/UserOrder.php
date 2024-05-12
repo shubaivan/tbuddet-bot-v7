@@ -18,7 +18,6 @@ class UserOrder
         'description',
         'quantity_product',
         'liq_pay_status',
-        'liq_order_id',
         'liq_pay_order_id',
         'product_info',
         'user_info',
@@ -42,9 +41,6 @@ class UserOrder
 
     #[ORM\Column(type: 'string', nullable: true)]
     private ?string $liq_pay_status = null;
-
-    #[ORM\Column(type: 'string', nullable: true)]
-    private ?string $liq_order_id = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $liq_pay_response = null;
@@ -162,18 +158,6 @@ class UserOrder
     public function setLiqPayorderid(?string $liq_pay_order_id): UserOrder
     {
         $this->liq_pay_order_id = $liq_pay_order_id;
-
-        return $this;
-    }
-
-    public function getLiqOrderId(): ?string
-    {
-        return $this->liq_order_id;
-    }
-
-    public function setLiqOrderId(?string $liq_order_id): UserOrder
-    {
-        $this->liq_order_id = $liq_order_id;
 
         return $this;
     }

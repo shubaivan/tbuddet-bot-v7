@@ -3,20 +3,17 @@
 namespace App\Controller;
 
 use App\Entity\Product;
-use App\Entity\Store;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use mysql_xdevapi\XSession;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
@@ -158,11 +155,12 @@ class AdminController extends AbstractController
         Request $request,
         ProductRepository $repository,
         EntityManagerInterface $em
-    ) {
+    )
+    {
         $params = $request->request->all();
         $context = [
             AbstractNormalizer::CALLBACKS => [
-                'product_properties' => function(?array $product_properties): ?array {
+                'product_properties' => function (?array $product_properties): ?array {
                     if (!$product_properties) {
                         return $product_properties;
                     }

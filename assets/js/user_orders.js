@@ -6,12 +6,12 @@ document.addEventListener("DOMContentLoaded", function () {
     let table;
     var common_defs = [];
     common_defs.push({
-        "targets": 7,
+        "targets": 8,
         "orderable": false,
     });
 
     common_defs.push({
-        "targets": 6,
+        "targets": 7,
         "orderable": false,
     });
 

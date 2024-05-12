@@ -15,7 +15,7 @@ class OrderService
         foreach ($this->repository->getOwnOrders($user) as $order) {
             $id = $order->getId();
             $info[$id][] = '<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>';
-            $info[$id][] = '<b>Номер ордеру</b>: ' . $order->getLiqOrderId();
+            $info[$id][] = '<b>Номер ордеру</b>: ' . $order->getLiqPayorderid();
             $info[$id][] = '<b>Загальна сума</b>: ' . $order->getTotalAmount() . ' грн';
             $info[$id][] = '<b>Кількість</b>: ' . $order->getQuantityProduct() . ' одиниць';
             $status = $order->getLiqPaystatus();

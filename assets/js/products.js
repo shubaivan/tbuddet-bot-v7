@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         $.each(data.productProperties, function( index, productProperty ) {
                             if (Object.keys(productProperty).length) {
                                 let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
-                                divPropSet.append(addPropertiesBlock(order, productProperty.property_value, productProperty.property_name));
+                                divPropSet.append(addPropertiesBlock(order, productProperty.property_name, productProperty.property_value));
                                 $('#createProduct .prop_conf').attr('order', order )
                             }
                         });
