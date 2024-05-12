@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 success: (data) => {
                     console.log(data);
-                    form.find('#exampleModalLabel').text('Редагування')
+                    modal.find('#exampleModalLabel').text('Редагувати продукт')
                     form.find('#product_name').val(data.productName)
                     form.find('#product_price').val(data.price)
 
@@ -128,7 +128,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             })
         } else {
-            form.find('#exampleModalLabel').text('Створити новий продукт')
+            modal.find('#exampleModalLabel').text('Створити новий продукт')
         }
 
         modal.on('click', '.remove_block .fa-minus-square', function () {
