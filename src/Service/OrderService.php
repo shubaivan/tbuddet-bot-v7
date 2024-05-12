@@ -14,13 +14,15 @@ class OrderService
         $info = [];
         foreach ($this->repository->getOwnOrders($user) as $order) {
             $id = $order->getId();
-            $info[$id][] = 'Загальна сума: ' . $order->getTotalAmount() . ' грн';
-            $info[$id][] = 'Кількість: ' . $order->getQuantityProduct() . ' одиниць';
-            $info[$id][] = 'Статус покупки: ' . ($order->getLiqPaystatus() == 'success' ? 'Оплачено' : $order->getLiqPaystatus());
+            $info[$id][] = '<b>Номер ордеру</b>: ' . $order->getLiqOrderId();
+            $info[$id][] = '<b>Загальна сума</b>: ' . $order->getTotalAmount() . ' грн';
+            $info[$id][] = '<b>Кількість</b>: ' . $order->getQuantityProduct() . ' одиниць';
+            $info[$id][] = '<b>Статус покупки</b>: ' . ($order->getLiqPaystatus() == 'success' ? 'Оплачено' : $order->getLiqPaystatus());
             $product = $order->getProductId();
-            $info[$id][] = 'Назва продукту: ' . $product->getProductName();
-            $info[$id][] = 'Ціна продукту за одинцу: ' . $product->getPrice() . ' грн';
-            $info[$id][] = 'Опис продукту: ' . PHP_EOL . $product->getProductPropertiesMessage();
+            $info[$id][] = '<b>Назва продукту</b>: ' . $product->getProductName();
+            $info[$id][] = '<b>Ціна продукту за одинцу</b>: ' . $product->getPrice() . ' грн';
+            $info[$id][] = PHP_EOL;
+            $info[$id][] = '<b>Опис продукту</b>: ' . PHP_EOL . $product->getProductPropertiesMessage();
         }
 
         return $info;

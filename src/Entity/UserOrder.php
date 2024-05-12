@@ -18,6 +18,7 @@ class UserOrder
         'description',
         'quantity_product',
         'liq_pay_status',
+        'liq_order_id',
         'liq_pay_order_id',
         'product_info',
         'user_info',
@@ -34,19 +35,22 @@ class UserOrder
     private int $total_amount;
 
     #[ORM\Column(type: 'string', nullable: true)]
-    private ?string $description;
+    private ?string $description = null;
 
     #[ORM\Column(type: 'integer', nullable: false)]
     private string $quantity_product;
 
     #[ORM\Column(type: 'string', nullable: true)]
-    private ?string $liq_pay_status;
+    private ?string $liq_pay_status = null;
+
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $liq_order_id = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $liq_pay_response;
+    private ?string $liq_pay_response = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $liq_pay_order_id;
+    private ?string $liq_pay_order_id = null;
 
     #[ORM\ManyToOne(targetEntity: TelegramUser::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'telegram_user_id', referencedColumnName: 'id')]
@@ -158,6 +162,18 @@ class UserOrder
     public function setLiqPayorderid(?string $liq_pay_order_id): UserOrder
     {
         $this->liq_pay_order_id = $liq_pay_order_id;
+
+        return $this;
+    }
+
+    public function getLiqOrderId(): ?string
+    {
+        return $this->liq_order_id;
+    }
+
+    public function setLiqOrderId(?string $liq_order_id): UserOrder
+    {
+        $this->liq_order_id = $liq_order_id;
 
         return $this;
     }

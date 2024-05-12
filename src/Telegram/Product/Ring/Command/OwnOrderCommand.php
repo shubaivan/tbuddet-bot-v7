@@ -12,8 +12,9 @@ use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 class OwnOrderCommand extends Command
 {
     protected string $command = 'own-order';
-    protected ?string $description = 'Продукія';
+    protected ?string $description = 'мої покупки';
     private OrderService $service;
+    private TelegramUserService $telegramUserService;
 
     public function __construct(
         TelegramUserService $telegramUserService,

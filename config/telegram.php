@@ -9,6 +9,7 @@ use SergiX44\Nutgram\RunningMode\Webhook;
 use \App\Telegram\Start\Command\StartCommand;
 use \App\Telegram\Product\Ring\Command\PriceRingConversation;
 use \App\Telegram\Product\Ring\Command\OwnOrderCommand;
+use \App\Telegram\Product\Ring\Command\OrderCommand;
 
 Conversation::refreshOnDeserialize();
 
@@ -16,6 +17,7 @@ $bot->setRunningMode(Webhook::class);
 
 $bot->registerCommand(StartCommand::class);
 $bot->registerCommand(ProductCommand::class);
+$bot->registerCommand(OrderCommand::class);
 
 $bot->onCommand('route', RouteCommand::class);
 $bot->onCommand('checkout-ring', PriceRingConversation::class);
