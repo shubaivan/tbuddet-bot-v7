@@ -75,7 +75,7 @@ class PriceRingConversation extends Conversation
                     reply_markup: InlineKeyboardMarkup::make()
                         ->addRow(
                             InlineKeyboardButton::make(
-                                'Обрати', callback_data: $product->getId()
+                                'Обрати', callback_data: 'product_' . $product->getId()
                             ),
                         )
                 );
@@ -87,16 +87,16 @@ class PriceRingConversation extends Conversation
 
     public function askProduct(Nutgram $bot)
     {
-        if (!$bot->isCallbackQuery()) {
+        if (!$bot->isCallbackQuery() || !str_contains($bot->callbackQuery()->data, 'product_')) {
             $this->askParameters($bot);
 
             return;
         }
-
-        $this->productId = $bot->callbackQuery()->data;
+        $this->productId = str_replace('product_', '', $bot->callbackQuery()->data);
 
         $bot->sendMessage(
             text: sprintf('
+<b>Ви ОБРАЛИ</b>            
 Продукт: %s, ціна: %s грн;%s
 %s 
                         ',
@@ -114,7 +114,18 @@ class PriceRingConversation extends Conversation
 
     public function quantity(Nutgram $bot)
     {
-        $this->quantity = (int)$bot->message()->text;
+        $text = $bot->message()->text;
+        if ($bot->isCallbackQuery()) {
+            $bot->sendMessage('По черзі: продукт - кількість');
+            $this->askProduct($bot);
+            return;
+        }
+        if (!preg_match_all('/^[0-9]*$/', $text)) {
+            $bot->sendMessage('Тількт цирфи');
+            $this->askProduct($bot);
+            return;
+        }
+        $this->quantity = (int)$text;
 
         $bot->sendMessage(
             sprintf('<b>Ваше замовлення</b>: <strong>%s</strong>: в <b>кількості</b>: <u>%s одиниць</u>',
