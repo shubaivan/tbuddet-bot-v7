@@ -18,7 +18,15 @@ class OrderService
             $info[$id][] = '<b>Номер ордеру</b>: ' . $order->getLiqOrderId();
             $info[$id][] = '<b>Загальна сума</b>: ' . $order->getTotalAmount() . ' грн';
             $info[$id][] = '<b>Кількість</b>: ' . $order->getQuantityProduct() . ' одиниць';
-            $info[$id][] = '<b>Статус покупки</b>: ' . ($order->getLiqPaystatus() == 'success' ? 'Оплачено' : $order->getLiqPaystatus());
+            $status = $order->getLiqPaystatus();
+            if (is_null($order->getLiqPaystatus())) {
+                $status = 'Чекає оплати';
+            }
+            if ($order->getLiqPaystatus() == 'success') {
+                $status = 'Оплачено';
+            }
+
+            $info[$id][] = '<b><i><u>Статус покупки</u></i></b>: <b><i>' . $status . '</i></b>';
             $product = $order->getProductId();
             $info[$id][] = '<b>Назва продукту</b>: ' . $product->getProductName();
             $info[$id][] = '<b>Ціна продукту за одинцу</b>: ' . $product->getPrice() . ' грн';
