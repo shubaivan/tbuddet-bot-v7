@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         var divPropSet = $('<div/>', {'class': "prop_set"});
 
-        var divTagColPlus = $('<div/>', {'class': "col text-right remove_block"});
+        var divTagColPlus = $('<div/>', {'class': "col text-right remove_block", 'text': "Додати характиристику"});
         divTagColPlus.append('<i class="fas fa-plus-circle"></i>');
         divPropConf.append(divTagColPlus);
 
@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function () {
             divTag.append(label2).append(input2).append(small2);
             divTag.append(label1).append(input1).append(small1);
 
-            var divTagColMinus = $('<div/>', {'class': "col text-right remove_block"});
+            var divTagColMinus = $('<div/>', {'class': "col text-right remove_block", 'text': "Видалити"});
             divTagColMinus.append('<i class="fas fa-minus-square"></i>')
             divTag.append(divTagColMinus);
 
