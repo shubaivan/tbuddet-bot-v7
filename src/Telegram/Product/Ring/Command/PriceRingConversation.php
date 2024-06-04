@@ -118,11 +118,13 @@ class PriceRingConversation extends Conversation
         if ($bot->isCallbackQuery()) {
             $bot->sendMessage('По черзі: продукт - кількість');
             $this->askProduct($bot);
+
             return;
         }
         if (!preg_match_all('/^[0-9]*$/', $text)) {
             $bot->sendMessage('Тількт цирфи');
             $this->askProduct($bot);
+
             return;
         }
         $this->quantity = (int)$text;
