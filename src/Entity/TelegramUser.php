@@ -3,14 +3,17 @@
 namespace App\Entity;
 
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
+use App\Entity\Enum\RoleEnum;
 use App\Repository\TelegramUserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\PersistentCollection;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: TelegramUserRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
-class TelegramUser
+class TelegramUser implements UserInterface
 {
     use CreatedUpdatedAtAwareTrait;
 
@@ -43,16 +46,27 @@ class TelegramUser
     private ?string $last_name;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $username;
-    #[ORM\Column(type: 'string', length: 255, nullable: false)]
-    private string $language_code;
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $language_code;
+    #[ORM\Column(type: 'integer')]
+    private ?int $auth_date;
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
+
+    #[ORM\JoinTable(name: 'user_role')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: "cascade")]
+    #[ORM\InverseJoinColumn(name: 'role_id', referencedColumnName: 'id')]
+    #[ORM\ManyToMany(targetEntity: Role::class)]
+    private Collection|PersistentCollection|ArrayCollection $userRoles;
 
     public function __construct()
     {
         $this->orders = new ArrayCollection();
         $this->phone_number = null;
         $this->chatId = null;
+        $this->auth_date = null;
+        $this->language_code = null;
+        $this->userRoles = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -127,7 +141,7 @@ class TelegramUser
         return $this;
     }
 
-    public function getLanguageCode(): string
+    public function getLanguageCode(): ?string
     {
         return $this->language_code;
     }
@@ -159,6 +173,68 @@ class TelegramUser
     public function setChatId(?string $chatId): TelegramUser
     {
         $this->chatId = $chatId;
+
+        return $this;
+    }
+
+    public function getRoles(): array
+    {
+        $data = [];
+        foreach ($this->userRoles->toArray() as $role) {
+            $data[] = $role->getName()->value;
+        }
+
+        return array_merge([RoleEnum::USER->value], $data);
+    }
+
+    public function eraseCredentials(): void
+    {
+
+    }
+
+    public function getUserIdentifier(): string
+    {
+        return $this->telegram_id;
+    }
+
+    public function getAuthDate(): ?int
+    {
+        return $this->auth_date;
+    }
+
+    public function setAuthDate(?int $auth_date): TelegramUser
+    {
+        $this->auth_date = $auth_date;
+
+        return $this;
+    }
+
+    public function getUserRoles(): Collection
+    {
+        return $this->userRoles;
+    }
+
+    public function addUsersRole(Role $role): self
+    {
+        if (!$this->userRoles->contains($role)) {
+            $this->userRoles->add($role);
+        }
+
+        return $this;
+    }
+
+    public function setUserRoles(Collection $collection): self
+    {
+        $this->userRoles = $collection;
+
+        return $this;
+    }
+
+    public function removeUsersRole(Role $role): self
+    {
+        if ($this->userRoles->contains($role)) {
+            $this->userRoles->removeElement($role);
+        }
 
         return $this;
     }

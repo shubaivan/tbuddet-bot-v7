@@ -4,6 +4,11 @@ security:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
+        users:
+            chain:
+                providers: [users_in_memory, telegram]
+        telegram:
+            id: App\Security\UserProvider
         users_in_memory:
             memory:
                 users:
@@ -12,15 +17,16 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        main:
+
+        telegram:
+            context: my_context_telegram
             lazy: true
-            provider: users_in_memory
-            form_login:
-                login_path: app_login
-                check_path: app_login
-                enable_csrf: true
+            provider: telegram
+            custom_authenticators:
+                - App\Authenticator\TelegramAuthenticator
             logout:
-                path: app_logout
+                path: login_app_logout
+
                 # where to redirect after logout
                 # target: app_any_route
                     # where to redirect after logout
