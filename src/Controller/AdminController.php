@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Product;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
+use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
@@ -156,7 +157,8 @@ class AdminController extends AbstractController
     public function productCreate(
         Request $request,
         ProductRepository $repository,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        FilesRepository $filesRepository
     )
     {
         $params = $request->request->all();
@@ -184,6 +186,15 @@ class AdminController extends AbstractController
             null,
             $context
         );
+
+        $fileIds = $request->get('file_ids');
+        if (is_array($fileIds) && count($fileIds)) {
+            $files = $filesRepository
+                ->getByIds($fileIds);
+            foreach ($files as $file) {
+                $file->setProduct($product);
+            }
+        }
 
         $em->persist($product);
         $em->flush();

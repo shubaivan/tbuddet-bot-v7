@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
-class Product
+class Product implements AttachmentFilesInterface
 {
     use CreatedUpdatedAtAwareTrait;
 
@@ -42,8 +42,12 @@ class Product
         mappedBy: 'product_id', cascade: ["persist", "remove"], orphanRemoval: true)]
     private Collection $orders;
 
+    #[ORM\OneToMany(targetEntity: Files::class, mappedBy: 'product', orphanRemoval: true, cascade: ["persist"])]
+    private Collection $files;
+
     public function __construct() {
         $this->orders = new ArrayCollection();
+        $this->files = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -111,6 +115,52 @@ class Product
     public function setProductProperties(array $product_properties): Product
     {
         $this->product_properties = $product_properties;
+
+        return $this;
+    }
+
+
+    public function checkFileExist($name)
+    {
+        $isCheck = false;
+        $files = $this->getFiles()->getValues();
+        foreach ($files as $file) {
+            /** @var Files $file */
+            $isCheck = ($file->getOriginalName() === $name);
+            if ($isCheck) {
+                break;
+            }
+        }
+
+        return $isCheck;
+    }
+
+    /**
+     * @return Collection|Files[]
+     */
+    public function getFiles(): Collection
+    {
+        if (!$this->files) {
+            $this->files = new ArrayCollection();
+        }
+
+        return $this->files;
+    }
+
+    public function addFile(Files $file): self
+    {
+        if (!$this->files->contains($file)) {
+            $this->files[] = $file;
+        }
+
+        return $this;
+    }
+
+    public function removeFile(Files $file): self
+    {
+        if ($this->files->contains($file)) {
+            $this->files->removeElement($file);
+        }
 
         return $this;
     }

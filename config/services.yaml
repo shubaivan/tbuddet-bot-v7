@@ -47,3 +47,8 @@ services:
         resource: '../src/Telegram'
         exclude:
             - '../src/Telegram/Location/Model'
+
+    App\EventListener\FilePathUploadListener:
+        tags:
+            - { name: doctrine.event_listener, event: prePersist }
+            - { name: doctrine.event_listener, event: preUpdate }

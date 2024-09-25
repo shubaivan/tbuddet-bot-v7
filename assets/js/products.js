@@ -1,5 +1,13 @@
 import 'select2';
 
+import {
+    getBlobFromImageUri,
+    createErrorImgPlaceHolder,
+    delay
+} from './photos_config.js';
+
+import {renderAttachmentFilesBlock, addInitPhotoToUppy} from "./uppy_attachment_files";
+
 document.addEventListener("DOMContentLoaded", function () {
     console.log("admin list!");
     $(document).on('click', '.delete-product', function () {
@@ -129,6 +137,16 @@ document.addEventListener("DOMContentLoaded", function () {
             })
         } else {
             modal.find('#exampleModalLabel').text('Створити новий продукт')
+
+            renderAttachmentFilesBlock(
+                null,
+                form,
+                modal,
+                button,
+                [],
+                null,
+                'App\\Entity\\Product'
+            );
         }
 
         modal.on('click', '.remove_block .fa-minus-square', function () {
