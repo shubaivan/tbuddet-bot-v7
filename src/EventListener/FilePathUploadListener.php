@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class FilePathUploadListener
 {
-    public function __construct(private FilesystemOperator $defaultStorage)
+    public function __construct(private FilesystemOperator $productStorage)
     {
     }
 
@@ -56,10 +56,10 @@ class FilePathUploadListener
             $path = $fileName.'_'.$file->getClientOriginalName();
             $fileSize = $file->getSize();
 
-            $has = $this->defaultStorage->has($path);
+            $has = $this->productStorage->has($path);
             if (!$has) {
                 $contents = file_get_contents($file->getPathname());
-                $this->defaultStorage->write(
+                $this->productStorage->write(
                     $path,
                     $contents,
                     ['visibility' => 'public']
