@@ -7,12 +7,15 @@ use App\Repository\ProductRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
 class Product implements AttachmentFilesInterface
 {
     use CreatedUpdatedAtAwareTrait;
+
+    const ADMIN_PRODUCT_VIEW_GROUP = 'admin_product_view_group';
 
     public static array $dataTableFields = [
         'id',
@@ -26,15 +29,19 @@ class Product implements AttachmentFilesInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
     private string $product_name;
 
     #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
     private array $product_properties = [];
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
     private string $price;
 
     #[ORM\OneToMany(
@@ -43,6 +50,7 @@ class Product implements AttachmentFilesInterface
     private Collection $orders;
 
     #[ORM\OneToMany(targetEntity: Files::class, mappedBy: 'product', orphanRemoval: true, cascade: ["persist"])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
     private Collection $files;
 
     public function __construct() {

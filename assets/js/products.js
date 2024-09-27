@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 success: (data) => {
                     console.log(data);
                     modal.find('#exampleModalLabel').text('Редагувати продукт')
-                    form.find('#product_name').val(data.productName)
+                    form.find('#product_name').val(data.product_name)
                     form.find('#product_price').val(data.price)
 
                     let product_id_input = $('<input>').attr({
@@ -124,8 +124,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     product_id_input.val(data.id);
                     form.append(product_id_input);
 
-                    if (Object.keys(data.productProperties).length) {
-                        $.each(data.productProperties, function( index, productProperty ) {
+                    if (Object.keys(data.product_properties).length) {
+                        $.each(data.product_properties, function( index, productProperty ) {
                             if (Object.keys(productProperty).length) {
                                 let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
                                 divPropSet.append(addPropertiesBlock(order, productProperty.property_name, productProperty.property_value));
@@ -133,6 +133,48 @@ document.addEventListener("DOMContentLoaded", function () {
                             }
                         });
                     }
+
+                    $.ajax({
+                        type: "POST",
+                        url: window.Routing
+                            .generate('app_attachmentfile_getattachmentfileslist'),
+                        data: {
+                            id: productId, entity: 'App\\Entity\\Product'
+                        },
+                        error: (result) => {
+                            console.log(result.responseJSON.status);
+                        },
+                        success: (data) => {
+                            renderAttachmentFilesBlock(productId, form, modal, button, data,
+                                function (uppy, data) {
+                                    (async function (arr) {
+                                        //Promise.all не подходит, т.к. он отвалится если хоть одна фотка не загрузится
+                                        for (let item of arr) {
+
+                                            try {
+                                                let blob = await getBlobFromImageUri(item.path);
+                                                await delay(1000);//минимальное время задержки для корректной работы добавления фоток в Dashborad Uppy
+                                                addInitPhotoToUppy(uppy, blob, false, item);
+
+                                            } catch (e) {
+
+                                                let blob = await createErrorImgPlaceHolder();
+                                                await delay(1000);
+                                                addInitPhotoToUppy(uppy, blob, true, item);
+                                                continue;
+                                            } finally {
+                                                uppy.getFiles().forEach(file => {
+                                                    uppy.setFileState(file.id, {
+                                                        progress: {uploadComplete: true, uploadStarted: true}
+                                                    })
+                                                })
+                                            }
+
+                                        }
+                                    })(data);
+                                }, 'App\\Entity\\Product');
+                        }
+                    });
                 }
             })
         } else {

@@ -8,10 +8,12 @@ use App\Entity\Files;
 use App\Entity\Product;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
+use League\Flysystem\FilesystemOperator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Twig\Environment;
 
 class AttachmentFileController extends AbstractController
@@ -31,8 +33,9 @@ class AttachmentFileController extends AbstractController
     }
 
     #[Route(path: '/admin/api/attachment_file', options: ["expose" => true], methods: ['POST'])]
-    public function postAttachmentFileAction(Request $request)
-    {
+    public function postAttachmentFileAction(
+        Request $request
+    ) {
         /** @var UploadedFile[] $files */
         $files = $request->files->get('files');
 
@@ -76,8 +79,10 @@ class AttachmentFileController extends AbstractController
     }
 
     #[Route(path: '/admin/api/attachment_files/list', options: ["expose" => true])]
-    public function getAttachmentFilesListAction(Request $request)
-    {
+    public function getAttachmentFilesListAction(
+        Request $request,
+        FilesystemOperator $productStorage
+    ) {
         $repo = $this->getModelRepo($request);
         if (!$repo) {
             throw new \Exception('entity was not matched');
@@ -87,8 +92,17 @@ class AttachmentFileController extends AbstractController
         if (!$parentEntity) {
             throw new \Exception('entity not found');
         }
+        /** @var Files[] $values */
+        $values = $parentEntity->getFiles()->getValues();
+        foreach ($values as $value) {
+            $value->setPath($productStorage->temporaryUrl($value->getPath(), (new \DateTime())->modify('+1 hour')));
+        }
 
-        return $this->json($parentEntity->getFiles()->getValues());
+        return $this->json(data: $values, context: [
+            AbstractNormalizer::GROUPS => [
+                Files::ADMIN_FILES_VIEW_GROUP,
+            ]
+        ]);
     }
 
     #[Route(path: '/admin/api/attachment_file/{id}', options: ["expose" => true], methods: ['DELETE'])]
@@ -107,7 +121,7 @@ class AttachmentFileController extends AbstractController
     {
         switch ($request->get('entity')) {
             case Product::class:
-                $repo = $this->filesRepository;
+                $repo = $this->productRepository;
                 break;
             default:
                 $repo = false;

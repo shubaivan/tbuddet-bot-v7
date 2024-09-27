@@ -201,7 +201,9 @@ class AdminController extends AbstractController
 
         $response = $this->serializer->serialize(
             $product, 'json',
-            [AbstractNormalizer::IGNORED_ATTRIBUTES => ['orders']]
+            [AbstractNormalizer::GROUPS => [
+                Product::ADMIN_PRODUCT_VIEW_GROUP,
+            ]]
         );
 
         return new JsonResponse($response, Response::HTTP_OK, [], true);
@@ -214,7 +216,11 @@ class AdminController extends AbstractController
     {
         $response = $this->serializer->serialize(
             $product, 'json',
-            [AbstractNormalizer::IGNORED_ATTRIBUTES => ['orders']]
+            [
+                AbstractNormalizer::GROUPS => [
+                    Product::ADMIN_PRODUCT_VIEW_GROUP,
+                ]
+            ]
         );
 
         return new JsonResponse($response, Response::HTTP_OK, [], true);

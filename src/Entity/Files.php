@@ -5,19 +5,24 @@ namespace App\Entity;
 use App\Repository\FilesRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: FilesRepository::class)]
 class Files
 {
+    const ADMIN_FILES_VIEW_GROUP = 'admin_files_view_group';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups([Product::ADMIN_PRODUCT_VIEW_GROUP, self::ADMIN_FILES_VIEW_GROUP])]
     private ?int $id = null;
 
     #[Assert\File(maxSize: "100M")]
     #[Assert\NotBlank]
     #[ORM\Column(type: 'string')]
+    #[Groups([Product::ADMIN_PRODUCT_VIEW_GROUP, self::ADMIN_FILES_VIEW_GROUP])]
     private string|UploadedFile $path;
 
     #[ORM\Column(type: 'string')]

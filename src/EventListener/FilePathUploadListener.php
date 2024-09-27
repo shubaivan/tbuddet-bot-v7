@@ -61,8 +61,7 @@ class FilePathUploadListener
                 $contents = file_get_contents($file->getPathname());
                 $this->productStorage->write(
                     $path,
-                    $contents,
-                    ['visibility' => 'public']
+                    $contents
                 );
             }
             $entity
