@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let table;
     var common_defs = [];
     common_defs.push({
-        "targets": 3,
+        "targets": 4,
         "orderable": false,
         "render": function (data, type, row, meta) {
             var divTag = $('<div/>');
@@ -46,7 +46,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     common_defs.push({
-        "targets": 6,
+        "targets": 1,
+        "render": function ( data, type, row, meta ) {
+            // row.filePath
+            let imgs = '';
+            $.each(row.filePath, function( index, filePath ) {
+                imgs = imgs + '<img src="'+filePath+'" class="img-thumbnail"><br>';
+            })
+            return imgs;
+        }
+    })
+
+    common_defs.push({
+        "targets": 7,
         data: 'action',
         render: function (data, type, row, meta) {
             return '    <!-- Button trigger modal -->\n' +

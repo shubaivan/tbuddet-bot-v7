@@ -64,6 +64,7 @@ class ProductRepository extends ServiceEntityRepository
             $dql = '
                 SELECT 
                 o.id, 
+                array_agg(f.path) as filePath,                
                 o.product_name,              
                 o.price,
                 o.product_properties,
@@ -71,6 +72,7 @@ class ProductRepository extends ServiceEntityRepository
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at,
                 \'edit\' as action
                 FROM App\Entity\Product o
+                LEFT JOIN o.files f 
             ';
         }
 
@@ -112,12 +114,7 @@ class ProductRepository extends ServiceEntityRepository
             $query
                 ->setParameters($bindParams);
         }
-        if ($count) {
-            $result = $query->getSingleScalarResult();
-        } else {
-            $result = $query->getResult();
-        }
 
-        return $result;
+        return $query;
     }
 }

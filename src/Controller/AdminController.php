@@ -9,7 +9,9 @@ use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
+use Aws\S3\S3Client;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Flysystem\FilesystemOperator;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -30,8 +32,28 @@ class AdminController extends AbstractController
     ) {}
 
     #[Route('/admin', name: 'app_admin')]
-    public function index(EntityManagerInterface $em): Response
-    {
+    public function index(
+//        S3Client $client
+    ): Response {
+//        $result = $client->getBucketCors([
+//            'Bucket' => 'bucketeer-5a7f7a9b-c93f-4b05-9e7e-835d595eacae', // REQUIRED
+//        ]);
+
+//        $result = $client->putBucketCors([
+//            'Bucket' => 'bucketeer-5a7f7a9b-c93f-4b05-9e7e-835d595eacae', // REQUIRED
+//            'CORSConfiguration' => [ // REQUIRED
+//                'CORSRules' => [ // REQUIRED
+//                    [
+//                        'AllowedHeaders' => ['Authorization'],
+//                        'AllowedMethods' => ['POST', 'GET', 'PUT'], // REQUIRED
+//                        'AllowedOrigins' => ['*'], // REQUIRED
+//                        'ExposeHeaders' => [],
+//                        'MaxAgeSeconds' => 3000
+//                    ],
+//                ],
+//            ]
+//        ]);
+
         return $this->render('admin/index.html.twig', [
         ]);
     }
@@ -134,19 +156,41 @@ class AdminController extends AbstractController
     }
 
     #[Route('/admin/products/data-table', name: 'admin-products-data-table', options: ['expose' => true])]
-    public function productsDatTable(ProductRepository $repository, Request $request)
-    {
+    public function productsDatTable(
+        FilesystemOperator $productStorage,
+        ProductRepository $repository,
+        Request $request
+    ): JsonResponse {
         $dataTable = $repository
-            ->getDataTablesData($request->request->all());
+            ->getDataTablesData($request->request->all())->getResult();
+
+        foreach ($dataTable as $key => $product) {
+            if (isset($product['filePath'])) {
+                $filePath = [];
+                $files = explode(',', $product['filePath']);
+                foreach ($files as $file) {
+                    $file = trim($file, '}');
+                    $file = trim($file, '{');
+                    if ($file == 'NULL') {
+                        continue;
+                    }
+                    $filePath[] = $productStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                }
+
+                $dataTable[$key]['filePath'] = $filePath;
+            }
+        }
 
         return $this->json(
             array_merge(
                 [
                     "draw" => $request->request->get('draw'),
                     "recordsTotal" => $repository
-                        ->getDataTablesData($request->request->all(), true, true),
+                        ->getDataTablesData($request->request->all(), true, true)
+                        ->getSingleScalarResult(),
                     "recordsFiltered" => $repository
                         ->getDataTablesData($request->request->all(), true)
+                        ->getSingleScalarResult()
                 ],
                 ['data' => $dataTable]
             )

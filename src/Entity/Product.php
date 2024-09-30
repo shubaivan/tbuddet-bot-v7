@@ -19,6 +19,7 @@ class Product implements AttachmentFilesInterface
 
     public static array $dataTableFields = [
         'id',
+        'filePath',
         'product_name',
         'price',
         'product_properties',

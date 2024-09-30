@@ -13,6 +13,7 @@ doctrine:
             string_functions:
                 # other operators
                 ILIKE: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\Ilike
+                ARRAY_AGG: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\ArrayAgg
 
                 group_concat: App\Doctrine\Functions\GroupConcat
                 date_format: App\Doctrine\Functions\DateFormat
