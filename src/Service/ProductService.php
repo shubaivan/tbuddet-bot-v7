@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Product;
 use App\Entity\TelegramUser;
 use App\Repository\ProductRepository;
 
@@ -10,6 +11,9 @@ class ProductService
 
     public function __construct(private ProductRepository $productRepository) {}
 
+    /**
+     * @return array<Product[]>
+     */
     public function getProductsForBot(): array
     {
         $group = [];

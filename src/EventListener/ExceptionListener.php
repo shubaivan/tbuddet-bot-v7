@@ -44,6 +44,7 @@ class ExceptionListener
                 $message = 'Not found';
 
                 break;
+            case Response::HTTP_UNAUTHORIZED:
             case Response::HTTP_BAD_REQUEST:
                 $message = $exception->getMessage();
 
@@ -71,6 +72,6 @@ class ExceptionListener
                 $message = 'Something gone wrong';
         }
 
-        return new JsonResponse($message, $statusCode);
+        return new JsonResponse(['error' => $message], $statusCode);
     }
 }

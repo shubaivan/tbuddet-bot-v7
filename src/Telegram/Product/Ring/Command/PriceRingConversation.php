@@ -9,6 +9,7 @@ use App\Repository\ProductRepository;
 use App\Service\ProductService;
 use App\Service\TelegramUserService;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\Nutgram;
@@ -30,6 +31,7 @@ class PriceRingConversation extends Conversation
     public ?bool $confirmPhone = false;
 
     public function __construct(
+        private FilesystemOperator $productStorage,
         private TelegramUserService $telegramUserService,
         private ProductRepository $productRepository,
         private ProductService $productService,
@@ -61,6 +63,16 @@ class PriceRingConversation extends Conversation
             }
 
             foreach ($products as $product) {
+
+                foreach ($product->getFiles() as $file) {
+                    $url = $this->productStorage->readStream($file->getPath());
+
+                    /** @var Message $message */
+                    $message = $bot->sendPhoto(
+                        photo: InputFile::make($url)
+                    );
+                }
+
                 $bot->sendMessage(
                     text: sprintf('
 Продукт: %s, ціна: %s грн;%s
