@@ -20,7 +20,7 @@ final class Version20240920144744 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE telegram_user ADD auth_date INT NOT NULL');
+        $this->addSql('ALTER TABLE telegram_user ADD auth_date INT DEFAULT NULL');
     }
 
     public function down(Schema $schema): void
