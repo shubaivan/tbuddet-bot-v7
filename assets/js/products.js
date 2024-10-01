@@ -241,7 +241,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 error: (result) => {
                     console.log(result);
 
-                    $.each(result.responseJSON, function( index, value ) {
+                    $.each(result.responseJSON.error, function( index, value ) {
                         let invalidInput = form.find('#'+index);
                         if (invalidInput.length > 0) {
                             invalidInput.prop('required', true);
