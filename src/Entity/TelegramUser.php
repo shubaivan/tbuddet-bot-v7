@@ -48,7 +48,7 @@ class TelegramUser implements UserInterface
     private ?string $username;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $language_code;
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $auth_date;
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
