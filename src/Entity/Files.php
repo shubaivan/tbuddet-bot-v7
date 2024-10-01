@@ -29,6 +29,7 @@ class Files
     private string $extension;
 
     #[ORM\Column(type: 'string')]
+    #[Groups([Product::ADMIN_PRODUCT_VIEW_GROUP, self::ADMIN_FILES_VIEW_GROUP])]
     private string $originalName;
 
     #[ORM\Column(type: 'string')]

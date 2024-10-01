@@ -17,11 +17,15 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\ConstraintViolationList;
+use Symfony\Component\Validator\Exception\ValidationFailedException;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[IsGranted("ROLE_ADMIN")]
 class AdminController extends AbstractController
@@ -202,7 +206,8 @@ class AdminController extends AbstractController
         Request $request,
         ProductRepository $repository,
         EntityManagerInterface $em,
-        FilesRepository $filesRepository
+        FilesRepository $filesRepository,
+        ValidatorInterface $validator
     )
     {
         $params = $request->request->all();
@@ -238,6 +243,16 @@ class AdminController extends AbstractController
             foreach ($files as $file) {
                 $file->setProduct($product);
             }
+        }
+
+        $violations = new ConstraintViolationList();
+        $violations->addAll($validator->validate($product));
+
+        if (\count($violations)) {
+            throw new HttpException(
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                implode("\n", array_map(static fn ($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($product, $violations)
+            );
         }
 
         $em->persist($product);

@@ -94,6 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {
         var modal = $(this);
         let form = modal.find("form");
 
+        modal.find('.error-message').remove();
         modal.find('#save_product').remove();
         modal.find('.prop_conf').remove();
         modal.find('.prop_set').remove();
@@ -126,7 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     console.log(data);
                     modal.find('#exampleModalLabel').text('Редагувати продукт')
                     form.find('#product_name').val(data.product_name)
-                    form.find('#product_price').val(data.price)
+                    form.find('#price').val(data.price)
 
                     let product_id_input = $('<input>').attr({
                         type: 'hidden',
@@ -219,10 +220,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         $('.btn#save_product').on('click', function () {
             let createProduct = $('#createProduct');
-
+            $('.error-message').remove();
             let inputColumns = createProduct.find('input');
             if (inputColumns.length) {
                 $.each(inputColumns, function (k, v) {
+                    $(v).prop('required', false);
                     $(v).val($.trim($(v).val()));
                 })
             }
@@ -238,6 +240,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 data: serialize,
                 error: (result) => {
                     console.log(result);
+
+                    $.each(result.responseJSON, function( index, value ) {
+                        let invalidInput = form.find('#'+index);
+                        if (invalidInput.length > 0) {
+                            invalidInput.prop('required', true);
+                            invalidInput.parent().closest('.form-group').append($('<span/>', {
+                                'text': value.message,
+                                'class': 'error-message'
+                            }))
+                        } else  {
+                            alert('Поле: '+index+' '+value.message);
+                        }
+                    });
                 },
                 success: (data) => {
                     exampleModal.modal('toggle');

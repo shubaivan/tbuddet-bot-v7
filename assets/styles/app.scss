@@ -6,6 +6,10 @@ body {
     color: red;
 }
 
+.error-message {
+    color: red;
+}
+
 .center {
     margin: auto;
     width: 60%;
@@ -49,28 +53,29 @@ body {
     color: red;
 }
 
-#resource_statistics {
-    table, th, td {
-        border: 1px solid black;
-        border-collapse: collapse;
-    }
-    th {
-        padding: 5px;
-        text-align: center;
-    }
-    td {
-        padding: 5px;
-        text-align: left;
-        vertical-align: top;
-    }
-}
-
 .render_play_ground {
     margin-bottom: 20px;
 }
 
 .core_analysis_result {
     margin: auto;
+}
+
+input:invalid {
+    background-color: #ffdddd;
+}
+form:invalid {
+    border: 5px solid #ffdddd;
+}
+input:valid {
+    background-color: #ddffdd;
+}
+form:valid {
+    border: 5px solid #ddffdd;
+}
+input:required {
+    border-color: #800000;
+    border-width: 3px;
 }
 
 @import "~bootstrap/scss/bootstrap";
