@@ -22,9 +22,7 @@ class AttachmentFileController extends AbstractController
         private Environment $twig,
         private FilesRepository $filesRepository,
         private ProductRepository $productRepository
-    )
-    {
-    }
+    ) {}
 
     #[Route(path: '/admin/api/attachment_files/template', options: ["expose" => true])]
     public function getAttachmentFilesTemplateAction(Request $request)
@@ -35,7 +33,8 @@ class AttachmentFileController extends AbstractController
     #[Route(path: '/admin/api/attachment_file', options: ["expose" => true], methods: ['POST'])]
     public function postAttachmentFileAction(
         Request $request
-    ) {
+    )
+    {
         /** @var UploadedFile[] $files */
         $files = $request->files->get('files');
 
@@ -82,7 +81,8 @@ class AttachmentFileController extends AbstractController
     public function getAttachmentFilesListAction(
         Request $request,
         FilesystemOperator $productStorage
-    ) {
+    )
+    {
         $repo = $this->getModelRepo($request);
         if (!$repo) {
             throw new \Exception('entity was not matched');
