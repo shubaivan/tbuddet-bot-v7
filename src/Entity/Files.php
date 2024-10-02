@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\FilesRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -9,8 +10,11 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: FilesRepository::class)]
+#[ORM\HasLifecycleCallbacks()]
 class Files
 {
+    use CreatedUpdatedAtAwareTrait;
+
     const ADMIN_FILES_VIEW_GROUP = 'admin_files_view_group';
 
     #[ORM\Id]
@@ -40,6 +44,9 @@ class Files
 
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'files')]
     private Product $product;
+
+    #[ORM\ManyToOne(targetEntity: Category::class, inversedBy: 'files')]
+    private Category $category;
 
     public function getId(): ?int
     {
@@ -114,6 +121,18 @@ class Files
     public function setProduct(Product $product): Files
     {
         $this->product = $product;
+
+        return $this;
+    }
+
+    public function getCategory(): Category
+    {
+        return $this->category;
+    }
+
+    public function setCategory(Category $category): Files
+    {
+        $this->category = $category;
 
         return $this;
     }

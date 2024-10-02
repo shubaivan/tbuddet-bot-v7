@@ -2,9 +2,11 @@
 
 namespace App\Controller;
 
+use App\Entity\Category;
 use App\Entity\Product;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
+use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
@@ -292,6 +294,154 @@ class AdminController extends AbstractController
     ): JsonResponse
     {
         $em->remove($product);
+        $em->flush();
+
+        return new JsonResponse([], Response::HTTP_NO_CONTENT);
+    }
+
+    #############
+    # Categories
+    #############
+
+    #[Route('/admin/categories', name: 'app_admin_categories')]
+    public function categories(EntityManagerInterface $em): Response
+    {
+        $fieldNames = Category::$dataTableFields;
+        $fieldNames[] = 'action';
+
+        array_map(function ($k) use (&$dataTableColumnData) {
+            $dataTableColumnData[] = ['data' => $k];
+        }, $fieldNames);
+
+        return $this->render('admin/categories.html.twig', [
+            'th_keys' => $fieldNames,
+            'dataTableKeys' => $dataTableColumnData,
+        ]);
+    }
+
+    #[Route('/admin/categories/data-table', name: 'admin-categories-data-table', options: ['expose' => true])]
+    public function categoriesDatTable(
+        FilesystemOperator $categoryStorage,
+        CategoryRepository $repository,
+        Request $request
+    ): JsonResponse {
+        $dataTable = $repository
+            ->getDataTablesData($request->request->all())->getResult();
+
+        foreach ($dataTable as $key => $product) {
+            if (isset($product['filePath'])) {
+                $filePath = [];
+                $files = explode(',', $product['filePath']);
+                foreach ($files as $file) {
+                    $file = trim($file, '}');
+                    $file = trim($file, '{');
+                    if ($file == 'NULL') {
+                        continue;
+                    }
+                    $filePath[] = $categoryStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                }
+
+                $dataTable[$key]['filePath'] = $filePath;
+            }
+        }
+
+        return $this->json(
+            array_merge(
+                [
+                    "draw" => $request->request->get('draw'),
+                    "recordsTotal" => $repository
+                        ->getDataTablesData($request->request->all(), true, true)
+                        ->getSingleScalarResult(),
+                    "recordsFiltered" => $repository
+                        ->getDataTablesData($request->request->all(), true)
+                        ->getSingleScalarResult()
+                ],
+                ['data' => $dataTable]
+            )
+        );
+    }
+
+    #[Route('/admin/categories/create', name: 'admin-categories-create', options: ['expose' => true])]
+    public function categoryCreate(
+        Request $request,
+        CategoryRepository $repository,
+        EntityManagerInterface $em,
+        FilesRepository $filesRepository,
+        ValidatorInterface $validator
+    )
+    {
+        $params = $request->request->all();
+        $context = [];
+        if ($request->request->get('category_id')) {
+            $currentProduct = $repository->find($request->request->get('category_id'));
+            $context += [
+                AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct,
+            ];
+        }
+
+        $category = $this->denormalizer->denormalize(
+            $params,
+            Category::class,
+            null,
+            $context
+        );
+
+        $fileIds = $request->get('file_ids');
+        if (is_array($fileIds) && count($fileIds)) {
+            $files = $filesRepository
+                ->getByIds($fileIds);
+            foreach ($files as $file) {
+                $file->setCategory($category);
+            }
+        }
+
+        $violations = new ConstraintViolationList();
+        $violations->addAll($validator->validate($category));
+
+        if (\count($violations)) {
+            throw new HttpException(
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                implode("\n", array_map(static fn ($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($category, $violations)
+            );
+        }
+
+        $em->persist($category);
+        $em->flush();
+
+        $response = $this->serializer->serialize(
+            $category, 'json',
+            [AbstractNormalizer::GROUPS => [
+                Category::ADMIN_CATEGORY_VIEW_GROUP,
+            ]]
+        );
+
+        return new JsonResponse($response, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('/admin/category/{id}', name: 'admin-category-get', options: ['expose' => true], methods: [Request::METHOD_GET])]
+    public function getCategory(
+        #[MapEntity(id: 'id')] Category $category,
+    ): JsonResponse
+    {
+        $response = $this->serializer->serialize(
+            $category, 'json',
+            [
+                AbstractNormalizer::GROUPS => [
+                    Category::ADMIN_CATEGORY_VIEW_GROUP,
+                ]
+            ]
+        );
+
+        return new JsonResponse($response, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('/admin/category/{id}', name: 'admin-category-delete', options: ['expose' => true], methods: [Request::METHOD_DELETE])]
+    public function deleteCategory(
+        #[MapEntity(id: 'id')] Category $category,
+        EntityManagerInterface $em
+    ): JsonResponse
+    {
+        $em->remove($category);
         $em->flush();
 
         return new JsonResponse([], Response::HTTP_NO_CONTENT);

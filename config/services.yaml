@@ -20,7 +20,7 @@ services:
             $liqpayPublicKey: '%liqpay_public_key%'
             $liqpayPrivateKey: '%liqpay_private_key%'
             $liqpayServerUrl: '%liqpay_server_url%'
-            $defaultTargetRoute: 'login_private'  # redirect after login success
+            $defaultTargetRoute: 'app_admin'  # redirect after login success
             $guardRoute: 'login_guard'        # guard route
             $loginRoute: 'login_public'       # optional, if login fails user will be redirected there
             $telegramBotName: '%env(APP_TELEGRAM_BOT_NAME)%'

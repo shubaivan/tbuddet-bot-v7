@@ -4,8 +4,10 @@
 namespace App\Controller;
 
 use App\Entity\AttachmentFilesInterface;
+use App\Entity\Category;
 use App\Entity\Files;
 use App\Entity\Product;
+use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use League\Flysystem\FilesystemOperator;
@@ -21,7 +23,8 @@ class AttachmentFileController extends AbstractController
     public function __construct(
         private Environment $twig,
         private FilesRepository $filesRepository,
-        private ProductRepository $productRepository
+        private ProductRepository $productRepository,
+        private CategoryRepository $categoryRepository
     ) {}
 
     #[Route(path: '/admin/api/attachment_files/template', options: ["expose" => true])]
@@ -115,13 +118,16 @@ class AttachmentFileController extends AbstractController
 
     /**
      * @param Request $request
-     * @return ProductRepository|bool
+     * @return ProductRepository|CategoryRepository|bool
      */
-    private function getModelRepo(Request $request): ProductRepository|bool
+    private function getModelRepo(Request $request): ProductRepository|CategoryRepository|bool
     {
         switch ($request->get('entity')) {
             case Product::class:
                 $repo = $this->productRepository;
+                break;
+            case Category::class:
+                $repo = $this->categoryRepository;
                 break;
             default:
                 $repo = false;

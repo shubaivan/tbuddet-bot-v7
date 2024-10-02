@@ -58,9 +58,13 @@ class Product implements AttachmentFilesInterface
     #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
     private Collection $files;
 
+    #[ORM\OneToMany(targetEntity: ProductCategory::class, mappedBy: 'product', orphanRemoval: true, cascade: ["persist"])]
+    private Collection $productCategory;
+
     public function __construct() {
         $this->orders = new ArrayCollection();
         $this->files = new ArrayCollection();
+        $this->productCategory = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -163,7 +167,7 @@ class Product implements AttachmentFilesInterface
     public function addFile(Files $file): self
     {
         if (!$this->files->contains($file)) {
-            $this->files[] = $file;
+            $this->files->add($file);
         }
 
         return $this;
@@ -173,6 +177,36 @@ class Product implements AttachmentFilesInterface
     {
         if ($this->files->contains($file)) {
             $this->files->removeElement($file);
+        }
+
+        return $this;
+    }
+
+    public function getProductCategory(): Collection
+    {
+        return $this->productCategory;
+    }
+
+    public function setProductCategory(Collection $productCategory): Product
+    {
+        $this->productCategory = $productCategory;
+
+        return $this;
+    }
+
+    public function addProductCategory(ProductCategory $productCategory): self
+    {
+        if (!$this->productCategory->contains($productCategory)) {
+            $this->productCategory->add($productCategory);
+        }
+
+        return $this;
+    }
+
+    public function removeProductCategory(ProductCategory $productCategory): self
+    {
+        if ($this->productCategory->contains($productCategory)) {
+            $this->productCategory->removeElement($productCategory);
         }
 
         return $this;

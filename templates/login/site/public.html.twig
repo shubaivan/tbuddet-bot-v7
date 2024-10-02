@@ -3,7 +3,7 @@
 {% block body %}
     <h1>Public area</h1>
     {% if is_granted('ROLE_USER') %}
-        <a href="{{ path('login_private') }}">Go to private area</a>
+        <a href="{{ path('app_admin') }}">Go to admin panel</a>
     {% else %}
         {{ render(controller('App\\Controller\\SiteController::widgetAction')) }}
     {% endif %}

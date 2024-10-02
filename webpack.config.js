@@ -25,6 +25,7 @@ Encore
     .addEntry('index/js/telegram_users.min', './assets/js/telegram_users.js')
     .addEntry('index/js/user_orders.min', './assets/js/user_orders.js')
     .addEntry('index/js/products.min', './assets/js/products.js')
+    .addEntry('index/js/categories.min', './assets/js/categories.js')
 
 
     // When enabled, Webpack "splits" your files into smaller pieces for greater optimization.
