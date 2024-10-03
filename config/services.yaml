@@ -35,6 +35,7 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
             - '../src/Telegram/Location/Model'
+            - '../src/Telegram/Model'
             - '../src/Liqpay'
 
     # add more service definitions when explicit configuration is needed
@@ -47,6 +48,7 @@ services:
         resource: '../src/Telegram'
         exclude:
             - '../src/Telegram/Location/Model'
+            - '../src/Telegram/Model'
 
     App\EventListener\FilePathUploadListener:
         tags:

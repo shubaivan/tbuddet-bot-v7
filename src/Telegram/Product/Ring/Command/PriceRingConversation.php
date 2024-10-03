@@ -2,10 +2,8 @@
 
 namespace App\Telegram\Product\Ring\Command;
 
-use App\Entity\Product;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
-use App\Repository\ProductRepository;
 use App\Service\ProductService;
 use App\Service\TelegramUserService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,13 +25,13 @@ class PriceRingConversation extends Conversation
     protected ?string $step = 'askParameters';
 
     public ?int $productId;
+    public ?int $categoryId;
     public ?int $quantity;
     public ?bool $confirmPhone = false;
 
     public function __construct(
         private FilesystemOperator $productStorage,
         private TelegramUserService $telegramUserService,
-        private ProductRepository $productRepository,
         private ProductService $productService,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
@@ -46,13 +44,51 @@ class PriceRingConversation extends Conversation
         $this->confirmPhone = false;
     }
 
-
     public function askParameters(Nutgram $bot)
     {
         $bot->sendMessage(
-            text: 'Оберіть продукт:',
+            text: 'Оберіть категорію:',
         );
-        foreach ($this->productService->getProductsForBot() as $group => $products) {
+
+        foreach ($this->productService->getCategories() as $categorySet) {
+            foreach ($categorySet->getCategory()->getFiles() as $file) {
+                $url = $this->productStorage->readStream($file->getPath());
+
+                /** @var Message $message */
+                $message = $bot->sendPhoto(
+                    photo: InputFile::make($url)
+                );
+            }
+
+            $bot->sendMessage(
+                text: sprintf('
+Категорія продуктів: %s, кількість продуктів %s',
+                    $categorySet->getCategory()->getCategoryName(),
+                    $categorySet->getTotalProduct(),
+                ),
+                parse_mode: ParseMode::HTML,
+                reply_markup: InlineKeyboardMarkup::make()
+                    ->addRow(
+                        InlineKeyboardButton::make(
+                            'Обрати категорію', callback_data: 'category_' . $categorySet->getCategory()->getId()
+                        ),
+                    )
+            );
+        }
+
+        $this->next('askCategory');
+    }
+
+    public function askCategory(Nutgram $bot)
+    {
+        if (!$bot->isCallbackQuery() || !str_contains($bot->callbackQuery()->data, 'category_')) {
+            $this->askParameters($bot);
+
+            return;
+        }
+        $this->categoryId = str_replace('category_', '', $bot->callbackQuery()->data);
+
+        foreach ($this->productService->getProductsForBot($this->categoryId) as $group => $products) {
             if ($products) {
                 $bot->sendMessage(
                     sprintf('<b>Группа продуктів: %s</b>',
@@ -63,7 +99,6 @@ class PriceRingConversation extends Conversation
             }
 
             foreach ($products as $product) {
-
                 foreach ($product->getFiles() as $file) {
                     $url = $this->productStorage->readStream($file->getPath());
 
@@ -112,10 +147,10 @@ class PriceRingConversation extends Conversation
 Продукт: %s, ціна: %s грн;%s
 %s 
                         ',
-                $this->getProduct()->getProductName(),
-                $this->getProduct()->getPrice(),
+                $this->productService->getProduct($this->productId)->getProductName(),
+                $this->productService->getProduct($this->productId)->getPrice(),
                 PHP_EOL,
-                $this->getProduct()->getProductPropertiesMessage()
+                $this->productService->getProduct($this->productId)->getProductPropertiesMessage()
             ),
             parse_mode: ParseMode::HTML,
         );
@@ -143,13 +178,13 @@ class PriceRingConversation extends Conversation
 
         $bot->sendMessage(
             sprintf('<b>Ваше замовлення</b>: <strong>%s</strong>: в <b>кількості</b>: <u>%s одиниць</u>',
-                $this->getProduct()->getProductName(),
+                $this->productService->getProduct($this->productId)->getProductName(),
                 $this->quantity
             ),
             parse_mode: ParseMode::HTML
         );
 
-        $totalAmount = $this->getProduct()->getPrice() * $this->quantity;
+        $totalAmount = $this->productService->getProduct($this->productId)->getPrice() * $this->quantity;
         $bot->sendMessage(
             '<b>Кінцева ціна</b>: ' . $totalAmount . ' грн',
             parse_mode: ParseMode::HTML
@@ -249,9 +284,9 @@ class PriceRingConversation extends Conversation
         $userOrder->setProductId($this->getProduct());
         $userOrder->setQuantityProduct($this->quantity);
         $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
-        $userOrder->setTotalAmount($this->getProduct()->getPrice() * $this->quantity);
+        $userOrder->setTotalAmount($this->productService->getProduct($this->productId)->getPrice() * $this->quantity);
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $this->getProduct()->getProductName(),
+            $this->productService->getProduct($this->productId)->getProductName(),
             $this->quantity
         );
         $userOrder->setDescription($description);
@@ -305,10 +340,5 @@ class PriceRingConversation extends Conversation
         );
 
         $this->end();
-    }
-
-    private function getProduct(): Product
-    {
-        return $this->productRepository->find($this->productId);
     }
 }

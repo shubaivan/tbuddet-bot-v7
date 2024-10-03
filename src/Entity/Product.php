@@ -182,6 +182,9 @@ class Product implements AttachmentFilesInterface
         return $this;
     }
 
+    /**
+     * @return Collection|ProductCategory[]
+     */
     public function getProductCategory(): Collection
     {
         return $this->productCategory;

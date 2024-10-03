@@ -26,12 +26,35 @@ class ProductRepository extends ServiceEntityRepository
     /**
      * @return Product[]
      */
-    public function getAllByProducts(): array
+    public function getProducts(?int $categoryId): array
     {
-        return $this->createQueryBuilder('p')
+        $queryBuilder = $this->createQueryBuilder('p');
+
+        if ($categoryId) {
+            $queryBuilder
+                ->innerJoin('p.productCategory', 'product_category')
+                ->where('product_category.category = :category ')
+                ->setParameter('category', $categoryId);
+        }
+
+        return $queryBuilder
             ->orderBy('p.updated_at')
             ->getQuery()
             ->getResult();
+    }
+
+    public function getTotalProductByCategory(int $categoryId): int
+    {
+        $queryBuilder = $this->createQueryBuilder('p');
+
+        return $queryBuilder
+            ->select('COUNT(DISTINCT p.id)')
+            ->innerJoin('p.productCategory', 'product_category')
+            ->where('product_category.category = :category ')
+            ->setParameter('category', $categoryId)
+            ->getQuery()
+            ->getSingleScalarResult()
+        ;
     }
 
     /**
@@ -83,8 +106,8 @@ class ProductRepository extends ServiceEntityRepository
             $or[] = 'ILIKE(o.product_name, :var_search) = TRUE';
             $or[] = 'ILIKE(o.price, :var_search) = TRUE';
 
-            $bindParams['var_search'] = '%'.$parameterBag->get('search').'%';
-            $conditions[] = '(' . implode(' OR ', $or) .')';
+            $bindParams['var_search'] = '%' . $parameterBag->get('search') . '%';
+            $conditions[] = '(' . implode(' OR ', $or) . ')';
 
         }
 
@@ -96,7 +119,7 @@ class ProductRepository extends ServiceEntityRepository
         if (!$count) {
             $dql .= '
                 GROUP BY o.id';
-            $sortBy = 'o.'.$sortBy;
+            $sortBy = 'o.' . $sortBy;
             $dql .= '
                 ORDER BY ' . $sortBy . ' ' . $sortOrder;
         }
