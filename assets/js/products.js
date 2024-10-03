@@ -1,4 +1,5 @@
 import 'select2';
+import '../styles/app.scss';
 
 import {
     getBlobFromImageUri,
@@ -147,6 +148,11 @@ document.addEventListener("DOMContentLoaded", function () {
                         });
                     }
 
+                    var categories_select = $('<select>').addClass('category_select');
+                    categories_select.attr('name', 'category_ids[]');
+                    form.prepend(categories_select);
+                    applySelect2ToShopsSelect(categories_select, {width: '100%'});
+
                     $.ajax({
                         type: "POST",
                         url: window.Routing
@@ -261,6 +267,43 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
 
+        function applySelect2ToShopsSelect(select, width = {}) {
+
+            let options = $.extend(width, {
+                placeholder: {
+                    id: '-1', // the value of the option
+                    text: 'Оберіть категорію'
+                },
+                dropdownParent: $('#exampleModal'),
+                dropdownAutoWidth: true,
+                multiple: true,
+                allowClear: true,
+                templateResult: formatShopOption,
+                ajax: {
+                    type: 'post',
+                    url: window.Routing
+                        .generate('admin-category-select2'),
+                    data: function (params) {
+                        let query = {
+                            search: params.term,
+                            page: params.page || 1,
+                            type: 'public'
+                        };
+
+                        // Query parameters will be ?search=[term]&type=public
+                        return query;
+                    }
+                }
+            });
+            select.select2(options);
+        }
+
+        function formatShopOption (option) {
+            return  $(
+                '<div><strong>' + option.text + '</strong></div>'
+            );
+        }
+
         function addPropertiesBlock(order, inputName = null, inputValue = null)
         {
             var divTag = $('<div/>', {'class': "form-group"});
@@ -303,4 +346,25 @@ document.addEventListener("DOMContentLoaded", function () {
             return divTag;
         }
     })
+
+    exampleModal.on('hide.bs.modal', function (event) {
+        var modal = $(this);
+
+        let form = modal.find("form");
+        form.trigger("reset");
+        form.find('textarea').val('');
+
+        form.find('.strategies_select').remove();
+        let strategySelect2Container = form.find('.strategy_select2_container');
+        if (strategySelect2Container) {
+            strategySelect2Container.remove();
+        }
+
+        modal.find('.render_play_ground').remove();
+        modal.find('.select2-container').remove();
+
+        form.find('.category_select').remove();
+
+        form.find('input[type=hidden]').remove();
+    });
 });

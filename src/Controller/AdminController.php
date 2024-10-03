@@ -4,19 +4,21 @@ namespace App\Controller;
 
 use App\Entity\Category;
 use App\Entity\Product;
+use App\Entity\ProductCategory;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
 use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
+use App\Repository\ProductCategoryRepository;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
-use Aws\S3\S3Client;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -40,7 +42,8 @@ class AdminController extends AbstractController
     #[Route('/admin', name: 'app_admin')]
     public function index(
 //        S3Client $client
-    ): Response {
+    ): Response
+    {
 //        $result = $client->getBucketCors([
 //            'Bucket' => 'bucketeer-5a7f7a9b-c93f-4b05-9e7e-835d595eacae', // REQUIRED
 //        ]);
@@ -166,7 +169,8 @@ class AdminController extends AbstractController
         FilesystemOperator $productStorage,
         ProductRepository $repository,
         Request $request
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $dataTable = $repository
             ->getDataTablesData($request->request->all())->getResult();
 
@@ -207,9 +211,11 @@ class AdminController extends AbstractController
     public function productCreate(
         Request $request,
         ProductRepository $repository,
+        CategoryRepository $categoryRepository,
         EntityManagerInterface $em,
         FilesRepository $filesRepository,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        ProductCategoryRepository $productCategoryRepository
     )
     {
         $params = $request->request->all();
@@ -247,13 +253,33 @@ class AdminController extends AbstractController
             }
         }
 
+        $categoryIds = $request->get('category_ids');
+        if (is_array($categoryIds) && count($categoryIds)) {
+            $currentProductCategories = $productCategoryRepository->findOneBy(['product' => $product]);
+            if ($currentProductCategories) {
+                foreach ($currentProductCategories as $productCategory) {
+                    $em->remove($productCategory);
+                }
+                $em->flush();
+            }
+
+            $categories = $categoryRepository
+                ->getByIds($categoryIds);
+            foreach ($categories as $category) {
+                $productCategory = (new ProductCategory())
+                    ->setProduct($product)
+                    ->setCategory($category);
+                $em->persist($productCategory);
+            }
+        }
+
         $violations = new ConstraintViolationList();
         $violations->addAll($validator->validate($product));
 
         if (\count($violations)) {
             throw new HttpException(
                 Response::HTTP_UNPROCESSABLE_ENTITY,
-                implode("\n", array_map(static fn ($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($product, $violations)
+                implode("\n", array_map(static fn($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($product, $violations)
             );
         }
 
@@ -324,7 +350,8 @@ class AdminController extends AbstractController
         FilesystemOperator $categoryStorage,
         CategoryRepository $repository,
         Request $request
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $dataTable = $repository
             ->getDataTablesData($request->request->all())->getResult();
 
@@ -401,7 +428,7 @@ class AdminController extends AbstractController
         if (\count($violations)) {
             throw new HttpException(
                 Response::HTTP_UNPROCESSABLE_ENTITY,
-                implode("\n", array_map(static fn ($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($category, $violations)
+                implode("\n", array_map(static fn($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($category, $violations)
             );
         }
 
@@ -445,5 +472,27 @@ class AdminController extends AbstractController
         $em->flush();
 
         return new JsonResponse([], Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/admin/category/select2', name: 'admin-category-select2', options: ['expose' => true], methods: [Request::METHOD_POST])]
+    public function categorySelect2Action(
+        Request $request,
+        CategoryRepository $categoryRepository
+    )
+    {
+        $parameterBag = new ParameterBag($request->request->all());
+        $data = $categoryRepository->getShopsForSelect2($parameterBag);
+
+        $more = $parameterBag->get('page') * 25 < $categoryRepository
+                ->getShopsForSelect2($parameterBag, true);
+
+        return $this->json(array_merge(
+            [
+                "pagination" => [
+                    'more' => $more
+                ],
+            ],
+            ['results' => $data]
+        ));
     }
 }
