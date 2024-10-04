@@ -82,6 +82,8 @@ class ProductRepository extends ServiceEntityRepository
             $dql = '
                 SELECT COUNT(DISTINCT o)
                 FROM App\Entity\Product o
+                LEFT JOIN o.productCategory pc 
+                LEFT JOIN pc.category category 
             ';
         } else {
             $dql = '
@@ -111,6 +113,14 @@ class ProductRepository extends ServiceEntityRepository
 
             $bindParams['var_search'] = '%' . $parameterBag->get('search') . '%';
             $conditions[] = '(' . implode(' OR ', $or) . ')';
+
+        }
+
+        if ($parameterBag->has('filter_category_id') && !$total) {
+            $conditions[] = '
+                category.id IN (:filter_category_id)
+            ';
+            $bindParams['filter_category_id'] = $parameterBag->get('filter_category_id');
 
         }
 

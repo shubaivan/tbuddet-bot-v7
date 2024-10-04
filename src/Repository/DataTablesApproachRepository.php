@@ -14,6 +14,9 @@ trait DataTablesApproachRepository
     public function handleDataTablesRequest(array $params): ParameterBag
     {
         $parameterBag = new ParameterBag();
+        if (isset($params['filter_category_id'])) {
+            $parameterBag->set('filter_category_id', $params['filter_category_id']);
+        }
 
         if (isset($params['order'])) {
             $columnIndex = $params['order'][0]['column']; // Column index

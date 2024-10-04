@@ -11,6 +11,10 @@ import {renderAttachmentFilesBlock, addInitPhotoToUppy} from "./uppy_attachment_
 
 document.addEventListener("DOMContentLoaded", function () {
     console.log("admin list!");
+
+    let table;
+    let filter_category_id;
+
     $(document).on('click', '.delete-product', function () {
         alert('Видалти?')
         var button = $(this); // Button that triggered the modal
@@ -28,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         })
     });
-    let table;
+
     var common_defs = [];
     common_defs.push({
         "targets": 5,
@@ -87,6 +91,9 @@ document.addEventListener("DOMContentLoaded", function () {
         .generate('admin-products-data-table');
 
     table = $('#telegramUserTable').DataTable({
+        initComplete: function () {
+            initiateShopsSelect();
+        },
         'order': [[0, 'desc']],
         'responsive': true,
         'fixedHeader': true,
@@ -96,6 +103,9 @@ document.addEventListener("DOMContentLoaded", function () {
         'ajax': {
             'url': collectionData,
             "data": function ( d ) {
+                if (filter_category_id) {
+                    d.filter_category_id = filter_category_id;
+                }
                 console.log('ajax data', d);
             }
         },
@@ -234,7 +244,7 @@ document.addEventListener("DOMContentLoaded", function () {
             categories_select.appendTo(categories_select_form_group);
 
             form.prepend(categories_select_form_group);
-            applySelect2ToShopsSelect(categories_select, {width: '100%'});
+            applySelect2ToShopsSelect(categories_select, {width: '100%', dropdownParent: $('#exampleModal')});
         }
 
         modal.on('click', '.remove_block .fa-minus-square', function () {
@@ -293,85 +303,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             });
         });
-
-        function applySelect2ToShopsSelect(select, width = {}) {
-
-            let options = $.extend(width, {
-                placeholder: {
-                    id: '-1', // the value of the option
-                    text: 'Оберіть категорію'
-                },
-                dropdownParent: $('#exampleModal'),
-                dropdownAutoWidth: true,
-                multiple: true,
-                allowClear: true,
-                templateResult: formatShopOption,
-                ajax: {
-                    type: 'post',
-                    url: window.Routing
-                        .generate('admin-category-select2'),
-                    data: function (params) {
-                        let query = {
-                            search: params.term,
-                            page: params.page || 1,
-                            type: 'public'
-                        };
-
-                        // Query parameters will be ?search=[term]&type=public
-                        return query;
-                    }
-                }
-            });
-            select.select2(options);
-        }
-
-        function formatShopOption (option) {
-            return  $(
-                '<div><strong>' + option.text + '</strong></div>'
-            );
-        }
-
-        function addPropertiesBlock(order, inputName = null, inputValue = null)
-        {
-            var divTag = $('<div/>', {'class': "form-group"});
-
-            let label1 = $("<label>");
-            label1.attr({'for': 'property_value'});
-            let input1 = $('<input>', {
-                'id': 'property_value',
-                'class': 'form-control',
-                'name': 'product_properties['+order+'][property_value]'
-            });
-            if (inputValue !== null) {
-                input1.val(inputValue)
-            }
-            let small1 = $("<small>", {
-                'class': 'form-text text-muted'
-            }).text('значення властивості');
-
-            let label2 = $("<label>");
-            label2.attr({'for': 'property_name'});
-            let input2 = $('<input>', {
-                'id': 'property_name',
-                'class': 'form-control',
-                'name': 'product_properties['+order+'][property_name]'
-            });
-            if (inputName !== null) {
-                input2.val(inputName)
-            }
-            let small2 = $("<small>", {
-                'class': 'form-text text-muted'
-            }).text('назва властивості');
-
-            divTag.append(label2).append(input2).append(small2);
-            divTag.append(label1).append(input1).append(small1);
-
-            var divTagColMinus = $('<div/>', {'class': "col text-right remove_block", 'text': "Видалити"});
-            divTagColMinus.append('<i class="fas fa-minus-square"></i>')
-            divTag.append(divTagColMinus);
-
-            return divTag;
-        }
     })
 
     exampleModal.on('hide.bs.modal', function (event) {
@@ -394,4 +325,101 @@ document.addEventListener("DOMContentLoaded", function () {
 
         form.find('input[type=hidden]').remove();
     });
+
+    function applySelect2ToShopsSelect(select, width = {}) {
+
+        let options = $.extend(width, {
+            placeholder: {
+                id: '-1', // the value of the option
+                text: 'Оберіть категорію'
+            },
+            dropdownAutoWidth: true,
+            multiple: true,
+            allowClear: true,
+            templateResult: formatShopOption,
+            ajax: {
+                type: 'post',
+                url: window.Routing
+                    .generate('admin-category-select2'),
+                data: function (params) {
+                    let query = {
+                        search: params.term,
+                        page: params.page || 1,
+                        type: 'public'
+                    };
+
+                    // Query parameters will be ?search=[term]&type=public
+                    return query;
+                }
+            }
+        });
+        select.select2(options);
+    }
+
+    function formatShopOption (option) {
+        return  $(
+            '<div><strong>' + option.text + '</strong></div>'
+        );
+    }
+
+    function addPropertiesBlock(order, inputName = null, inputValue = null)
+    {
+        var divTag = $('<div/>', {'class': "form-group"});
+
+        let label1 = $("<label>");
+        label1.attr({'for': 'property_value'});
+        let input1 = $('<input>', {
+            'id': 'property_value',
+            'class': 'form-control',
+            'name': 'product_properties['+order+'][property_value]'
+        });
+        if (inputValue !== null) {
+            input1.val(inputValue)
+        }
+        let small1 = $("<small>", {
+            'class': 'form-text text-muted'
+        }).text('значення властивості');
+
+        let label2 = $("<label>");
+        label2.attr({'for': 'property_name'});
+        let input2 = $('<input>', {
+            'id': 'property_name',
+            'class': 'form-control',
+            'name': 'product_properties['+order+'][property_name]'
+        });
+        if (inputName !== null) {
+            input2.val(inputName)
+        }
+        let small2 = $("<small>", {
+            'class': 'form-text text-muted'
+        }).text('назва властивості');
+
+        divTag.append(label2).append(input2).append(small2);
+        divTag.append(label1).append(input1).append(small1);
+
+        var divTagColMinus = $('<div/>', {'class': "col text-right remove_block", 'text': "Видалити"});
+        divTagColMinus.append('<i class="fas fa-minus-square"></i>')
+        divTag.append(divTagColMinus);
+
+        return divTag;
+    }
+
+    function initiateShopsSelect() {
+        var filter_category_select = $('<select>').addClass('filter_category_select');
+        filter_category_select.attr('name', 'filter_category_select[]')
+        filter_category_select.attr('multiple', 'multiple')
+        filter_category_select.insertBefore($('#telegramUserTable'));
+        applySelect2ToShopsSelect(filter_category_select, {width: '20%'});
+        applyOnChangeToResourceCategorySelect(filter_category_select, {width: '20%'});
+    }
+
+    function applyOnChangeToResourceCategorySelect(filter_category_select) {
+        filter_category_select.on('change', function (e) {
+            if (table) {
+                filter_category_id = $(this).val();
+                console.log(filter_category_id);
+                table.draw();
+            }
+        })
+    }
 });
