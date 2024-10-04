@@ -432,8 +432,11 @@ class AdminController extends AbstractController
 
         $fileIds = $request->get('file_ids');
         if (is_array($fileIds) && count($fileIds)) {
+            $filterIds = array_filter($fileIds, function ($fileId) {
+                return strlen($fileId);
+            });
             $files = $filesRepository
-                ->getByIds($fileIds);
+                ->getByIds($filterIds);
             foreach ($files as $file) {
                 $file->setCategory($category);
             }

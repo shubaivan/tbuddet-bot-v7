@@ -331,6 +331,7 @@ document.addEventListener("DOMContentLoaded", function () {
         modal.find('.select2-container').remove();
 
         form.find('.category_select').remove();
+        form.find('input[name="file_ids[]"]').remove();
 
         form.find('input[type=hidden]').remove();
     });
