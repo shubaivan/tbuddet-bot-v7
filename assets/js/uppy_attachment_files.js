@@ -25,6 +25,7 @@ export function renderAttachmentFilesBlock(
                 let parseHTML = $.parseHTML(template);
                 let attachment_files_template = form.find('#attachment_files_template');
                 attachment_files_template.empty();
+                form.find('input[name="file_ids[]"]').remove();
                 attachment_files_template.append(parseHTML);
                 let uppy = renderUppy(modelId, form, modal, button, entity);
                 if (attachmentFiles && uppy_callback_function) {
