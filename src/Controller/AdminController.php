@@ -201,10 +201,13 @@ class AdminController extends AbstractController
                     if ($file == 'NULL') {
                         continue;
                     }
-                    $filePath[$productStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'))] = 1;
+                    if (array_key_exists($file, $filePath)) {
+                        continue;
+                    }
+                    $filePath[$file] = $productStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
                 }
 
-                $dataTable[$key]['filePath'] = array_keys($filePath);
+                $dataTable[$key]['filePath'] = array_values($filePath);
             }
         }
 
