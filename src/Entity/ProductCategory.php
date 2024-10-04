@@ -48,6 +48,7 @@ class ProductCategory
     public function setProduct(Product $product): ProductCategory
     {
         $this->product = $product;
+        $product->addProductCategory($this);
 
         return $this;
     }

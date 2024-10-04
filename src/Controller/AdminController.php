@@ -175,6 +175,23 @@ class AdminController extends AbstractController
             ->getDataTablesData($request->request->all())->getResult();
 
         foreach ($dataTable as $key => $product) {
+            if (isset($product['categories'])) {
+                $setCategory = [];
+                $categories = explode(',', $product['categories']);
+                foreach ($categories as $category) {
+                    $category = trim($category, '}');
+                    $category = trim($category, '{');
+                    if ($category == 'NULL') {
+                        continue;
+                    }
+                    $setCategory[] = $category;
+                }
+
+                $dataTable[$key]['categories'] = $setCategory;
+            }
+        }
+
+        foreach ($dataTable as $key => $product) {
             if (isset($product['filePath'])) {
                 $filePath = [];
                 $files = explode(',', $product['filePath']);

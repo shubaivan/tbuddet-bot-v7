@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let table;
     var common_defs = [];
     common_defs.push({
-        "targets": 4,
+        "targets": 5,
         "orderable": false,
         "render": function (data, type, row, meta) {
             var divTag = $('<div/>');
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     common_defs.push({
-        "targets": 1,
+        "targets": 2,
         "render": function ( data, type, row, meta ) {
             // row.filePath
             let imgs = '';
@@ -59,7 +59,19 @@ document.addEventListener("DOMContentLoaded", function () {
     })
 
     common_defs.push({
-        "targets": 7,
+        "targets": 1,
+        "render": function ( data, type, row, meta ) {
+            // row.filePath
+            let categories = '';
+            $.each(row.categories, function( index, category ) {
+                categories = categories + '<b>'+category+'<b><br>';
+            })
+            return categories;
+        }
+    })
+
+    common_defs.push({
+        "targets": 8,
         data: 'action',
         render: function (data, type, row, meta) {
             return '    <!-- Button trigger modal -->\n' +
@@ -148,9 +160,14 @@ document.addEventListener("DOMContentLoaded", function () {
                         });
                     }
 
+                    var categories_select_form_group = $('<div>').addClass('form-group');
+
                     var categories_select = $('<select>').addClass('category_select');
                     categories_select.attr('name', 'category_ids[]');
-                    form.prepend(categories_select);
+                    categories_select.attr('id', 'productCategory');
+                    categories_select.appendTo(categories_select_form_group);
+
+                    form.prepend(categories_select_form_group);
                     applySelect2ToShopsSelect(categories_select, {width: '100%'});
 
                     $.ajax({
@@ -208,6 +225,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 null,
                 'App\\Entity\\Product'
             );
+
+            var categories_select_form_group = $('<div>').addClass('form-group');
+
+            var categories_select = $('<select>').addClass('category_select');
+            categories_select.attr('name', 'category_ids[]');
+            categories_select.attr('id', 'productCategory');
+            categories_select.appendTo(categories_select_form_group);
+
+            form.prepend(categories_select_form_group);
+            applySelect2ToShopsSelect(categories_select, {width: '100%'});
         }
 
         modal.on('click', '.remove_block .fa-minus-square', function () {

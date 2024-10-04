@@ -86,7 +86,8 @@ class ProductRepository extends ServiceEntityRepository
         } else {
             $dql = '
                 SELECT 
-                o.id, 
+                o.id,
+                array_agg(category.category_name) as categories, 
                 array_agg(f.path) as filePath,                
                 o.product_name,              
                 o.price,
@@ -96,6 +97,8 @@ class ProductRepository extends ServiceEntityRepository
                 \'edit\' as action
                 FROM App\Entity\Product o
                 LEFT JOIN o.files f 
+                LEFT JOIN o.productCategory pc 
+                LEFT JOIN pc.category category 
             ';
         }
 

@@ -8,6 +8,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Attribute\SerializedName;
+use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
@@ -20,6 +22,7 @@ class Product implements AttachmentFilesInterface
 
     public static array $dataTableFields = [
         'id',
+        'categories',
         'filePath',
         'product_name',
         'price',
@@ -59,6 +62,7 @@ class Product implements AttachmentFilesInterface
     private Collection $files;
 
     #[ORM\OneToMany(targetEntity: ProductCategory::class, mappedBy: 'product', orphanRemoval: true, cascade: ["persist"])]
+    #[Count(min: 1, minMessage: "Має бути хоча б одна категорія")]
     private Collection $productCategory;
 
     public function __construct() {
@@ -213,5 +217,19 @@ class Product implements AttachmentFilesInterface
         }
 
         return $this;
+    }
+
+    #[SerializedName('categories_info')]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    public function getCategoriesSelect2Info(): array
+    {
+        $result = [];
+        foreach ($this->getProductCategory() as $key=>$productCategory)
+        {
+            $result[$key]['id'] = $productCategory->getCategory()->getId();
+            $result[$key]['name'] = $productCategory->getCategory()->getCategoryName();
+        }
+
+        return $result;
     }
 }
