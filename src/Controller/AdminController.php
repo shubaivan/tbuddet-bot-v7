@@ -184,10 +184,10 @@ class AdminController extends AbstractController
                     if ($category == 'NULL') {
                         continue;
                     }
-                    $setCategory[] = $category;
+                    $setCategory[$category] = 1;
                 }
 
-                $dataTable[$key]['categories'] = $setCategory;
+                $dataTable[$key]['categories'] = array_keys($setCategory);
             }
         }
 
@@ -201,10 +201,10 @@ class AdminController extends AbstractController
                     if ($file == 'NULL') {
                         continue;
                     }
-                    $filePath[] = $productStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                    $filePath[$productStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'))] = 1;
                 }
 
-                $dataTable[$key]['filePath'] = $filePath;
+                $dataTable[$key]['filePath'] = array_keys($filePath);
             }
         }
 
