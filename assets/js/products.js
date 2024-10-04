@@ -1,13 +1,9 @@
 import 'select2';
 import '../styles/app.scss';
 
-import {
-    getBlobFromImageUri,
-    createErrorImgPlaceHolder,
-    delay
-} from './photos_config.js';
+import {createErrorImgPlaceHolder, delay, getBlobFromImageUri} from './photos_config.js';
 
-import {renderAttachmentFilesBlock, addInitPhotoToUppy} from "./uppy_attachment_files";
+import {addInitPhotoToUppy, renderAttachmentFilesBlock} from "./uppy_attachment_files";
 
 document.addEventListener("DOMContentLoaded", function () {
     console.log("admin list!");
@@ -40,8 +36,8 @@ document.addEventListener("DOMContentLoaded", function () {
         "render": function (data, type, row, meta) {
             var divTag = $('<div/>');
             if (Object.keys(data).length) {
-                $.each(data, function( index, value ) {
-                    var pOrder = $('<p/>').append('<b>' + value.property_name + ':</b> ').append('<i>'+value.property_value+'</i>');
+                $.each(data, function (index, value) {
+                    var pOrder = $('<p/>').append('<b>' + value.property_name + ':</b> ').append('<i>' + value.property_value + '</i>');
                     divTag.append(pOrder);
                 });
             }
@@ -52,11 +48,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     common_defs.push({
         "targets": 2,
-        "render": function ( data, type, row, meta ) {
+        "render": function (data, type, row, meta) {
             // row.filePath
             let imgs = '';
-            $.each(row.filePath, function( index, filePath ) {
-                imgs = imgs + '<img src="'+filePath+'" class="img-thumbnail"><br>';
+            $.each(row.filePath, function (index, filePath) {
+                imgs = imgs + '<img src="' + filePath + '" class="img-thumbnail"><br>';
             })
             return imgs;
         }
@@ -64,11 +60,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     common_defs.push({
         "targets": 1,
-        "render": function ( data, type, row, meta ) {
+        "render": function (data, type, row, meta) {
             // row.filePath
             let categories = '';
-            $.each(row.categories, function( index, category ) {
-                categories = categories + '<b>'+category+'<b><br>';
+            $.each(row.categories, function (index, category) {
+                categories = categories + '<b>' + category + '<b><br>';
             })
             return categories;
         }
@@ -102,7 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
         'serverMethod': 'post',
         'ajax': {
             'url': collectionData,
-            "data": function ( d ) {
+            "data": function (d) {
                 if (filter_category_id) {
                     d.filter_category_id = filter_category_id;
                 }
@@ -161,11 +157,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     form.append(product_id_input);
 
                     if (Object.keys(data.product_properties).length) {
-                        $.each(data.product_properties, function( index, productProperty ) {
+                        $.each(data.product_properties, function (index, productProperty) {
                             if (Object.keys(productProperty).length) {
                                 let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
                                 divPropSet.append(addPropertiesBlock(order, productProperty.property_name, productProperty.property_value));
-                                $('#createProduct .prop_conf').attr('order', order )
+                                $('#createProduct .prop_conf').attr('order', order)
                             }
                         });
                     }
@@ -179,6 +175,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     form.prepend(categories_select_form_group);
                     applySelect2ToShopsSelect(categories_select, {width: '100%'});
+
+
+                    $.each(data.categories_info, function (index, category) {
+                        // Set the value, creating a new option if necessary
+                        if (categories_select.find("option[value='" + category.id + "']").length) {
+                            categories_select.val(category.id).trigger('change');
+                        } else {
+                            // Create a DOM Option and pre-select by default
+                            var newOption = new Option(category.name, category.id, true, true);
+                            // Append it to the select
+                            categories_select.append(newOption).trigger('change');
+                        }
+                    })
 
                     $.ajax({
                         type: "POST",
@@ -284,16 +293,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 error: (result) => {
                     console.log(result);
 
-                    $.each(result.responseJSON.error, function( index, value ) {
-                        let invalidInput = form.find('#'+index);
+                    $.each(result.responseJSON.error, function (index, value) {
+                        let invalidInput = form.find('#' + index);
                         if (invalidInput.length > 0) {
                             invalidInput.prop('required', true);
                             invalidInput.parent().closest('.form-group').append($('<span/>', {
                                 'text': value.message,
                                 'class': 'error-message'
                             }))
-                        } else  {
-                            alert('Поле: '+index+' '+value.message);
+                        } else {
+                            alert('Поле: ' + index + ' ' + value.message);
                         }
                     });
                 },
@@ -350,20 +359,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     // Query parameters will be ?search=[term]&type=public
                     return query;
+                },
+                processResults: function (data) {
+                    console.log('processResults', data);
+                    return data;
                 }
             }
         });
         select.select2(options);
     }
 
-    function formatShopOption (option) {
-        return  $(
+    function formatShopOption(option) {
+        return $(
             '<div><strong>' + option.text + '</strong></div>'
         );
     }
 
-    function addPropertiesBlock(order, inputName = null, inputValue = null)
-    {
+    function addPropertiesBlock(order, inputName = null, inputValue = null) {
         var divTag = $('<div/>', {'class': "form-group"});
 
         let label1 = $("<label>");
@@ -371,7 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let input1 = $('<input>', {
             'id': 'property_value',
             'class': 'form-control',
-            'name': 'product_properties['+order+'][property_value]'
+            'name': 'product_properties[' + order + '][property_value]'
         });
         if (inputValue !== null) {
             input1.val(inputValue)
@@ -385,7 +397,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let input2 = $('<input>', {
             'id': 'property_name',
             'class': 'form-control',
-            'name': 'product_properties['+order+'][property_name]'
+            'name': 'product_properties[' + order + '][property_name]'
         });
         if (inputName !== null) {
             input2.val(inputName)
