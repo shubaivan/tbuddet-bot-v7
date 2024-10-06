@@ -281,7 +281,7 @@ class PriceRingConversation extends Conversation
         }
 
         $userOrder = new UserOrder();
-        $userOrder->setProductId($this->getProduct());
+        $userOrder->setProductId($this->productService->getProduct($this->productId));
         $userOrder->setQuantityProduct($this->quantity);
         $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
         $userOrder->setTotalAmount($this->productService->getProduct($this->productId)->getPrice() * $this->quantity);
