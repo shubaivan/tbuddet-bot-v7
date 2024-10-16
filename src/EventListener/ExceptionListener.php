@@ -2,10 +2,14 @@
 
 namespace App\EventListener;
 
+use App\Error\ErrorCodeEnum;
+use App\Exception\AuthException;
+use App\Exception\AuthExceptionInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
@@ -30,7 +34,7 @@ class ExceptionListener
 
     private function isSatisfiedBy(Request $request): bool
     {
-        return preg_match('/^\/(admin|api|jwt)\//i', $request->getRequestUri()) === 1;
+        return preg_match('/^\/(api|jwt)\//i', $request->getRequestUri()) === 1;
     }
 
     private function createApiResponse(HttpExceptionInterface $exception): JsonResponse
@@ -44,10 +48,16 @@ class ExceptionListener
                 $message = 'Not found';
 
                 break;
-            case Response::HTTP_UNAUTHORIZED:
             case Response::HTTP_BAD_REQUEST:
                 $message = $exception->getMessage();
-
+                if ($exception instanceof BadRequestHttpException) {
+                    $message = [
+                        'message' => [
+                            'message' => 'Malformed request payload',
+                            'code' => ErrorCodeEnum::MALFORMED_REQUEST_PAYLOAD_INVALID->value
+                        ]
+                    ];
+                }
                 break;
             case Response::HTTP_FORBIDDEN:
                 $message = 'Forbidden';
@@ -55,16 +65,26 @@ class ExceptionListener
                 break;
             case Response::HTTP_UNPROCESSABLE_ENTITY:
                 if ($exception->getPrevious() instanceof ValidationFailedException) {
-                    foreach ($exception->getPrevious()?->getViolations() as $violation) {
+                    foreach ($exception->getPrevious()?->getViolations() as $key=>$violation) {
                         /** @var ConstraintViolationInterface $violation */
                         if ($violation->getPropertyPath() && $violation->getMessage()) {
-                            $errorResponse[$violation->getPropertyPath()]['message'] = $violation->getMessage();
-                            $errorResponse[$violation->getPropertyPath()]['code'] = $violation->getCode();
+                            $errorResponse[$violation->getPropertyPath()][$key]['message'] = $violation->getMessage();
+                            $errorResponse[$violation->getPropertyPath()][$key]['code'] = $violation->getCode();
                         }
                     }
                 }
 
-                $message = $errorResponse ?? ($exception->getMessage() ? $exception->getMessage() : 'Something gone wrong');
+                if (isset($errorResponse)) {
+                    $message['errors'] = array_map(function (array $pp) {
+                        return array_values($pp);
+                    }, $errorResponse);
+                    if ($exception instanceof AuthExceptionInterface) {
+                        $message['message']['message'] = $exception->getAuthMessage();
+                        $message['message']['code'] = $exception->getAuthCode();
+                    }
+                } else {
+                    $message = $exception->getMessage() ? $exception->getMessage() : 'Something gone wrong';
+                }
 
                 break;
             default:
@@ -72,6 +92,6 @@ class ExceptionListener
                 $message = 'Something gone wrong';
         }
 
-        return new JsonResponse(['error' => $message], $statusCode);
+        return new JsonResponse((is_array($message) ? $message : ['error' => $message]), $statusCode);
     }
 }
