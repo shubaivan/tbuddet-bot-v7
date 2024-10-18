@@ -34,7 +34,7 @@ class ExceptionListener
 
     private function isSatisfiedBy(Request $request): bool
     {
-        return preg_match('/^\/(api|jwt)\//i', $request->getRequestUri()) === 1;
+        return preg_match('/^\/(api|jwt|admin)\//i', $request->getRequestUri()) === 1;
     }
 
     private function createApiResponse(HttpExceptionInterface $exception): JsonResponse

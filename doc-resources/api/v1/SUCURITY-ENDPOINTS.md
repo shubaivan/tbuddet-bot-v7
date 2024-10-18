@@ -45,13 +45,13 @@
 ### Request:
 ```json
 {
-  "email": "some1@dude.com",
-  "first_name": "Some1",
-  "last_name": "las1",
+  "email": "q@q.com",
+  "first_name": "first_name",
+  "last_name": "last_name",
   "password": "111",
-  "password_repeat": "111"
+  "password_repeat": "111",
+  "phone": "0633022666"
 }
-
 ```
 ### Response:
 ```json
@@ -60,11 +60,12 @@
     "message": "User registered"
   },
   "entity": {
-    "id": 119,
-    "uuid": "01928c94-b065-7529-8bf9-93a0abf6bebc",
-    "email": "some1@dude.com",
-    "first_name": "Some1",
-    "last_name": "las1"
+    "id": 2,
+    "uuid": "01929f75-64a6-76c6-8491-78299688d4c0",
+    "email": "q@q.com",
+    "firstName": "first_name",
+    "lastName": "last_name",
+    "phone": "0633022666"
   }
 }
 ```

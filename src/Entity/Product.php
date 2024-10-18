@@ -19,6 +19,7 @@ class Product implements AttachmentFilesInterface
     use CreatedUpdatedAtAwareTrait;
 
     const ADMIN_PRODUCT_VIEW_GROUP = 'admin_product_view_group';
+    const PUBLIC_PRODUCT_VIEW_GROUP = 'public_product_view_group';
 
     public static array $dataTableFields = [
         'id',
@@ -34,21 +35,21 @@ class Product implements AttachmentFilesInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     #[NotBlank(message: 'Вкажіть назву')]
     private string $product_name;
 
     #[ORM\Column(type: 'json', nullable: true)]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP])]
     #[NotBlank(message: 'Вкажіть властивості')]
     private array $product_properties = [];
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP])]
     #[NotBlank(message: 'Вкажіть ціну')]
     private string $price;
 
@@ -220,7 +221,7 @@ class Product implements AttachmentFilesInterface
     }
 
     #[SerializedName('categories_info')]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP])]
     public function getCategoriesSelect2Info(): array
     {
         $result = [];
@@ -231,5 +232,12 @@ class Product implements AttachmentFilesInterface
         }
 
         return $result;
+    }
+
+    #[SerializedName('count_purchase')]
+    #[Groups([self::PUBLIC_PRODUCT_VIEW_GROUP])]
+    public function getCountPurchase()
+    {
+        return $this->getOrders()->count();
     }
 }

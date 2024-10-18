@@ -5,12 +5,15 @@ namespace App\Entity;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: UserOrderRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
 class UserOrder
 {
     use CreatedUpdatedAtAwareTrait;
+
+    const PROTECTED_ORDER_VIEW_GROUP = 'protected_order_view_group';
 
     public static array $dataTableFields = [
         'id',
@@ -25,33 +28,47 @@ class UserOrder
         'updated_at'
     ];
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
     private int $total_amount;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'string', nullable: true)]
     private ?string $description = null;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'integer', nullable: false)]
     private string $quantity_product;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'string', nullable: true)]
     private ?string $liq_pay_status = null;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $liq_pay_response = null;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $liq_pay_order_id = null;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\ManyToOne(targetEntity: TelegramUser::class, inversedBy: 'orders')]
-    #[ORM\JoinColumn(name: 'telegram_user_id', referencedColumnName: 'id')]
-    private TelegramUser $telegram_user_id;
+    #[ORM\JoinColumn(name: 'telegram_user_id', referencedColumnName: 'id', onDelete: 'cascade')]
+    private ?TelegramUser $telegram_user_id;
 
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'orders')]
+    #[ORM\JoinColumn(name: 'client_user_id', referencedColumnName: 'id', onDelete: 'cascade')]
+    private ?User $client_user_id;
+
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private Product $product_id;
@@ -59,6 +76,20 @@ class UserOrder
     public function __construct() {
         $this->quantity_product = 1;
         $this->liq_pay_status = null;
+        $this->telegram_user_id = null;
+        $this->client_user_id = null;
+    }
+
+    public function getClientUserId(): ?User
+    {
+        return $this->client_user_id;
+    }
+
+    public function setClientUserId(User $client_user_id): self
+    {
+        $this->client_user_id = $client_user_id;
+
+        return $this;
     }
 
     public function getId(): ?int
@@ -90,7 +121,7 @@ class UserOrder
         return $this;
     }
 
-    public function getTelegramUserid(): TelegramUser
+    public function getTelegramUserid(): ?TelegramUser
     {
         return $this->telegram_user_id;
     }

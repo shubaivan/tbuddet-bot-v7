@@ -293,17 +293,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 error: (result) => {
                     console.log(result);
 
-                    $.each(result.responseJSON.error, function (index, value) {
-                        let invalidInput = form.find('#' + index);
-                        if (invalidInput.length > 0) {
-                            invalidInput.prop('required', true);
-                            invalidInput.parent().closest('.form-group').append($('<span/>', {
-                                'text': value.message,
-                                'class': 'error-message'
-                            }))
-                        } else {
-                            alert('Поле: ' + index + ' ' + value.message);
-                        }
+                    $.each(result.responseJSON.errors, function (propIndex, propValue) {
+                        let invalidInput = form.find('#' + propIndex);
+
+                        $.each(propValue, function (index, value) {
+                            if (invalidInput.length > 0) {
+                                invalidInput.prop('required', true);
+                                invalidInput.parent().closest('.form-group').append($('<span/>', {
+                                    'text': value.message,
+                                    'class': 'error-message'
+                                }))
+                            } else {
+                                alert('Поле: ' + propIndex + ' ' + value.message);
+                            }
+                        });
                     });
                 },
                 success: (data) => {

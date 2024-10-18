@@ -34,20 +34,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private static array $USER_UPDATE = ['firstName', 'lastName', 'phone', 'email',];
     private static array $USER_INVITE = ['firstName', 'lastName', 'email',];
 
-    #[Groups([self::USER_OWN_REGISTRATION, self::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP])]
+    #[Groups([self::USER_OWN_REGISTRATION, self::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(options: ['unsigned' => true])]
     private int $id;
 
-    #[Groups([self::USER_OWN_REGISTRATION, self::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP])]
+    #[Groups([self::USER_OWN_REGISTRATION, self::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(name: 'uuid', type: 'string', length: 255, unique: true, nullable: false)]
     private string $uuid;
 
     #[Assert\Email]
     #[Assert\NotNull(message: 'Email is required')]
     #[Assert\NotBlank(message: 'Email should not be blank')]
-    #[Groups([self::USER_OWN_REGISTRATION, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, self::USER_ME_GROUP])]
+    #[Groups([self::USER_OWN_REGISTRATION, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, self::USER_ME_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(name: 'email', type: 'string', length: 255, unique: true, nullable: false)]
     private string $email;
 
@@ -68,7 +68,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private string $lastName;
 
     #[Assert\NotBlank]
-    #[Assert\Length(min: 10, max: 10, minMessage: 'Phone cannot be less than {{ limit }} characters',
+    #[Assert\Length(min: 12, max: 12, minMessage: 'Phone cannot be less than {{ limit }} characters',
         maxMessage: 'Phone cannot be longer than {{ limit }} characters')]
     #[Groups([User::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, self::USER_OWN_REGISTRATION])]
     #[ORM\Column(name: 'phone', type: 'string', length: 255, nullable: true)]
@@ -81,10 +81,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'password', type: 'string', length: 255, nullable: false)]
     private string $password;
 
+    #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
+    private Collection $orders;
+
     public function __construct()
     {
         $this->uuid = (Uuid::v7())->jsonSerialize();
         $this->userRoles = new ArrayCollection();
+        $this->orders = new ArrayCollection();
+    }
+
+    public function getOrders(): Collection
+    {
+        return $this->orders;
+    }
+
+    public function setOrders(Collection $orders): self
+    {
+        $this->orders = $orders;
+
+        return $this;
     }
 
     public function getId(): int

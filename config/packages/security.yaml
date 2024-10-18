@@ -35,7 +35,15 @@ security:
             pattern:   ^/api
             stateless: true
             provider: app_user_provider
+
+            entry_point: jwt
+            json_login:
+                check_path: /api/login_check
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
             jwt: ~
+            refresh_jwt:
+                check_path: /api/token/refresh
 
         telegram:
             context: my_context_telegram
@@ -60,8 +68,10 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
+        - { path: ^/api/(login|token/refresh), roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/product, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/product/view, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/user/registration, roles: PUBLIC_ACCESS }
-        - { path: ^/api/login, roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }

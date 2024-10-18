@@ -2,9 +2,11 @@
 
 namespace App\EventSubscriber;
 
+use App\Exception\InvalidJsonException;
 use App\Service\TelegramUserService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 
 class RequestSubscriber implements EventSubscriberInterface
@@ -38,6 +40,12 @@ class RequestSubscriber implements EventSubscriberInterface
         try {
             $content = json_decode($content, true, 512, \JSON_BIGINT_AS_STRING | \JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
+            if ($request->headers->has('content-type')
+                && $request->headers->get('content-type') === 'application/json'
+            ) {
+                throw new InvalidJsonException(Response::HTTP_BAD_REQUEST, 'Invalid JSON.');
+            }
+
             return;
         }
 
