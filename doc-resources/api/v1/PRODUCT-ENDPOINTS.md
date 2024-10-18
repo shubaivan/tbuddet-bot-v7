@@ -2,6 +2,8 @@
 
 - [List of all roles](#1-list-of-all-roles)
 - [Get role by token](#2-get-role-by-token)
+- [Purchase product](#3-purchase-product)
+- [Get user order](#4-user-order-by-id)
 
 ## 1. List of all roles
 ### To get all products
@@ -130,5 +132,37 @@
     "token": "invoice_1729258015648222_54798019_QFz3PhC7RR2qbBM8tA26"
   },
   "link": "secure-link"
+}
+```
+
+## 4 User order by id
+### To user order only for USER_ROLE
+### Security: Bearer {TOKEN}
+### Method: POST
+
+```
+/api/v1/product/user-order/view/{id}
+```
+
+###
+```json
+{
+    "id": 4,
+    "total_amount": "222",
+    "description": "Ваше замовлення: fff: в кількості: 1 одиниць",
+    "quantity_product": "1",
+    "liq_pay_status": null,
+    "liq_pay_response":"secure-data",
+    "liq_pay_order_id": "4-1729258015",
+    "telegram_user_id": null,
+    "client_user_id": {
+        "id": 2,
+        "uuid": "01929f75-64a6-76c6-8491-78299688d4c0",
+        "email": "q@q.com"
+    },
+    "product_id": {
+        "id": 1,
+        "product_name": "fff"
+    }
 }
 ```
