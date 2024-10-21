@@ -4,18 +4,14 @@ namespace App\Controller\API;
 
 use App\Controller\API\Request\ProductListRequest;
 use App\Controller\API\Request\PurchaseProduct;
-use App\Controller\API\V1\Request\User\List\UserListRequest;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
-use App\Entity\QuicksureTenant;
-use App\Entity\Role;
 use App\Entity\User;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Pagination\PaginatedRepresentation;
 use App\Pagination\Paginator;
 use App\Repository\ProductRepository;
-use App\Repository\RoleRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,7 +46,8 @@ class ProductController extends AbstractController
         #[MapQueryString] ?ProductListRequest $listRequest,
         ProductRepository $repository,
         Paginator $paginator,
-    ) {
+    )
+    {
         //Todo https://github.com/symfony/symfony/issues/50690
         if (is_null($listRequest)) {
             $listRequest = new ProductListRequest();
@@ -85,7 +82,8 @@ class ProductController extends AbstractController
         string $id,
         ProductRepository $repository,
         ObjectHandler $objectHandler,
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
@@ -104,7 +102,8 @@ class ProductController extends AbstractController
         #[CurrentUser] User $user,
         EntityManagerInterface $em,
         LoggerInterface $logger
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
@@ -181,7 +180,8 @@ class ProductController extends AbstractController
         string $id,
         UserOrderRepository $repository,
         ObjectHandler $objectHandler,
-    ): JsonResponse {
+    ): JsonResponse
+    {
         $objectHandler->entityLookup($id, UserOrder::class, 'id');
         $userOrder = $repository->findOneBy(['id' => $id]);
 
