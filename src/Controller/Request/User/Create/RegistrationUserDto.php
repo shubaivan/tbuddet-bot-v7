@@ -31,7 +31,7 @@ class RegistrationUserDto
 
     #[Assert\NotBlank]
     #[Assert\Type('string')]
-    #[Assert\Length(min: 10, max: 10, minMessage: 'Phone cannot be less than {{ limit }} characters',
+    #[Assert\Length(min: 12, max: 12, minMessage: 'Phone cannot be less than {{ limit }} characters',
         maxMessage: 'Phone cannot be longer than {{ limit }} characters')]
     #[Assert\Regex(pattern: "/^[0-9]*$/", message: "Please use number only")]
     private string $phone;
