@@ -19,9 +19,11 @@ class UserRole
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'userRoles')]
+    #[ORM\JoinColumn(onDelete: 'cascade')]
     private User $user;
 
     #[ORM\ManyToOne(targetEntity: Role::class)]
+    #[ORM\JoinColumn(onDelete: 'cascade')]
     private Role $role;
 
     public function getId(): ?int

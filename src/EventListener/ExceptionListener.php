@@ -5,6 +5,7 @@ namespace App\EventListener;
 use App\Error\ErrorCodeEnum;
 use App\Exception\AuthException;
 use App\Exception\AuthExceptionInterface;
+use App\Exception\InvalidJsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -50,7 +51,7 @@ class ExceptionListener
                 break;
             case Response::HTTP_BAD_REQUEST:
                 $message = $exception->getMessage();
-                if ($exception instanceof BadRequestHttpException) {
+                if ($exception instanceof InvalidJsonException) {
                     $message = [
                         'message' => [
                             'message' => 'Malformed request payload',

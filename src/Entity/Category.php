@@ -7,6 +7,7 @@ use App\Repository\CategoryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\PersistentCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
@@ -43,9 +44,17 @@ class Category implements AttachmentFilesInterface
     #[Groups([self::ADMIN_CATEGORY_VIEW_GROUP])]
     private Collection $files;
 
+    #[ORM\OneToMany(targetEntity: CategoryRelation::class, mappedBy: 'parent', cascade: ['persist'])]
+    private Collection|PersistentCollection|ArrayCollection $parent;
+
+    #[ORM\OneToMany(targetEntity: CategoryRelation::class, mappedBy: 'child', cascade: ['persist'])]
+    private Collection|PersistentCollection|ArrayCollection $child;
+
     public function __construct() {
         $this->productCategory = new ArrayCollection();
         $this->files = new ArrayCollection();
+        $this->parent = new ArrayCollection();
+        $this->child = new ArrayCollection();
     }
 
 
