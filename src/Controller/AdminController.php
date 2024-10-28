@@ -166,7 +166,7 @@ class AdminController extends AbstractController
 
     #[Route('/admin/products/data-table', name: 'admin-products-data-table', options: ['expose' => true])]
     public function productsDatTable(
-        FilesystemOperator $productStorage,
+        FilesystemOperator $defaultStorage,
         ProductRepository $repository,
         Request $request
     ): JsonResponse
@@ -204,7 +204,8 @@ class AdminController extends AbstractController
                     if (array_key_exists($file, $filePath)) {
                         continue;
                     }
-                    $filePath[$file] = $productStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                    #$filePath[$file] = $defaultStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                    $filePath[$file] = $defaultStorage->publicUrl($file);
                 }
 
                 $dataTable[$key]['filePath'] = array_values($filePath);
@@ -367,7 +368,7 @@ class AdminController extends AbstractController
 
     #[Route('/admin/categories/data-table', name: 'admin-categories-data-table', options: ['expose' => true])]
     public function categoriesDatTable(
-        FilesystemOperator $categoryStorage,
+        FilesystemOperator $defaultStorage,
         CategoryRepository $repository,
         Request $request
     ): JsonResponse
@@ -385,7 +386,8 @@ class AdminController extends AbstractController
                     if ($file == 'NULL') {
                         continue;
                     }
-                    $filePath[] = $categoryStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                    //$filePath[] = $categoryStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
+                    $filePath[] = $defaultStorage->publicUrl($file);
                 }
 
                 $dataTable[$key]['filePath'] = $filePath;

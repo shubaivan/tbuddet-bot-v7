@@ -43,9 +43,11 @@ class Files
     private ?string $description;
 
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'files')]
+    #[ORM\JoinColumn(onDelete: 'cascade')]
     private Product $product;
 
     #[ORM\ManyToOne(targetEntity: Category::class, inversedBy: 'files')]
+    #[ORM\JoinColumn(onDelete: 'cascade')]
     private Category $category;
 
     public function getId(): ?int

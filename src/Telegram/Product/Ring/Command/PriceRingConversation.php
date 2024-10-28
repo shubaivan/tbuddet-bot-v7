@@ -30,7 +30,7 @@ class PriceRingConversation extends Conversation
     public ?bool $confirmPhone = false;
 
     public function __construct(
-        private FilesystemOperator $productStorage,
+        private FilesystemOperator $defaultStorage,
         private TelegramUserService $telegramUserService,
         private ProductService $productService,
         private EntityManagerInterface $em,
@@ -52,7 +52,7 @@ class PriceRingConversation extends Conversation
 
         foreach ($this->productService->getCategories() as $categorySet) {
             foreach ($categorySet->getCategory()->getFiles() as $file) {
-                $url = $this->productStorage->readStream($file->getPath());
+                $url = $this->defaultStorage->readStream($file->getPath());
 
                 /** @var Message $message */
                 $message = $bot->sendPhoto(
@@ -100,7 +100,7 @@ class PriceRingConversation extends Conversation
 
             foreach ($products as $product) {
                 foreach ($product->getFiles() as $file) {
-                    $url = $this->productStorage->readStream($file->getPath());
+                    $url = $this->defaultStorage->readStream($file->getPath());
 
                     /** @var Message $message */
                     $message = $bot->sendPhoto(

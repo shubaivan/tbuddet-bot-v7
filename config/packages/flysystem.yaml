@@ -4,9 +4,10 @@ flysystem:
         default.storage:
             adapter: 'local'
             options:
-                directory: '%kernel.project_dir%/var/storage/default'
+                directory: '%kernel.project_dir%/public/assets/default'
+            public_url: '%env(BUDDET_SERVER_URL)%/assets/default'
 
-        product.storage:
+        aws.storage:
             adapter: 'aws'
             # visibility: public # Make the uploaded file publicly accessible in S3
             options:
@@ -15,11 +16,3 @@ flysystem:
                 prefix: 'products'
                 streamReads: true
 
-        category.storage:
-            adapter: 'aws'
-            # visibility: public # Make the uploaded file publicly accessible in S3
-            options:
-                client: Aws\S3\S3Client
-                bucket: '%env(BUCKETEER_BUCKET_NAME)%'
-                prefix: 'products'
-                streamReads: true
