@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     table = $('#telegramUserTable').DataTable({
         initComplete: function () {
-            initiateShopsSelect();
+            initiateCategoriesSelect();
         },
         'order': [[0, 'desc']],
         'responsive': true,
@@ -420,7 +420,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return divTag;
     }
 
-    function initiateShopsSelect() {
+    function initiateCategoriesSelect() {
         var filter_category_select = $('<select>').addClass('filter_category_select');
         filter_category_select.attr('name', 'filter_category_select[]')
         filter_category_select.attr('multiple', 'multiple')

@@ -21,6 +21,7 @@ class Category implements AttachmentFilesInterface
 
     public static array $dataTableFields = [
         'id',
+        'parents',
         'filePath',
         'category_name',
         'created_at',
@@ -45,9 +46,11 @@ class Category implements AttachmentFilesInterface
     private Collection $files;
 
     #[ORM\OneToMany(targetEntity: CategoryRelation::class, mappedBy: 'parent', cascade: ['persist'])]
+    #[Groups([self::ADMIN_CATEGORY_VIEW_GROUP])]
     private Collection|PersistentCollection|ArrayCollection $parent;
 
     #[ORM\OneToMany(targetEntity: CategoryRelation::class, mappedBy: 'child', cascade: ['persist'])]
+    #[Groups([self::ADMIN_CATEGORY_VIEW_GROUP])]
     private Collection|PersistentCollection|ArrayCollection $child;
 
     public function __construct() {
@@ -149,4 +152,30 @@ class Category implements AttachmentFilesInterface
 
         return $this;
     }
+
+    public function getParent(): ArrayCollection|Collection|PersistentCollection
+    {
+        return $this->parent;
+    }
+
+    public function setParent(ArrayCollection|Collection|PersistentCollection $parent): Category
+    {
+        $this->parent = $parent;
+
+        return $this;
+    }
+
+    public function getChild(): ArrayCollection|Collection|PersistentCollection
+    {
+        return $this->child;
+    }
+
+    public function setChild(ArrayCollection|Collection|PersistentCollection $child): Category
+    {
+        $this->child = $child;
+
+        return $this;
+    }
+
+
 }

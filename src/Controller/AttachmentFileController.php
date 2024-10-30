@@ -83,7 +83,7 @@ class AttachmentFileController extends AbstractController
     #[Route(path: '/admin/api/attachment_files/list', options: ["expose" => true])]
     public function getAttachmentFilesListAction(
         Request $request,
-        FilesystemOperator $productStorage
+        FilesystemOperator $defaultStorage
     )
     {
         $repo = $this->getModelRepo($request);
@@ -98,7 +98,8 @@ class AttachmentFileController extends AbstractController
         /** @var Files[] $values */
         $values = $parentEntity->getFiles()->getValues();
         foreach ($values as $value) {
-            $value->setPath($productStorage->temporaryUrl($value->getPath(), (new \DateTime())->modify('+1 hour')));
+            #$value->setPath($defaultStorage->temporaryUrl($value->getPath(), (new \DateTime())->modify('+1 hour')));
+            $value->setPath($defaultStorage->publicUrl($value->getPath()));
         }
 
         return $this->json(data: $values, context: [

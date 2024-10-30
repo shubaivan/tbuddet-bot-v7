@@ -33,6 +33,18 @@ document.addEventListener("DOMContentLoaded", function () {
     common_defs.push({
         "targets": 1,
         "render": function ( data, type, row, meta ) {
+            var divTag = $('<div/>');
+            $.each(row.parents, function( index, value ) {
+                var pOrder = $('<p/>').append('<b>' + value + ':</b> ');
+                divTag.append(pOrder);
+            })
+            return divTag.html();
+        }
+    })
+
+    common_defs.push({
+        "targets": 2,
+        "render": function ( data, type, row, meta ) {
             // row.filePath
             let imgs = '';
             $.each(row.filePath, function( index, filePath ) {
@@ -43,7 +55,7 @@ document.addEventListener("DOMContentLoaded", function () {
     })
 
     common_defs.push({
-        "targets": 5,
+        "targets": 6,
         data: 'action',
         render: function (data, type, row, meta) {
             return '    <!-- Button trigger modal -->\n' +
@@ -109,6 +121,29 @@ document.addEventListener("DOMContentLoaded", function () {
                     category_id_input.val(data.id);
                     form.append(category_id_input);
 
+                    var categories_select_form_group = $('<div>').addClass('form-group');
+
+                    var categories_select = $('<select>').addClass('category_select');
+                    categories_select.attr('name', 'category_ids[]');
+                    categories_select.attr('id', 'productCategory');
+                    categories_select.appendTo(categories_select_form_group);
+
+                    form.prepend(categories_select_form_group);
+                    applySelect2ToShopsSelect(categories_select, {width: '100%'});
+
+
+                    $.each(data.parents, function (index, category) {
+                        // Set the value, creating a new option if necessary
+                        if (categories_select.find("option[value='" + category.id + "']").length) {
+                            categories_select.val(category.id).trigger('change');
+                        } else {
+                            // Create a DOM Option and pre-select by default
+                            var newOption = new Option(category.name, category.id, true, true);
+                            // Append it to the select
+                            categories_select.append(newOption).trigger('change');
+                        }
+                    })
+
                     $.ajax({
                         type: "POST",
                         url: window.Routing
@@ -154,6 +189,16 @@ document.addEventListener("DOMContentLoaded", function () {
             })
         } else {
             modal.find('#exampleModalLabel').text('Створити нову категорію')
+
+            var categories_select_form_group = $('<div>').addClass('form-group');
+
+            var categories_select = $('<select>').addClass('category_select');
+            categories_select.attr('name', 'category_ids[]');
+            categories_select.attr('id', 'productCategory');
+            categories_select.appendTo(categories_select_form_group);
+
+            form.prepend(categories_select_form_group);
+            applySelect2ToShopsSelect(categories_select, {width: '100%', dropdownParent: $('#exampleModal')});
 
             renderAttachmentFilesBlock(
                 null,
@@ -211,4 +256,66 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     })
+
+    exampleModal.on('hide.bs.modal', function (event) {
+        var modal = $(this);
+
+        let form = modal.find("form");
+        form.trigger("reset");
+        form.find('textarea').val('');
+
+        form.find('.strategies_select').remove();
+        let strategySelect2Container = form.find('.strategy_select2_container');
+        if (strategySelect2Container) {
+            strategySelect2Container.remove();
+        }
+
+        modal.find('.render_play_ground').remove();
+        modal.find('.select2-container').remove();
+
+        form.find('.category_select').remove();
+        form.find('input[name="file_ids[]"]').remove();
+
+        form.find('input[type=hidden]').remove();
+    });
+
+    function applySelect2ToShopsSelect(select, width = {}) {
+
+        let options = $.extend(width, {
+            placeholder: {
+                id: '-1', // the value of the option
+                text: 'Оберіть категорію'
+            },
+            dropdownAutoWidth: true,
+            multiple: true,
+            allowClear: true,
+            templateResult: formatShopOption,
+            ajax: {
+                type: 'post',
+                url: window.Routing
+                    .generate('admin-category-select2'),
+                data: function (params) {
+                    let query = {
+                        search: params.term,
+                        page: params.page || 1,
+                        type: 'public'
+                    };
+
+                    // Query parameters will be ?search=[term]&type=public
+                    return query;
+                },
+                processResults: function (data) {
+                    console.log('processResults', data);
+                    return data;
+                }
+            }
+        });
+        select.select2(options);
+    }
+
+    function formatShopOption(option) {
+        return $(
+            '<div><strong>' + option.text + '</strong></div>'
+        );
+    }
 });

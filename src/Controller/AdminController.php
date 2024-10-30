@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Category;
+use App\Entity\CategoryRelation;
 use App\Entity\Product;
 use App\Entity\ProductCategory;
 use App\Entity\TelegramUser;
@@ -25,6 +26,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
@@ -376,10 +378,10 @@ class AdminController extends AbstractController
         $dataTable = $repository
             ->getDataTablesData($request->request->all())->getResult();
 
-        foreach ($dataTable as $key => $product) {
-            if (isset($product['filePath'])) {
+        foreach ($dataTable as $key => $category) {
+            if (isset($category['filePath'])) {
                 $filePath = [];
-                $files = explode(',', $product['filePath']);
+                $files = explode(',', $category['filePath']);
                 foreach ($files as $file) {
                     $file = trim($file, '}');
                     $file = trim($file, '{');
@@ -387,10 +389,25 @@ class AdminController extends AbstractController
                         continue;
                     }
                     //$filePath[] = $categoryStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
-                    $filePath[] = $defaultStorage->publicUrl($file);
+                    $filePath[$defaultStorage->publicUrl($file)] = 1;
                 }
 
-                $dataTable[$key]['filePath'] = $filePath;
+                $dataTable[$key]['filePath'] = array_values(array_keys($filePath));
+            }
+
+            if (isset($category['parents'])) {
+                $resultParents = [];
+                $parents = explode(',', $category['parents']);
+                foreach ($parents as $parent) {
+                    $parent = trim($parent, '}');
+                    $parent = trim($parent, '{');
+                    if ($parent == 'NULL') {
+                        continue;
+                    }
+                    $resultParents[$parent] = 1;
+                }
+
+                $dataTable[$key]['parents'] = array_values(array_keys($resultParents));
             }
         }
 
@@ -447,6 +464,31 @@ class AdminController extends AbstractController
             }
         }
 
+        if (is_array($request->get('category_ids')) && count($request->get('category_ids'))) {
+            $categories = $repository
+                ->getByIds($request->get('category_ids'));
+            foreach ($categories as $parentCategory) {
+                $childRelation = $category->getChild();
+
+                if (is_null($childRelation)) {
+                    $exists = false;
+                } else {
+                    $exists = $category->getChild()->exists(function ($key, CategoryRelation $element) use ($parentCategory) {
+                        return $parentCategory->getId() === $element->getParent()->getId();
+                    });
+                }
+
+                $categoryRelation = new CategoryRelation();
+                $categoryRelation
+                    ->setChild($category)
+                    ->setParent($parentCategory);
+
+                if (!$exists && !$childRelation->contains($categoryRelation)) {
+                    $em->persist($categoryRelation);
+                }
+            }
+        }
+
         $violations = new ConstraintViolationList();
         $violations->addAll($validator->validate($category));
 
@@ -461,10 +503,17 @@ class AdminController extends AbstractController
         $em->flush();
 
         $response = $this->serializer->serialize(
-            $category, 'json',
-            [AbstractNormalizer::GROUPS => [
-                Category::ADMIN_CATEGORY_VIEW_GROUP,
-            ]]
+            [
+                'id' => $category->getId(),
+                'category_name' => $category->getCategoryName(),
+                'parents' => $category->getChild()->map(function (CategoryRelation $categoryRelation) {
+                    return [
+                        'id' => $categoryRelation->getParent()->getId(),
+                        'name' => $categoryRelation->getParent()->getCategoryName(),
+                    ];
+                })
+            ],
+            'json'
         );
 
         return new JsonResponse($response, Response::HTTP_OK, [], true);
@@ -476,12 +525,17 @@ class AdminController extends AbstractController
     ): JsonResponse
     {
         $response = $this->serializer->serialize(
-            $category, 'json',
             [
-                AbstractNormalizer::GROUPS => [
-                    Category::ADMIN_CATEGORY_VIEW_GROUP,
-                ]
-            ]
+                'id' => $category->getId(),
+                'category_name' => $category->getCategoryName(),
+                'parents' => $category->getChild()->map(function (CategoryRelation $categoryRelation) {
+                    return [
+                        'id' => $categoryRelation->getParent()->getId(),
+                        'name' => $categoryRelation->getParent()->getCategoryName(),
+                    ];
+                })
+            ],
+            'json'
         );
 
         return new JsonResponse($response, Response::HTTP_OK, [], true);
