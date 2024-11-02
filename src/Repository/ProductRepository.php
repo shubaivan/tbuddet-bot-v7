@@ -44,6 +44,25 @@ class ProductRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function filterProducts(array $categoryIds = []): QueryBuilder
+    {
+        $queryBuilder = $this->createQueryBuilder('p');
+
+        if ($categoryIds) {
+            $queryBuilder
+                ->innerJoin('p.productCategory', 'product_category');
+            $orX = $queryBuilder->expr()->orX();
+            foreach ($categoryIds as $key => $categoryId) {
+                $orX->add('product_category.category = :category_' . $key);
+                $queryBuilder->setParameter('category_'.$key, $categoryId);
+            }
+            $queryBuilder->andWhere($orX);
+        }
+
+        return $queryBuilder
+            ->orderBy('p.updated_at');
+    }
+
     public function getTotalProductByCategory(int $categoryId): int
     {
         $queryBuilder = $this->createQueryBuilder('p');

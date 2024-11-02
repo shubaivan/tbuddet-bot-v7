@@ -5,9 +5,15 @@ namespace App\Entity;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\ProductCategoryRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: ProductCategoryRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
+#[UniqueEntity(['category', 'product'])]
+#[ORM\UniqueConstraint(
+    name: 'unique_product_category',
+    columns: ['category_id', 'product_id']
+)]
 class ProductCategory
 {
     use CreatedUpdatedAtAwareTrait;

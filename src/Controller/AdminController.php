@@ -278,7 +278,7 @@ class AdminController extends AbstractController
 
         $categoryIds = $request->get('category_ids');
         if (is_array($categoryIds) && count($categoryIds)) {
-            $currentProductCategories = $productCategoryRepository->findOneBy(['product' => $product]);
+            $currentProductCategories = $productCategoryRepository->findBy(['product' => $product]);
             if ($currentProductCategories) {
                 foreach ($currentProductCategories as $productCategory) {
                     $em->remove($productCategory);

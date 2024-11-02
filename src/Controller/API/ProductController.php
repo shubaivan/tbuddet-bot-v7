@@ -54,7 +54,7 @@ class ProductController extends AbstractController
         }
 
         $paginatedRepresentation = $paginator->getPaginatedRepresentation(
-            $repository->productQueryBuilder(),
+            $repository->filterProducts($listRequest->getCategoryId()),
             [
                 Paginator::PAGE => $listRequest->getPage(),
                 Paginator::LIMIT => $listRequest->getLimit(),

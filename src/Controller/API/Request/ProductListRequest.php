@@ -2,22 +2,17 @@
 
 namespace App\Controller\API\Request;
 
-use Symfony\Component\Validator\Constraints as Assert;
-
 class ProductListRequest
 {
-    #[Assert\Type('int')]
-    #[Assert\NotBlank]
-    private $page;
-
-    #[Assert\Type('int')]
-    #[Assert\NotBlank]
-    private $limit;
+    private int $page;
+    private int $limit;
+    private array $category_id;
 
     public function __construct()
     {
         $this->page = 1;
         $this->limit = 10;
+        $this->category_id = [];
     }
 
     public function getPage(): int
@@ -40,6 +35,18 @@ class ProductListRequest
     public function setLimit(int $limit): ProductListRequest
     {
         $this->limit = $limit;
+
+        return $this;
+    }
+
+    public function getCategoryId(): array
+    {
+        return $this->category_id;
+    }
+
+    public function setCategoryId(array $category_id): ProductListRequest
+    {
+        $this->category_id = $category_id;
 
         return $this;
     }
