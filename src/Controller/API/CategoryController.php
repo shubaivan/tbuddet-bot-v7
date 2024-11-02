@@ -23,20 +23,38 @@ class CategoryController extends AbstractController
     )
     {
         $categories = $categoryRepository->findAll();
-        $three = [];
+        $all = [];
         foreach ($categories as $category) {
-            $categoryThreeResponse = new CategoryThreeResponse($category->getCategoryName(), $category->getId());
-            $setChild = [];
-            foreach ($category->getParent() as $categoryRelation) {
-                $child = $categoryRelation->getChild();
-                if ($child) {
-                    $setChild[] = new CategoryThreeResponse($child->getCategoryName(), $child->getId());
-                }
-            }
-            $categoryThreeResponse->setChild($setChild);
+            $all[$category->getId()] = $category;
+        }
+
+        $mainCategories = $categoryRepository->getMainCategories();
+
+        $three = [];
+        foreach ($mainCategories as $category) {
+            $categoryThreeResponse = $this->getThreeResponse($category);
             $three[] = $categoryThreeResponse;
         }
 
         return $this->json($three);
+    }
+
+    /**
+     * @param \App\Entity\Category $category
+     * @return CategoryThreeResponse
+     */
+    public function getThreeResponse(\App\Entity\Category $category): CategoryThreeResponse
+    {
+        $categoryThreeResponse = new CategoryThreeResponse($category->getCategoryName(), $category->getId());
+        $setChild = [];
+        foreach ($category->getParent() as $categoryRelation) {
+            $child = $categoryRelation->getChild();
+            if ($child) {
+                $setChild[] = $this->getThreeResponse($child);
+            }
+        }
+        $categoryThreeResponse->setChild($setChild);
+
+        return $categoryThreeResponse;
     }
 }

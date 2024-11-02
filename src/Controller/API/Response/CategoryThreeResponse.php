@@ -6,6 +6,7 @@ class CategoryThreeResponse
 {
     private string $category_name;
     private int $category_id;
+    private CategoryThreeResponse $parent;
     private array $child;
 
     /**
@@ -51,6 +52,18 @@ class CategoryThreeResponse
     public function setChild(array $child): CategoryThreeResponse
     {
         $this->child = $child;
+
+        return $this;
+    }
+
+    public function getParent(): CategoryThreeResponse
+    {
+        return $this->parent;
+    }
+
+    public function setParent(CategoryThreeResponse $parent): CategoryThreeResponse
+    {
+        $this->parent = $parent;
 
         return $this;
     }
