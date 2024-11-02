@@ -153,6 +153,9 @@ class Category implements AttachmentFilesInterface
         return $this;
     }
 
+    /**
+     * @return ArrayCollection|Collection|PersistentCollection|CategoryRelation[]
+     */
     public function getParent(): ArrayCollection|Collection|PersistentCollection
     {
         return $this->parent;

@@ -38,6 +38,32 @@ class CategoryRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function getCategoryList()
+    {
+        $dql = '
+                SELECT 
+                o.id,                
+                array_agg(parent.category_name) as parents,                
+                o.category_name,              
+                date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
+                date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at
+                FROM App\Entity\Category o
+                LEFT JOIN o.child child
+                LEFT JOIN child.parent parent  
+            ';
+
+        $dql .= '
+                GROUP BY o.id';
+        $sortBy = 'o.id';
+        $dql .= '
+                ORDER BY ' . $sortBy . ' DESC';
+
+        $r = $this->getEntityManager()
+            ->createQuery($dql)->getResult();
+
+        return $r;
+    }
+
     /**
      * @param array $params
      * @param bool $count
