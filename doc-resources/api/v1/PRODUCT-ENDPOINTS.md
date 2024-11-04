@@ -1,17 +1,27 @@
 # Endpoints list for Role
 
-- [List of all roles](#1-list-of-all-roles)
+- [List of all product](#1-list-of-all-product)
 - [Get role by token](#2-get-role-by-token)
 - [Purchase product](#3-purchase-product)
 - [Get user order](#4-user-order-by-id)
 
-## 1. List of all roles
+## 1. List of all product
 ### To get all products
 ### Security: PUBLIC
 ### Method: GET
 ```
 /api/v1/product
 ```
+### Available get parameters
+```shell
+int `page` default 1
+int `limit` default 10
+array category_id default [] (example category_id[]=1&category_id[]=2) 
+string full_text_search default null
+int price_from default null
+int price_to default null
+```
+
 ### Response:
 ```json
 {

@@ -48,10 +48,10 @@ class Product implements AttachmentFilesInterface
     #[NotBlank(message: 'Вкажіть властивості')]
     private array $product_properties = [];
 
-    #[ORM\Column(type: 'string', length: 255)]
+    #[ORM\Column(type: 'integer')]
     #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP])]
     #[NotBlank(message: 'Вкажіть ціну')]
-    private string $price;
+    private mixed $price;
 
     #[ORM\OneToMany(
         targetEntity: UserOrder::class,
@@ -89,14 +89,14 @@ class Product implements AttachmentFilesInterface
         return $this;
     }
 
-    public function getPrice(): string
+    public function getPrice(): int
     {
         return $this->price;
     }
 
-    public function setPrice(string $price): Product
+    public function setPrice(mixed $price): Product
     {
-        $this->price = $price;
+        $this->price = (int)$price;
 
         return $this;
     }

@@ -24,9 +24,11 @@ class ProductCategory
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Category::class, inversedBy: 'productCategory')]
+    #[ORM\JoinColumn(onDelete: 'cascade')]
     private Category $category;
 
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'productCategory')]
+    #[ORM\JoinColumn(onDelete: 'cascade')]
     private Product $product;
 
     public function getId(): ?int

@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Controller\API\Request\ProductListRequest;
 use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -44,25 +45,34 @@ class ProductRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function filterProducts(array $categoryIds = []): QueryBuilder
+    public function filterProducts(ProductListRequest $listRequest): QueryBuilder
     {
         $queryBuilder = $this->createQueryBuilder('p');
 
-        if ($categoryIds) {
+        if ($listRequest->getCategoryId()) {
             $queryBuilder
                 ->innerJoin('p.productCategory', 'product_category');
             $orX = $queryBuilder->expr()->orX();
-            foreach ($categoryIds as $key => $categoryId) {
+            foreach ($listRequest->getCategoryId() as $key => $categoryId) {
                 $orX->add('product_category.category = :category_' . $key);
                 $queryBuilder->setParameter('category_'.$key, $categoryId);
             }
             $queryBuilder->andWhere($orX);
         }
 
+        if ($listRequest->getPriceFrom() && is_null($listRequest->getPriceTo())) {
+            $queryBuilder->andWhere($queryBuilder->expr()->gte('p.price', $listRequest->getPriceFrom()));
+        } elseif ($listRequest->getPriceTo() && is_null($listRequest->getPriceFrom())) {
+            $queryBuilder->andWhere($queryBuilder->expr()->lte('p.price', $listRequest->getPriceFrom()));
+        } elseif ($listRequest->getPriceFrom() && $listRequest->getPriceTo()) {
+            $queryBuilder->andWhere($queryBuilder->expr()->between('p.price', $listRequest->getPriceFrom(), $listRequest->getPriceTo()));
+        }
+
         return $queryBuilder
             ->orderBy('p.updated_at');
     }
 
+    //SELECT p FROM App\Entity\Product p INNER JOIN p.productCategory product_category WHERE product_category.category = :category_0 AND (p.price BETWEEN 10 AND 15)
     public function getTotalProductByCategory(int $categoryId): int
     {
         $queryBuilder = $this->createQueryBuilder('p');
