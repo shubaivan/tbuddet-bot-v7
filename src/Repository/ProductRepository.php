@@ -72,7 +72,6 @@ class ProductRepository extends ServiceEntityRepository
             ->orderBy('p.updated_at');
     }
 
-    //SELECT p FROM App\Entity\Product p INNER JOIN p.productCategory product_category WHERE product_category.category = :category_0 AND (p.price BETWEEN 10 AND 15)
     public function getTotalProductByCategory(int $categoryId): int
     {
         $queryBuilder = $this->createQueryBuilder('p');

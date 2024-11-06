@@ -8,7 +8,7 @@ class CategoryThreeResponse
     private int $category_id;
     private CategoryThreeResponse $parent;
     private array $child;
-
+    private array $filePath = [];
     /**
      * @param string $category_name
      * @param int $category_id
@@ -64,6 +64,18 @@ class CategoryThreeResponse
     public function setParent(CategoryThreeResponse $parent): CategoryThreeResponse
     {
         $this->parent = $parent;
+
+        return $this;
+    }
+
+    public function getFilePath(): array
+    {
+        return $this->filePath;
+    }
+
+    public function setFilePath(array $filePath): CategoryThreeResponse
+    {
+        $this->filePath = $filePath;
 
         return $this;
     }

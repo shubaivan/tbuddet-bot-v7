@@ -66,6 +66,9 @@ class Product implements AttachmentFilesInterface
     #[Count(min: 1, minMessage: "Має бути хоча б одна категорія")]
     private Collection $productCategory;
 
+    #[Groups([Product::PUBLIC_PRODUCT_VIEW_GROUP])]
+    private array $filePath = [];
+
     public function __construct() {
         $this->orders = new ArrayCollection();
         $this->files = new ArrayCollection();
@@ -239,5 +242,17 @@ class Product implements AttachmentFilesInterface
     public function getCountPurchase()
     {
         return $this->getOrders()->count();
+    }
+
+    public function getFilePath(): array
+    {
+        return $this->filePath;
+    }
+
+    public function setFilePath(array $filePath): Product
+    {
+        $this->filePath = $filePath;
+
+        return $this;
     }
 }

@@ -179,6 +179,4 @@ class Category implements AttachmentFilesInterface
 
         return $this;
     }
-
-
 }

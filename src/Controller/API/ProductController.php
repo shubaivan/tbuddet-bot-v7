@@ -15,6 +15,7 @@ use App\Repository\ProductRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -46,8 +47,8 @@ class ProductController extends AbstractController
         #[MapQueryString] ?ProductListRequest $listRequest,
         ProductRepository $repository,
         Paginator $paginator,
-    )
-    {
+        FilesystemOperator $defaultStorage
+    ) {
         //Todo https://github.com/symfony/symfony/issues/50690
         if (is_null($listRequest)) {
             $listRequest = new ProductListRequest();
@@ -63,7 +64,22 @@ class ProductController extends AbstractController
                     [],
                     UrlGeneratorInterface::ABSOLUTE_URL
                 ),
-            ]
+            ],
+            function (\ArrayIterator $arrayIterator) use ($defaultStorage) {
+                while($arrayIterator->valid() )
+                {
+                    /** @var Product $product */
+                    $product = $arrayIterator->current();
+                    $path = [];
+                    foreach ($product->getFiles() as $file) {
+                        $path[] = $defaultStorage->publicUrl($file->getPath());
+                    }
+                    $product->setFilePath($path);
+                    $arrayIterator->next();
+                }
+
+                return $arrayIterator;
+            }
         );
 
         return new JsonResponse(
