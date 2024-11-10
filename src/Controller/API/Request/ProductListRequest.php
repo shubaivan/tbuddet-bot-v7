@@ -13,7 +13,7 @@ class ProductListRequest
 
     public function __construct()
     {
-        $this->page = 1;
+        $this->page = 0;
         $this->limit = 10;
         $this->category_id = [];
         $this->full_text_search = null;

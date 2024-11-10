@@ -45,6 +45,68 @@ class ProductRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function nativeSqlFilterProducts(ProductListRequest $listRequest)
+    {
+        $connection = $this->getEntityManager()->getConnection();
+
+        if ($listRequest->getFullTextSearch()) {
+            $handleSearchValue = $this->handleSearchValue($listRequest->getFullTextSearch());
+        }
+
+        $from = 'from product as c';
+        $select = '*';
+        $where = [];
+        $bind = [];
+        $orderBy = '';
+        if ($listRequest->getCategoryId()) {
+            $from .= ' left join public.product_category pc on c.id = pc.product_id';
+            $orX = [];
+
+            foreach ($listRequest->getCategoryId() as $key => $categoryId) {
+                $orX[] = ' pc.category_id = :category_' . $key;
+                $bind['category_' . $key] = $categoryId;
+            }
+
+            $orC = implode(' OR ' , $orX);
+            $where[] = $orC;
+        }
+
+        if ($listRequest->getFullTextSearch()) {
+            $select = 'select ts_rank_cd(
+                   c.common_fts,
+                   to_tsquery(:search)) AS rank,
+                    c.*';
+
+            $where[] = 'c.common_fts @@ to_tsquery(:search)';
+            $bind['search'] = $handleSearchValue;
+
+            $orderBy = 'order by rank desc';
+        }
+
+        if ($listRequest->getPriceFrom() && is_null($listRequest->getPriceTo())) {
+            $where[] = 'c.price >= :price_from';
+            $bind['price_from'] = $listRequest->getPriceFrom();
+        } elseif ($listRequest->getPriceTo() && is_null($listRequest->getPriceFrom())) {
+            $where[] = 'c.price <= :price_to';
+            $bind['price_to'] = $listRequest->getPriceFrom();
+        } elseif ($listRequest->getPriceFrom() && $listRequest->getPriceTo()) {
+            $where[] = 'c.price between :price_from and :price_to';
+            $bind['price_to'] = $listRequest->getPriceTo();
+            $bind['price_from'] = $listRequest->getPriceFrom();
+        }
+
+        $limitOfSet = 'limit :limit offset :offset';
+        $bind['limit'] = $listRequest->getLimit();
+        $bind['offset'] = $listRequest->getPage();
+
+        $q = sprintf('%s %s %s %s %s', $select, $from, 'WHERE ' .implode(' AND ', $where), $orderBy, $limitOfSet);
+        $result = $connection->executeQuery($q, $bind);
+
+        $associative = $result->fetchAllAssociative();
+
+        return $associative;
+    }
+
     public function filterProducts(ProductListRequest $listRequest): QueryBuilder
     {
         $queryBuilder = $this->createQueryBuilder('p');
@@ -188,4 +250,18 @@ class ProductRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('product');
     }
 
+    /**
+     * @param $searchField
+     * @param bool $strict
+     * @return string
+     */
+    public function handleSearchValue(
+        $searchField
+    ): string
+    {
+        $result = preg_replace('!\s+!', ' ', $searchField);
+        $result = explode(' ', $result);
+
+        return implode(':*|', $result) . ':*';
+    }
 }

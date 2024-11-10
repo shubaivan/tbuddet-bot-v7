@@ -54,6 +54,8 @@ class ProductController extends AbstractController
             $listRequest = new ProductListRequest();
         }
 
+        $t = $repository->nativeSqlFilterProducts($listRequest);
+
         $paginatedRepresentation = $paginator->getPaginatedRepresentation(
             $repository->filterProducts($listRequest),
             [
