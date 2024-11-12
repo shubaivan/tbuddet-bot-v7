@@ -163,10 +163,17 @@ class ProductController extends AbstractController
         string $id,
         ProductRepository $repository,
         ObjectHandler $objectHandler,
+        FilesystemOperator $defaultStorage,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
+
+        $path = [];
+        foreach ($product->getFiles() as $file) {
+            $path[] = $defaultStorage->publicUrl($file->getPath());
+        }
+        $product->setFilePath($path);
 
         return $this->json($product, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [Product::PUBLIC_PRODUCT_VIEW_GROUP],
