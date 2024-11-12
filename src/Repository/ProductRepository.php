@@ -45,7 +45,7 @@ class ProductRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function nativeSqlFilterProducts(ProductListRequest $listRequest)
+    public function nativeSqlFilterProducts(ProductListRequest $listRequest, bool $total = false)
     {
         $connection = $this->getEntityManager()->getConnection();
 
@@ -54,7 +54,7 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         $from = 'from product as c';
-        $select = '*';
+        $select = 'select';
         $where = [];
         $bind = [];
         $orderBy = '';
@@ -71,8 +71,8 @@ class ProductRepository extends ServiceEntityRepository
             $where[] = $orC;
         }
 
-        if ($listRequest->getFullTextSearch()) {
-            $select = 'select ts_rank_cd(
+        if ($listRequest->getFullTextSearch() && !$total) {
+            $select .= ' ts_rank_cd(
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
                     c.*';
@@ -81,6 +81,8 @@ class ProductRepository extends ServiceEntityRepository
             $bind['search'] = $handleSearchValue;
 
             $orderBy = 'order by rank desc';
+        } else {
+            $select .= ' c.*';
         }
 
         if ($listRequest->getPriceFrom() && is_null($listRequest->getPriceTo())) {
@@ -95,16 +97,21 @@ class ProductRepository extends ServiceEntityRepository
             $bind['price_from'] = $listRequest->getPriceFrom();
         }
 
-        $limitOfSet = 'limit :limit offset :offset';
-        $bind['limit'] = $listRequest->getLimit();
-        $bind['offset'] = $listRequest->getPage();
+        if (!$total) {
+            $limitOfSet = 'limit :limit offset :offset';
+            $bind['limit'] = $listRequest->getLimit();
+            $bind['offset'] = $listRequest->getPage();
+        }
 
-        $q = sprintf('%s %s %s %s %s', $select, $from, 'WHERE ' .implode(' AND ', $where), $orderBy, $limitOfSet);
+        if ($total) {
+            $select = 'select COUNT(DISTINCT c.id) as total';
+            $limitOfSet = '';
+        }
+
+        $q = sprintf('%s %s %s %s %s', $select, $from, (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''), $orderBy, $limitOfSet);
         $result = $connection->executeQuery($q, $bind);
 
-        $associative = $result->fetchAllAssociative();
-
-        return $associative;
+        return $total ? $result->fetchOne() : $result->fetchAllAssociative();
     }
 
     public function filterProducts(ProductListRequest $listRequest): QueryBuilder

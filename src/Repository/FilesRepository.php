@@ -50,4 +50,17 @@ class FilesRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * @param int $productId
+     * @return array|Files[]
+     */
+    public function getFileByProductId(int $productId): array
+    {
+        return $this->createQueryBuilder('f')
+            ->where('f.product = :product')
+            ->setParameter('product', $productId)
+            ->getQuery()
+            ->getResult();
+    }
 }

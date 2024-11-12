@@ -11,6 +11,7 @@ use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Pagination\PaginatedRepresentation;
 use App\Pagination\Paginator;
+use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\ObjectHandler;
@@ -47,52 +48,114 @@ class ProductController extends AbstractController
         #[MapQueryString] ?ProductListRequest $listRequest,
         ProductRepository $repository,
         Paginator $paginator,
-        FilesystemOperator $defaultStorage
+        FilesystemOperator $defaultStorage,
+        FilesRepository $filesRepository
     ) {
         //Todo https://github.com/symfony/symfony/issues/50690
         if (is_null($listRequest)) {
             $listRequest = new ProductListRequest();
         }
 
-        $t = $repository->nativeSqlFilterProducts($listRequest);
+        $total = $repository->nativeSqlFilterProducts($listRequest, true);
+        $offset = (int)($total / $listRequest->getLimit()) * $listRequest->getPage();
+        $listRequest->setOffset($offset);
 
-        $paginatedRepresentation = $paginator->getPaginatedRepresentation(
-            $repository->filterProducts($listRequest),
-            [
-                Paginator::PAGE => $listRequest->getPage(),
-                Paginator::LIMIT => $listRequest->getLimit(),
-                Paginator::PAGINATION_URL => $this->generateUrl(
-                    'public_product_list',
-                    [],
-                    UrlGeneratorInterface::ABSOLUTE_URL
-                ),
-            ],
-            function (\ArrayIterator $arrayIterator) use ($defaultStorage) {
-                while($arrayIterator->valid() )
-                {
-                    /** @var Product $product */
-                    $product = $arrayIterator->current();
-                    $path = [];
-                    foreach ($product->getFiles() as $file) {
-                        $path[] = $defaultStorage->publicUrl($file->getPath());
-                    }
-                    $product->setFilePath($path);
-                    $arrayIterator->next();
-                }
+        $products = $repository->nativeSqlFilterProducts($listRequest);
+        foreach ($products as $key => $productData) {
+            $files = $filesRepository->getFileByProductId($productData['id']);
+            $path = [];
 
-                return $arrayIterator;
+            foreach ($files as $file) {
+                $path[] = $defaultStorage->publicUrl($file->getPath());
             }
-        );
+            $productData['file_path'] = $path;
+            $productData['product_properties'] = json_decode($productData['product_properties'], true);
 
-        return new JsonResponse(
-            $this->serializer->serialize($paginatedRepresentation, JsonEncoder::FORMAT, [
-                AbstractNormalizer::GROUPS => [
-                    PaginatedRepresentation::PAGINATION_DEFAULT,
-                    Product::PUBLIC_PRODUCT_VIEW_GROUP
-                ]
-            ]),
-            Response::HTTP_OK, [], true
-        );
+            $products[$key] = $productData;
+        }
+
+        $parameters = [];
+        if ($listRequest->getPage()) {
+            $parameters['page'] = $listRequest->getPage();
+        }
+
+        if ($listRequest->getLimit()) {
+            $parameters['limit'] = $listRequest->getLimit();
+        }
+
+        if ($listRequest->getCategoryId()) {
+            $parameters['category_id'] = $listRequest->getCategoryId();
+        }
+
+        if ($listRequest->getFullTextSearch()) {
+            $parameters['full_text_search'] = $listRequest->getFullTextSearch();
+        }
+
+        if ($listRequest->getPriceFrom()) {
+            $parameters['price_from'] = $listRequest->getPriceFrom();
+        }
+
+        if ($listRequest->getPriceTo()) {
+            $parameters['price_to'] = $listRequest->getPriceTo();
+        }
+
+        $r = [
+            'data' => $products,
+            'meta' => [
+                'current_page' => $listRequest->getPage(),
+                'from' => $offset,
+                'to' => $offset + $listRequest->getLimit(),
+                'per_page' => $listRequest->getLimit(),
+                'total' => $total,
+            ],
+            'links' => [
+                'first' => $this->generateUrl(
+                    'public_product_list',
+                    $parameters,
+                    UrlGeneratorInterface::ABSOLUTE_URL
+                )
+            ]
+        ];
+
+        return $this->json($r);
+
+//        $paginatedRepresentation = $paginator->getPaginatedRepresentation(
+//            $repository->filterProducts($listRequest),
+//            [
+//                Paginator::PAGE => $listRequest->getPage(),
+//                Paginator::LIMIT => $listRequest->getLimit(),
+//                Paginator::PAGINATION_URL => $this->generateUrl(
+//                    'public_product_list',
+//                    [],
+//                    UrlGeneratorInterface::ABSOLUTE_URL
+//                ),
+//            ],
+//            function (\ArrayIterator $arrayIterator) use ($defaultStorage) {
+//                while($arrayIterator->valid() )
+//                {
+//                    /** @var Product $product */
+//                    $product = $arrayIterator->current();
+//                    $path = [];
+//                    foreach ($product->getFiles() as $file) {
+//                        $path[] = $defaultStorage->publicUrl($file->getPath());
+//                    }
+//                    $product->setFilePath($path);
+//                    $arrayIterator->next();
+//                }
+//
+//                return $arrayIterator;
+//            }
+//        );
+//
+//        return new JsonResponse(
+//            $this->serializer->serialize($paginatedRepresentation, JsonEncoder::FORMAT, [
+//                AbstractNormalizer::GROUPS => [
+//                    PaginatedRepresentation::PAGINATION_DEFAULT,
+//                    Product::PUBLIC_PRODUCT_VIEW_GROUP
+//                ]
+//            ]),
+//            Response::HTTP_OK, [], true
+//        );
     }
 
     #[Route('/view/{id}', name: 'product_view_by_id', methods: [Request::METHOD_GET])]

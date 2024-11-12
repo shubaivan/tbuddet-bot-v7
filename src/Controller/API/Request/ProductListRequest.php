@@ -6,6 +6,7 @@ class ProductListRequest
 {
     private int $page;
     private int $limit;
+    private ?int $offset;
     private array $category_id;
     private ?string $full_text_search;
     private ?int $price_from;
@@ -14,6 +15,7 @@ class ProductListRequest
     public function __construct()
     {
         $this->page = 0;
+        $this->offset = 0;
         $this->limit = 10;
         $this->category_id = [];
         $this->full_text_search = null;
@@ -89,6 +91,18 @@ class ProductListRequest
     public function setPriceTo(?int $price_to): ProductListRequest
     {
         $this->price_to = $price_to;
+
+        return $this;
+    }
+
+    public function getOffset(): ?int
+    {
+        return $this->offset;
+    }
+
+    public function setOffset(?int $offset): ProductListRequest
+    {
+        $this->offset = $offset;
 
         return $this;
     }
