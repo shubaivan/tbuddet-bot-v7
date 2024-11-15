@@ -67,7 +67,7 @@ class Product implements AttachmentFilesInterface
     private Collection $productCategory;
 
     #[Groups([Product::PUBLIC_PRODUCT_VIEW_GROUP])]
-    private array $filePath = [];
+    private array $file_path = [];
 
     public function __construct() {
         $this->orders = new ArrayCollection();
@@ -246,12 +246,12 @@ class Product implements AttachmentFilesInterface
 
     public function getFilePath(): array
     {
-        return $this->filePath;
+        return $this->file_path;
     }
 
-    public function setFilePath(array $filePath): Product
+    public function setFilePath(array $file_path): Product
     {
-        $this->filePath = $filePath;
+        $this->file_path = $file_path;
 
         return $this;
     }
