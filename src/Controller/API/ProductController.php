@@ -304,7 +304,7 @@ class ProductController extends AbstractController
     }
 
     #[isGranted(RoleEnum::USER->value)]
-    #[Route('/user-orders', name: 'user_order_view_by_id', methods: [Request::METHOD_GET])]
+    #[Route('/user-orders', name: 'user_orders', methods: [Request::METHOD_GET])]
     public function userOrders(
         #[CurrentUser] User $user
     ): JsonResponse {
