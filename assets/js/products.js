@@ -37,7 +37,11 @@ document.addEventListener("DOMContentLoaded", function () {
             var divTag = $('<div/>');
             if (Object.keys(data).length) {
                 $.each(data, function (index, value) {
-                    var pOrder = $('<p/>').append('<b>' + value.property_name + ':</b> ').append('<i>' + value.property_value + '</i>');
+                    var pOrder = $('<p/>')
+                        .append('<b>Назва: ' + value.property_name + '</b>; ')
+                        .append('<i>Значення: ' + value.property_value + '</i>; ')
+                        .append('<b>Збільшення ціни: ' + value.property_price_impact + '</b> ')
+                    ;
                     divTag.append(pOrder);
                 });
             }
@@ -160,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         $.each(data.product_properties, function (index, productProperty) {
                             if (Object.keys(productProperty).length) {
                                 let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
-                                divPropSet.append(addPropertiesBlock(order, productProperty.property_name, productProperty.property_value));
+                                divPropSet.append(addPropertiesBlock(order, productProperty.property_name, productProperty.property_value, productProperty.property_price_impact));
                                 $('#createProduct .prop_conf').attr('order', order)
                             }
                         });
@@ -379,7 +383,12 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     }
 
-    function addPropertiesBlock(order, inputName = null, inputValue = null) {
+    function addPropertiesBlock(
+        order,
+        inputName = null,
+        inputValue = null,
+        inputPriceImpact = null,
+    ) {
         var divTag = $('<div/>', {'class': "form-group"});
 
         let label1 = $("<label>");
@@ -410,6 +419,22 @@ document.addEventListener("DOMContentLoaded", function () {
             'class': 'form-text text-muted'
         }).text('назва властивості');
 
+        let label3 = $("<label>");
+        label3.attr({'for': 'property_price_impact'});
+        let input3 = $('<input>', {
+            'id': 'property_price_impact',
+            'type': 'number',
+            'class': 'form-control',
+            'name': 'product_properties[' + order + '][property_price_impact]'
+        });
+        if (inputPriceImpact !== null) {
+            input3.val(inputPriceImpact)
+        }
+        let small3 = $("<small>", {
+            'class': 'form-text text-muted'
+        }).text('збільшення ціни властвивості на продукт у грн');
+
+        divTag.append(label3).append(input3).append(small3);
         divTag.append(label2).append(input2).append(small2);
         divTag.append(label1).append(input1).append(small1);
 

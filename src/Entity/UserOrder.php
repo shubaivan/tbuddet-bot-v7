@@ -6,6 +6,7 @@ use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 #[ORM\Entity(repositoryClass: UserOrderRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
@@ -64,7 +65,7 @@ class UserOrder
     private ?TelegramUser $telegram_user_id;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
-    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'orders')]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'client_orders')]
     #[ORM\JoinColumn(name: 'client_user_id', referencedColumnName: 'id', onDelete: 'cascade')]
     private ?User $client_user_id;
 
@@ -72,6 +73,11 @@ class UserOrder
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'orders')]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private Product $product_id;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    #[NotBlank(message: 'Вкажіть властивості')]
+    private array $product_properties = [];
 
     public function __construct() {
         $this->quantity_product = 1;
@@ -189,6 +195,18 @@ class UserOrder
     public function setLiqPayorderid(?string $liq_pay_order_id): UserOrder
     {
         $this->liq_pay_order_id = $liq_pay_order_id;
+
+        return $this;
+    }
+
+    public function getProductProperties(): array
+    {
+        return $this->product_properties;
+    }
+
+    public function setProductProperties(array $product_properties): UserOrder
+    {
+        $this->product_properties = $product_properties;
 
         return $this;
     }

@@ -3,13 +3,12 @@
 namespace App\Controller\API;
 
 use App\Controller\API\Request\ProductListRequest;
-use App\Controller\API\Request\PurchaseProduct;
+use App\Controller\API\Request\Purchase\PurchaseProduct;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\User;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
-use App\Pagination\PaginatedRepresentation;
 use App\Pagination\Paginator;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
@@ -28,7 +27,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
@@ -57,7 +55,12 @@ class ProductController extends AbstractController
         }
 
         $total = $repository->nativeSqlFilterProducts($listRequest, true);
-        $offset = (int)($total / $listRequest->getLimit()) * $listRequest->getPage();
+        if ($listRequest->getLimit() >= $total) {
+            $offset = 0;
+        } else {
+            $offset = (int)($total / $listRequest->getLimit()) * $listRequest->getPage();
+        }
+
         $listRequest->setOffset($offset);
 
         $products = $repository->nativeSqlFilterProducts($listRequest);
@@ -199,11 +202,28 @@ class ProductController extends AbstractController
         $userOrder->setProductId($product);
         $userOrder->setQuantityProduct($purchaseProduct->getQuantity());
         $userOrder->setClientUserId($user);
-        $userOrder->setTotalAmount($product->getPrice() * $purchaseProduct->getQuantity());
+        $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
+
+        $price = $product->getPrice();
+        $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
+        $propExplainingSet = [];
+        foreach ($purchaseProduct->getProductProperties() as $productProperty) {
+            $price += $productProperty->getPropertyPriceImpact();
+            $propExplainingSet[] = sprintf($propExplainingTemplate, $productProperty->getPropertyName(), $productProperty->getPropertyValue(), $productProperty->getPropertyPriceImpact());
+        }
+
+        $total_amount = $price * $purchaseProduct->getQuantity();
+
+        $userOrder->setTotalAmount($total_amount);
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
             $product->getProductName(),
             $purchaseProduct->getQuantity()
         );
+
+        if (count($propExplainingSet)) {
+            $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet);
+        }
+
         $userOrder->setDescription($description);
 
         $em->persist($userOrder);
@@ -268,12 +288,27 @@ class ProductController extends AbstractController
         string $id,
         UserOrderRepository $repository,
         ObjectHandler $objectHandler,
+        #[CurrentUser] User $user
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, UserOrder::class, 'id');
         $userOrder = $repository->findOneBy(['id' => $id]);
 
+        if (!$user->getOrders()->contains($userOrder)) {
+            return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
+        }
+
         return $this->json($userOrder, Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/user-orders', name: 'user_order_view_by_id', methods: [Request::METHOD_GET])]
+    public function userOrders(
+        #[CurrentUser] User $user
+    ): JsonResponse {
+        return $this->json($user->getClientOrders(), Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
     }

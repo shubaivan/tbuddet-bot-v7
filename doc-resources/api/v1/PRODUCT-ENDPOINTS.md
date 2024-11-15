@@ -4,6 +4,7 @@
 - [Get role by token](#2-get-role-by-token)
 - [Purchase product](#3-purchase-product)
 - [Get user order](#4-user-order-by-id)
+- [Get user orders](#41-user-order-by-id)
 
 ## 1. List of all product
 ### To get all products
@@ -96,9 +97,39 @@ int price_to default null
 ```
 ### Payload:
 ```json
-{
-  "quantity": 1
-}
+[
+  {
+    "id": 1,
+    "total_amount": "14",
+    "description": "Ваше замовлення: Перший: в кількості: 1 одиниць\nНазва: fff, Значення: ccc, Плюс до ціни продкта: 1\nНазва: dd, Значення: aaa, Плюс до ціни продкта: 2",
+    "quantity_product": "1",
+    "liq_pay_status": null,
+    "liq_pay_response": null,
+    "liq_pay_order_id": null,
+    "telegram_user_id": null,
+    "client_user_id": {
+      "id": 2,
+      "uuid": "0192ee3e-1eaf-7bb7-bce8-e1a17bd45ad3",
+      "email": "q@q.com"
+    },
+    "product_id": {
+      "id": 5,
+      "product_name": "Перший"
+    },
+    "product_properties": [
+      {
+        "property_name": "fff",
+        "property_value": "ccc",
+        "property_price_impact": 1
+      },
+      {
+        "property_name": "dd",
+        "property_value": "aaa",
+        "property_price_impact": 2
+      }
+    ]
+  }
+]
 ```
 ### Response:
 ```json
@@ -145,10 +176,10 @@ int price_to default null
 }
 ```
 
-## 4 User order by id
+## 4.1 User order by id
 ### To user order only for USER_ROLE
 ### Security: Bearer {TOKEN}
-### Method: POST
+### Method: GET
 
 ```
 /api/v1/product/user-order/view/{id}
@@ -175,4 +206,38 @@ int price_to default null
         "product_name": "fff"
     }
 }
+```
+
+## 5 User orders
+### To user order only for USER_ROLE
+### Security: Bearer {TOKEN}
+### Method: GET
+
+```
+/api/v1/product/user-orders
+```
+
+###
+```json
+[
+    {
+        "id": 4,
+        "total_amount": "222",
+        "description": "Ваше замовлення: fff: в кількості: 1 одиниць",
+        "quantity_product": "1",
+        "liq_pay_status": null,
+        "liq_pay_response":"secure-data",
+        "liq_pay_order_id": "4-1729258015",
+        "telegram_user_id": null,
+        "client_user_id": {
+            "id": 2,
+            "uuid": "01929f75-64a6-76c6-8491-78299688d4c0",
+            "email": "q@q.com"
+        },
+        "product_id": {
+            "id": 1,
+            "product_name": "fff"
+        }
+    }
+]
 ```

@@ -85,11 +85,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
 
+    #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'client_user_id', cascade: ["persist"])]
+    private Collection $client_orders;
+
     public function __construct()
     {
         $this->uuid = (Uuid::v7())->jsonSerialize();
         $this->userRoles = new ArrayCollection();
         $this->orders = new ArrayCollection();
+        $this->client_orders = new ArrayCollection();
     }
 
     public function getOrders(): Collection
@@ -100,6 +104,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setOrders(Collection $orders): self
     {
         $this->orders = $orders;
+
+        return $this;
+    }
+
+    public function getClientOrders(): Collection
+    {
+        return $this->client_orders;
+    }
+
+    public function setClientOrders(Collection $client_orders): User
+    {
+        $this->client_orders = $client_orders;
 
         return $this;
     }

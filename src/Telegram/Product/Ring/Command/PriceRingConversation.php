@@ -168,12 +168,14 @@ class PriceRingConversation extends Conversation
 
             return;
         }
+
         if (!preg_match_all('/^[0-9]*$/', $text)) {
             $bot->sendMessage('Тількт цирфи');
             $this->askProduct($bot);
 
             return;
         }
+
         $this->quantity = (int)$text;
 
         $bot->sendMessage(
