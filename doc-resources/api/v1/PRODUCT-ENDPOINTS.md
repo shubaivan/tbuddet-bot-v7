@@ -28,34 +28,34 @@ int price_to default null
 {
   "data": [
     {
-      "id": 1,
-      "product_name": "fff",
+      "rank": "1.4",
+      "id": 5,
+      "product_name": "Перший",
+      "price": 11,
+      "created_at": "2024-11-04 12:47:32",
+      "updated_at": "2024-11-04 12:47:32",
       "product_properties": [
         {
-          "property_name": "ggg",
-          "property_value": "rrr"
+          "property_name": "Властивість",
+          "property_value": "Значення"
         }
       ],
-      "price": "222",
-      "categories_info": [
-        {
-          "id": 1,
-          "name": "Благоустрій"
-        }
-      ],
-      "count_purchase": 0
+      "common_fts": "'властивість':2B 'значення':4B 'перший':1A",
+      "file_path": [
+        "https://shuba-chalova-26-2.tplinkdns.com/assets/default/20241106_08:44:02_Selection_409.png",
+        "https://shuba-chalova-26-2.tplinkdns.com/assets/default/20241106_10:27:34_Selection_326.png"
+      ]
     }
   ],
   "meta": {
-    "current_page": 1,
-    "from": 1,
-    "to": 1,
+    "current_page": 0,
+    "from": 0,
+    "to": 10,
     "per_page": 10,
     "total": 1
   },
   "links": {
-    "first": "https://shuba-chalova-26-2.tplinkdns.com/api/v1/product?page=1",
-    "last": "https://shuba-chalova-26-2.tplinkdns.com/api/v1/product?page=1"
+    "first": "https://shuba-chalova-26-2.tplinkdns.com/api/v1/product?limit=10&category_id%5B0%5D=1&full_text_search=%D0%BF%D0%B5%D1%80%20%D0%B7%D0%BD%D0%B0%D1%87%D0%B5&price_from=10&price_to=50"
   }
 }
 ```
@@ -69,19 +69,23 @@ int price_to default null
 ### Response:
 ```json
 {
-  "id": 1,
-  "product_name": "fff",
+  "id": 7,
+  "product_name": "ffff",
   "product_properties": [
     {
-      "property_name": "ggg",
-      "property_value": "rrr"
+      "property_price_impact": "333",
+      "property_name": "fff",
+      "property_value": "eeee"
     }
   ],
-  "price": "222",
+  "price": 222,
+  "filePath": [
+    "https://shuba-chalova-26-2.tplinkdns.com/assets/default/20241115_11:57:40_Selection_332.png"
+  ],
   "categories_info": [
     {
       "id": 1,
-      "name": "Благоустрій"
+      "name": "Main"
     }
   ],
   "count_purchase": 0
