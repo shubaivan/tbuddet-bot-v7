@@ -294,7 +294,7 @@ class ProductController extends AbstractController
         $objectHandler->entityLookup($id, UserOrder::class, 'id');
         $userOrder = $repository->findOneBy(['id' => $id]);
 
-        if (!$user->getOrders()->contains($userOrder)) {
+        if (!$user->getClientOrders()->contains($userOrder)) {
             return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
         }
 
