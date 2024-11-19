@@ -108,7 +108,14 @@ class ProductRepository extends ServiceEntityRepository
             $limitOfSet = '';
         }
 
-        $q = sprintf('%s %s %s %s %s', $select, $from, (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''), $orderBy, $limitOfSet);
+        $q = sprintf('%s %s %s %s %s %s', $select
+            , $from,
+            (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''),
+            ' group by c.id ',
+            $orderBy,
+            $limitOfSet
+        );
+
         $result = $connection->executeQuery($q, $bind);
 
         return $total ? $result->fetchOne() : $result->fetchAllAssociative();
