@@ -58,7 +58,8 @@ class ProductController extends AbstractController
         if ($listRequest->getLimit() >= $total) {
             $offset = 0;
         } else {
-            $offset = (int)($total / $listRequest->getLimit()) * $listRequest->getPage();
+            $step = (int)($total / $listRequest->getLimit());
+            $offset = $listRequest->getLimit() * $listRequest->getPage();
         }
 
         $listRequest->setOffset($offset);

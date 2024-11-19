@@ -100,18 +100,19 @@ class ProductRepository extends ServiceEntityRepository
         if (!$total) {
             $limitOfSet = 'limit :limit offset :offset';
             $bind['limit'] = $listRequest->getLimit();
-            $bind['offset'] = $listRequest->getPage();
+            $bind['offset'] = $listRequest->getOffset();
         }
 
         if ($total) {
             $select = 'select COUNT(DISTINCT c.id) as total';
             $limitOfSet = '';
+            $orderBy = '';
         }
 
         $q = sprintf('%s %s %s %s %s %s', $select
             , $from,
             (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''),
-            ' group by c.id ',
+            (count($where) ? ' group by c.id ' : ''),
             $orderBy,
             $limitOfSet
         );
