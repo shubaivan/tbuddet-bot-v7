@@ -71,16 +71,16 @@ class ProductRepository extends ServiceEntityRepository
             $where[] = $orC;
         }
 
-        if ($listRequest->getFullTextSearch() && !$total) {
-            $select .= ' ts_rank_cd(
+        if ($listRequest->getFullTextSearch()) {
+            if (!$total) {
+                $select .= ' ts_rank_cd(
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
                     c.*';
-
+                $orderBy = 'order by rank desc';
+            }
             $where[] = 'c.common_fts @@ to_tsquery(:search)';
             $bind['search'] = $handleSearchValue;
-
-            $orderBy = 'order by rank desc';
         } else {
             $select .= ' c.*';
         }
@@ -97,6 +97,7 @@ class ProductRepository extends ServiceEntityRepository
             $bind['price_from'] = $listRequest->getPriceFrom();
         }
 
+        $limitOfSet = '';
         if (!$total) {
             $limitOfSet = 'limit :limit offset :offset';
             $bind['limit'] = $listRequest->getLimit();
@@ -112,7 +113,7 @@ class ProductRepository extends ServiceEntityRepository
         $q = sprintf('%s %s %s %s %s %s', $select
             , $from,
             (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''),
-            (count($where) ? ' group by c.id ' : ''),
+            !$total ? ' group by c.id ' : '',
             $orderBy,
             $limitOfSet
         );
