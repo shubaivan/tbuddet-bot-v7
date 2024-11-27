@@ -76,7 +76,7 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         if ($listRequest->getFullTextSearch()) {
-            if (!$total) {
+            if (!$total && !$minPrice && !$maxPrice) {
                 $select .= ' ts_rank_cd(
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
