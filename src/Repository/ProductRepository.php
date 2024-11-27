@@ -45,8 +45,12 @@ class ProductRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function nativeSqlFilterProducts(ProductListRequest $listRequest, bool $total = false)
-    {
+    public function nativeSqlFilterProducts(
+        ProductListRequest $listRequest,
+        bool $total = false,
+        bool $minPrice = false,
+        bool $maxPrice = false
+    ) {
         $connection = $this->getEntityManager()->getConnection();
 
         if ($listRequest->getFullTextSearch()) {
@@ -98,7 +102,7 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         $limitOfSet = '';
-        if (!$total) {
+        if (!$total && !$minPrice && !$maxPrice) {
             $limitOfSet = 'limit :limit offset :offset';
             $bind['limit'] = $listRequest->getLimit();
             $bind['offset'] = $listRequest->getOffset();
@@ -110,17 +114,45 @@ class ProductRepository extends ServiceEntityRepository
             $orderBy = '';
         }
 
+        if ($minPrice) {
+            $select = 'select min(c.price) as min_price';
+            $limitOfSet = '';
+            $orderBy = '';
+        }
+
+        if ($maxPrice) {
+            $select = 'select max(c.price) as max_price';
+            $limitOfSet = '';
+            $orderBy = '';
+        }
+
         $q = sprintf('%s %s %s %s %s %s', $select
             , $from,
             (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''),
-            !$total ? ' group by c.id ' : '',
+            !$total && !$maxPrice && !$minPrice ? ' group by c.id ' : '',
             $orderBy,
             $limitOfSet
         );
 
         $result = $connection->executeQuery($q, $bind);
 
-        return $total ? $result->fetchOne() : $result->fetchAllAssociative();
+        return ($total || $maxPrice || $minPrice) ? $result->fetchOne() : $result->fetchAllAssociative();
+    }
+
+    public function getMinPrice()
+    {
+        return $this->createQueryBuilder('p')
+            ->select('MIN(p.price)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function getMaxPrice()
+    {
+        return $this->createQueryBuilder('p')
+            ->select('MAX(p.price)')
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     public function filterProducts(ProductListRequest $listRequest): QueryBuilder

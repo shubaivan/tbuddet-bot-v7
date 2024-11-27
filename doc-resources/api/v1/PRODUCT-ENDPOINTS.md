@@ -52,7 +52,11 @@ int price_to default null
     "from": 0,
     "to": 10,
     "per_page": 10,
-    "total": 1
+    "total": 1,
+    "min_price": 111,
+    "max_price": 222,
+    "total_min_price": 111,
+    "total_max_price": 222
   },
   "links": {
     "first": "https://shuba-chalova-26-2.tplinkdns.com/api/v1/product?limit=10&category_id%5B0%5D=1&full_text_search=%D0%BF%D0%B5%D1%80%20%D0%B7%D0%BD%D0%B0%D1%87%D0%B5&price_from=10&price_to=50"

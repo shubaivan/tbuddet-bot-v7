@@ -111,6 +111,10 @@ class ProductController extends AbstractController
                 'to' => $offset + $listRequest->getLimit(),
                 'per_page' => $listRequest->getLimit(),
                 'total' => $total,
+                'min_price' => $repository->nativeSqlFilterProducts($listRequest, false, true),
+                'max_price' => $repository->nativeSqlFilterProducts($listRequest, false, false, true),
+                'total_min_price' => $repository->getMinPrice(),
+                'total_max_price' => $repository->getMaxPrice()
             ],
             'links' => [
                 'first' => $this->generateUrl(
