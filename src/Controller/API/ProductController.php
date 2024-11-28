@@ -23,6 +23,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -213,6 +214,15 @@ class ProductController extends AbstractController
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
         foreach ($purchaseProduct->getProductProperties() as $productProperty) {
+            $prop = $product->getProp($productProperty->getPropertyName());
+            if (!$prop) {
+                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
+            }
+
+            if ($prop->getPropertyPriceImpact() != $productProperty->getPropertyPriceImpact()) {
+                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s для продутку %s має інше значення приросту ціни', $productProperty->getPropertyName(), $product->getProductName()));
+            }
+
             $price += $productProperty->getPropertyPriceImpact();
             $propExplainingSet[] = sprintf($propExplainingTemplate, $productProperty->getPropertyName(), $productProperty->getPropertyValue(), $productProperty->getPropertyPriceImpact());
         }

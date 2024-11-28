@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\ProductRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -119,6 +120,40 @@ class Product implements AttachmentFilesInterface
     public function getProductProperties(): array
     {
         return $this->product_properties;
+    }
+
+    public function hasProp(string $name): bool
+    {
+        foreach ($this->product_properties as $property) {
+            if (array_key_exists('property_name', $property)
+                && $property['property_name'] === $name
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $name
+     * @return bool|ProductProperties
+     */
+    public function getProp(string $name): mixed
+    {
+        foreach ($this->product_properties as $property) {
+            if (array_key_exists('property_name', $property)
+                && $property['property_name'] === $name
+            ) {
+                return (new ProductProperties())
+                    ->setPropertyName($property['property_name'])
+                    ->setPropertyValue($property['property_value'])
+                    ->setPropertyPriceImpact((int)$property['property_price_impact'])
+                ;
+            }
+        }
+
+        return false;
     }
 
     public function getProductPropertiesMessage(): string
