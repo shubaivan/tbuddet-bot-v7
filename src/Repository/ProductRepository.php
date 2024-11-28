@@ -72,7 +72,7 @@ class ProductRepository extends ServiceEntityRepository
             }
 
             $orC = implode(' OR ' , $orX);
-            $where[] = $orC;
+            $where[] = '(' . $orC . ')';
         }
 
         if ($listRequest->getFullTextSearch()) {
