@@ -40,7 +40,7 @@ class UserOrder
     private int $total_amount;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
-    #[ORM\Column(type: 'string', nullable: true)]
+    #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
