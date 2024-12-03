@@ -214,7 +214,10 @@ class ProductController extends AbstractController
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
         foreach ($purchaseProduct->getProductProperties() as $productProperty) {
-            $prop = $product->getProp($productProperty->getPropertyName());
+            $prop = $product->getProp(
+                $productProperty->getPropertyName(),
+                $productProperty->getPropertyValue()
+            );
             if (!$prop) {
                 throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
             }

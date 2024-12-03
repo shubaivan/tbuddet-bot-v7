@@ -136,14 +136,16 @@ class Product implements AttachmentFilesInterface
     }
 
     /**
-     * @param string $name
+     * @param string $propertyName
+     * @param string $propertyValue
      * @return bool|ProductProperties
      */
-    public function getProp(string $name): mixed
+    public function getProp(string $propertyName, string $propertyValue): mixed
     {
         foreach ($this->product_properties as $property) {
             if (array_key_exists('property_name', $property)
-                && $property['property_name'] === $name
+                && $property['property_name'] === $propertyName
+                && $property['property_value'] === $propertyValue
             ) {
                 return (new ProductProperties())
                     ->setPropertyName($property['property_name'])
