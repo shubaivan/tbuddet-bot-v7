@@ -6,7 +6,7 @@ use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserOrderRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
@@ -76,14 +76,22 @@ class UserOrder
 
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
-    #[NotBlank(message: 'Вкажіть властивості')]
+    #[Assert\NotBlank(message: 'Вкажіть властивості')]
     private array $product_properties = [];
+
+    #[Assert\Type('string')]
+    #[Assert\Length(min: 12, max: 12, minMessage: 'Phone cannot be less than {{ limit }} characters',
+        maxMessage: 'Phone cannot be longer than {{ limit }} characters')]
+    #[Assert\Regex(pattern: "/^[0-9]*$/", message: "Please use number only")]
+    #[ORM\Column(type: 'string', nullable: true)]
+    private ?string $phone;
 
     public function __construct() {
         $this->quantity_product = 1;
         $this->liq_pay_status = null;
         $this->telegram_user_id = null;
         $this->client_user_id = null;
+        $this->phone = null;
     }
 
     public function getClientUserId(): ?User
@@ -207,6 +215,18 @@ class UserOrder
     public function setProductProperties(array $product_properties): UserOrder
     {
         $this->product_properties = $product_properties;
+
+        return $this;
+    }
+
+    public function getPhone(): ?string
+    {
+        return $this->phone;
+    }
+
+    public function setPhone(?string $phone): self
+    {
+        $this->phone = $phone;
 
         return $this;
     }

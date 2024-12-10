@@ -3,6 +3,7 @@
 namespace App\Controller\API;
 
 use App\Controller\API\Request\ProductListRequest;
+use App\Controller\API\Request\Purchase\PublicPurchaseProduct;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
@@ -36,6 +37,8 @@ class ProductController extends AbstractController
 {
 
     public function __construct(
+        protected EntityManagerInterface $em,
+        protected LoggerInterface $logger,
         protected readonly SerializerInterface $serializer,
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
@@ -196,9 +199,7 @@ class ProductController extends AbstractController
         ProductRepository $repository,
         ObjectHandler $objectHandler,
         #[MapRequestPayload] PurchaseProduct $purchaseProduct,
-        #[CurrentUser] User $user,
-        EntityManagerInterface $em,
-        LoggerInterface $logger
+        #[CurrentUser] User $user
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -208,96 +209,27 @@ class ProductController extends AbstractController
         $userOrder->setProductId($product);
         $userOrder->setQuantityProduct($purchaseProduct->getQuantity());
         $userOrder->setClientUserId($user);
-        $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
 
-        $price = $product->getPrice();
-        $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
-        $propExplainingSet = [];
-        foreach ($purchaseProduct->getProductProperties() as $productProperty) {
-            $prop = $product->getProp(
-                $productProperty->getPropertyName(),
-                $productProperty->getPropertyValue()
-            );
-            if (!$prop) {
-                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
-            }
+        return $this->handleOrder($userOrder, $purchaseProduct, $product);
+    }
 
-            if ($prop->getPropertyPriceImpact() != $productProperty->getPropertyPriceImpact()) {
-                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s для продутку %s має інше значення приросту ціни', $productProperty->getPropertyName(), $product->getProductName()));
-            }
+    #[Route('/public/purchase/{id}', name: 'public_product_purchase_by_id', methods: [Request::METHOD_POST])]
+    public function publicPurchaseProduct(
+        string $id,
+        ProductRepository $repository,
+        ObjectHandler $objectHandler,
+        #[MapRequestPayload] PublicPurchaseProduct $publicPurchaseProduct
+    ): JsonResponse
+    {
+        $objectHandler->entityLookup($id, Product::class, 'id');
+        $product = $repository->findOneBy(['id' => $id]);
 
-            $price += $productProperty->getPropertyPriceImpact();
-            $propExplainingSet[] = sprintf($propExplainingTemplate, $productProperty->getPropertyName(), $productProperty->getPropertyValue(), $productProperty->getPropertyPriceImpact());
-        }
+        $userOrder = new UserOrder();
+        $userOrder->setProductId($product);
+        $userOrder->setQuantityProduct($publicPurchaseProduct->getQuantity());
+        $userOrder->setPhone($publicPurchaseProduct->getPhone());
 
-        $total_amount = $price * $purchaseProduct->getQuantity();
-
-        $userOrder->setTotalAmount($total_amount);
-        $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $product->getProductName(),
-            $purchaseProduct->getQuantity()
-        );
-
-        if (count($propExplainingSet)) {
-            $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet);
-        }
-
-        $userOrder->setDescription($description);
-
-        $em->persist($userOrder);
-        $em->flush();
-
-        $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
-
-        $liqpay = new LiqPay($logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
-
-        if ($userOrder->getTelegramUserid()) {
-            $phoneNumber = $userOrder->getTelegramUserid()->getPhoneNumber();
-        }
-
-        if ($userOrder->getClientUserId()) {
-            $phoneNumber = $userOrder->getClientUserId()->getPhone();
-        }
-
-        $params = array(
-            'action' => 'invoice_send',
-            'version' => '3',
-            'phone' => $phoneNumber,
-            'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
-            'order_id' => $liqPayOrderID,
-            'server_url' => $this->liqpayServerUrl,
-            'description' => $description
-        );
-        $res = $liqpay->api("request", $params);
-        $userOrder->setLiqPayresponse(json_encode($res));
-        $userOrder->setLiqPayorderid($liqPayOrderID);
-        $em->flush();
-
-        $params = array(
-            'action' => 'pay',
-            'version' => '3',
-            'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
-            'order_id' => $liqPayOrderID,
-            'server_url' => $this->liqpayServerUrl,
-            'description' => $description
-        );
-        $cnb_form_raw = $liqpay->cnb_form_raw($params);
-        $link = sprintf(
-            '%s?%s&%s',
-            $cnb_form_raw['url'],
-            'data=' . $cnb_form_raw['data'],
-            'signature=' . $cnb_form_raw['signature'],
-        );
-
-        return $this->json([
-            'order' => $userOrder,
-            'liqpay' => $res,
-            'link' => $link
-        ], Response::HTTP_OK, [], [
-            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
-        ]);
+        return $this->handleOrder($userOrder, $publicPurchaseProduct, $product);
     }
 
     #[isGranted(RoleEnum::USER->value)]
@@ -327,6 +259,101 @@ class ProductController extends AbstractController
         #[CurrentUser] User $user
     ): JsonResponse {
         return $this->json($user->getClientOrders(), Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    public function handleOrder(
+        UserOrder $userOrder,
+        PurchaseProduct $publicPurchaseProduct,
+        Product $product
+    ): JsonResponse {
+        $userOrder->setProductProperties($publicPurchaseProduct->getProductPropertiesArray());
+
+        $price = $product->getPrice();
+        $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
+        $propExplainingSet = [];
+        foreach ($publicPurchaseProduct->getProductProperties() as $productProperty) {
+            $prop = $product->getProp(
+                $productProperty->getPropertyName(),
+                $productProperty->getPropertyValue()
+            );
+            if (!$prop) {
+                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
+            }
+
+            if ($prop->getPropertyPriceImpact() != $productProperty->getPropertyPriceImpact()) {
+                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s для продутку %s має інше значення приросту ціни', $productProperty->getPropertyName(), $product->getProductName()));
+            }
+
+            $price += $productProperty->getPropertyPriceImpact();
+            $propExplainingSet[] = sprintf($propExplainingTemplate, $productProperty->getPropertyName(), $productProperty->getPropertyValue(), $productProperty->getPropertyPriceImpact());
+        }
+
+        $total_amount = $price * $publicPurchaseProduct->getQuantity();
+
+        $userOrder->setTotalAmount($total_amount);
+        $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
+            $product->getProductName(),
+            $publicPurchaseProduct->getQuantity()
+        );
+
+        if (count($propExplainingSet)) {
+            $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet);
+        }
+
+        $userOrder->setDescription($description);
+
+        $this->em->persist($userOrder);
+        $this->em->flush();
+
+        $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
+
+        $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
+
+        if ($userOrder->getClientUserId()) {
+            $phoneNumber = $userOrder->getClientUserId()->getPhone();
+        } elseif ($userOrder->getPhone()) {
+            $phoneNumber = $userOrder->getPhone();
+        }
+
+        $params = array(
+            'action' => 'invoice_send',
+            'version' => '3',
+            'phone' => $phoneNumber,
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'description' => $description
+        );
+        $res = $liqpay->api("request", $params);
+        $userOrder->setLiqPayresponse(json_encode($res));
+        $userOrder->setLiqPayorderid($liqPayOrderID);
+        $this->em->flush();
+
+        $params = array(
+            'action' => 'pay',
+            'version' => '3',
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'description' => $description
+        );
+        $cnb_form_raw = $liqpay->cnb_form_raw($params);
+        $link = sprintf(
+            '%s?%s&%s',
+            $cnb_form_raw['url'],
+            'data=' . $cnb_form_raw['data'],
+            'signature=' . $cnb_form_raw['signature'],
+        );
+
+        return $this->json([
+            'order' => $userOrder,
+            'liqpay' => $res,
+            'link' => $link
+        ], Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
     }

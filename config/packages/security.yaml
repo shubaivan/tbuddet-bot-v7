@@ -73,6 +73,7 @@ security:
         - { path: ^/api/v1/product/view, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/user/registration, roles: PUBLIC_ACCESS }
         - { route: 'public_category_list', roles: PUBLIC_ACCESS }
+        - { route: 'public_product_purchase_by_id', roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }

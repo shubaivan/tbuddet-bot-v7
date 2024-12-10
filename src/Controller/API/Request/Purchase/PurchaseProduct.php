@@ -11,14 +11,13 @@ class PurchaseProduct
     #[Type('int')]
     #[NotBlank]
     #[NotNull]
-    public $quantity;
+    protected $quantity;
 
     /**
      * @var ProductProperties[]
      */
     #[Type('array')]
-    #[NotBlank]
-    private $product_properties;
+    protected $product_properties = [];
 
     public function getQuantity()
     {
