@@ -63,7 +63,9 @@ class LiqPayController extends AbstractController
         $userOrder->setLiqPaystatus($json_decode['status']);
         $em->flush();
 
-        if ($userOrder->getTelegramUserid()->getChatId()) {
+        if ($userOrder->getTelegramUserid()
+            && $userOrder->getTelegramUserid()->getChatId()
+        ) {
             if ($json_decode['status'] === 'success') {
                 $msg = 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами зв\'яжеться наш менеджер';
             } else {
