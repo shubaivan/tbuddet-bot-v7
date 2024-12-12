@@ -85,12 +85,13 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.liq_pay_status,          
                 o.liq_pay_order_id,
                 GROUP_CONCAT(p.product_name, \' ціна за шт:\', p.price, \' грн\') as product_info,
-                GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username, \' \') as user_info,
+                GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone, \' \', tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username, \' \') as user_info,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at
                 FROM App\Entity\UserOrder o
                 LEFT JOIN o.product_id as p
                 LEFT JOIN o.telegram_user_id as tu
+                LEFT JOIN o.client_user_id as cui
             ';
         }
 
