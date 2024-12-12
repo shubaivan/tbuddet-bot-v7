@@ -24,7 +24,8 @@ class UserOrder
         'liq_pay_status',
         'liq_pay_order_id',
         'product_info',
-        'user_info',
+        't_user_info',
+        'c_user_info',
         'created_at',
         'updated_at'
     ];
