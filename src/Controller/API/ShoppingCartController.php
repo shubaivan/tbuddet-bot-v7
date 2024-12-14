@@ -126,7 +126,7 @@ class ShoppingCartController extends AbstractController
     }
 
     #[isGranted(RoleEnum::USER->value)]
-    #[Route(path: '/{purchase_id}', name: 'remove-purchase-product', methods: Request::METHOD_PUT)]
+    #[Route(path: '/{purchase_id}', name: 'update-purchase-product', methods: Request::METHOD_PUT)]
     public function updatePurchaseProduct(
         string $purchase_id,
         #[MapRequestPayload] PurchaseProduct $inputPurchaseProduct,
