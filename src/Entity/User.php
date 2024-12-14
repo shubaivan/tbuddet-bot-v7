@@ -20,6 +20,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\HasLifecycleCallbacks()]
 #[UniqueEntity(['email'])]
+#[UniqueEntity(['phone'])]
 #[ORM\Table(name: 'client_user')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -72,7 +73,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         maxMessage: 'Phone cannot be longer than {{ limit }} characters')]
     #[Assert\Regex(pattern: "/^[0-9]*$/", message: "Please use number only")]
     #[Groups([User::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, self::USER_OWN_REGISTRATION])]
-    #[ORM\Column(name: 'phone', type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(name: 'phone', type: 'string', length: 255, unique: true, nullable: true)]
     private string $phone;
 
     #[ORM\OneToMany(targetEntity: UserRole::class, mappedBy: 'user', cascade: ['persist'])]
@@ -87,6 +88,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'client_user_id', cascade: ["persist"])]
     private Collection $client_orders;
+
+    /** One Customer has One Cart. */
+    #[ORM\OneToOne(targetEntity: ShoppingCart::class, mappedBy: 'user')]
+    private ShoppingCart|null $cart = null;
+
+    /** One User has One Merge. */
+    #[ORM\OneToOne(targetEntity: UserMerge::class, mappedBy: 'user')]
+    private UserMerge|null $merge = null;
 
     public function __construct()
     {
@@ -279,5 +288,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public static function getUserInviteProperties(): array
     {
         return self::$USER_INVITE;
+    }
+
+    public function getCart(): ?ShoppingCart
+    {
+        return $this->cart;
+    }
+
+    public function setCart(?ShoppingCart $cart): User
+    {
+        $this->cart = $cart;
+
+        return $this;
+    }
+
+    public function getMerge(): ?UserMerge
+    {
+        return $this->merge;
+    }
+
+    public function setMerge(?UserMerge $merge): User
+    {
+        $this->merge = $merge;
+
+        return $this;
     }
 }

@@ -258,7 +258,18 @@ class ProductController extends AbstractController
     public function userOrders(
         #[CurrentUser] User $user
     ): JsonResponse {
-        return $this->json($user->getClientOrders(), Response::HTTP_OK, [], [
+        $userOrder = $user->getClientOrders();
+        if ($user->getMerge()
+            && $user->getMerge()->getTelegramUser()
+            && $user->getMerge()->getTelegramUser()->getOrders()
+        ) {
+            $telegramUserOrder = $user->getMerge()->getTelegramUser()->getOrders();
+            foreach ($telegramUserOrder as $order) {
+                $userOrder->add($order);
+            }
+        }
+
+        return $this->json($userOrder, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
     }

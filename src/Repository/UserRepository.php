@@ -18,4 +18,15 @@ class UserRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, User::class);
     }
+
+    public function matchUserByPhone(string $phone): ?User
+    {
+        $queryBuilder = $this->createQueryBuilder('user');
+
+        return $queryBuilder
+            ->where($queryBuilder->expr()->like('user.phone', ':phone'))
+            ->setParameter('phone', '%' . $phone . '%')
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

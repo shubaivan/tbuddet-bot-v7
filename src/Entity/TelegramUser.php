@@ -59,6 +59,14 @@ class TelegramUser implements UserInterface
     #[ORM\ManyToMany(targetEntity: Role::class)]
     private Collection|PersistentCollection|ArrayCollection $userRoles;
 
+    /** One Customer has One Cart. */
+    #[ORM\OneToOne(targetEntity: ShoppingCart::class, mappedBy: 'telegramUser')]
+    private ShoppingCart|null $cart = null;
+
+    /** One User has One Merge. */
+    #[ORM\OneToOne(targetEntity: UserMerge::class, mappedBy: 'telegramUser')]
+    private UserMerge|null $merge = null;
+
     public function __construct()
     {
         $this->orders = new ArrayCollection();
@@ -235,6 +243,30 @@ class TelegramUser implements UserInterface
         if ($this->userRoles->contains($role)) {
             $this->userRoles->removeElement($role);
         }
+
+        return $this;
+    }
+
+    public function getCart(): ?ShoppingCart
+    {
+        return $this->cart;
+    }
+
+    public function setCart(?ShoppingCart $cart): TelegramUser
+    {
+        $this->cart = $cart;
+
+        return $this;
+    }
+
+    public function getMerge(): ?UserMerge
+    {
+        return $this->merge;
+    }
+
+    public function setMerge(?UserMerge $merge): TelegramUser
+    {
+        $this->merge = $merge;
 
         return $this;
     }

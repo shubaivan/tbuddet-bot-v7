@@ -3,7 +3,10 @@
 namespace App\Service;
 
 use App\Entity\TelegramUser;
+use App\Entity\UserMerge;
 use App\Repository\TelegramUserRepository;
+use App\Repository\UserMergeRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class TelegramUserService
@@ -12,6 +15,8 @@ class TelegramUserService
 
     public function __construct(
         private TelegramUserRepository $telegramUserRepository,
+        private UserRepository $userRepository,
+        private UserMergeRepository $userMergeRepository,
         private EntityManagerInterface $em
     ) {}
 
@@ -57,6 +62,19 @@ class TelegramUserService
 
     public function savePhone(string $phone_number): void
     {
+        if ($this->currentUser) {
+            $normalizePhone = substr($phone_number, -10);
+            $user = $this->userRepository->matchUserByPhone($normalizePhone);
+            if ($user) {
+                $merge = $this->userMergeRepository->getByUser($user);
+                if (!$merge) {
+                    $merge = new UserMerge();
+                    $this->em->persist($merge);
+                }
+                $merge->setUser($user)->setTelegramUser($this->currentUser);
+            }
+        }
+
         $this->currentUser->setPhoneNumber($phone_number);
     }
 
