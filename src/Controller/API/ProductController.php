@@ -258,18 +258,18 @@ class ProductController extends AbstractController
     public function userOrders(
         #[CurrentUser] User $user
     ): JsonResponse {
-        $userOrder = $user->getClientOrders();
+        $userOrders = $user->getClientOrders();
         if ($user->getMerge()
             && $user->getMerge()->getTelegramUser()
             && $user->getMerge()->getTelegramUser()->getOrders()
         ) {
             $telegramUserOrder = $user->getMerge()->getTelegramUser()->getOrders();
             foreach ($telegramUserOrder as $order) {
-                $userOrder->add($order);
+                $userOrders->add($order);
             }
         }
 
-        return $this->json($userOrder, Response::HTTP_OK, [], [
+        return $this->json($userOrders, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
     }
@@ -279,26 +279,20 @@ class ProductController extends AbstractController
         PurchaseProduct $publicPurchaseProduct,
         Product $product
     ): JsonResponse {
+        $product->checkInputProp($publicPurchaseProduct->getProductProperties());
         $userOrder->setProductProperties($publicPurchaseProduct->getProductPropertiesArray());
 
         $price = $product->getPrice();
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
         foreach ($publicPurchaseProduct->getProductProperties() as $productProperty) {
-            $prop = $product->getProp(
-                $productProperty->getPropertyName(),
-                $productProperty->getPropertyValue()
-            );
-            if (!$prop) {
-                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
-            }
-
-            if ($prop->getPropertyPriceImpact() != $productProperty->getPropertyPriceImpact()) {
-                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s для продутку %s має інше значення приросту ціни', $productProperty->getPropertyName(), $product->getProductName()));
-            }
-
             $price += $productProperty->getPropertyPriceImpact();
-            $propExplainingSet[] = sprintf($propExplainingTemplate, $productProperty->getPropertyName(), $productProperty->getPropertyValue(), $productProperty->getPropertyPriceImpact());
+            $propExplainingSet[] = sprintf(
+                $propExplainingTemplate,
+                $productProperty->getPropertyName(),
+                $productProperty->getPropertyValue(),
+                $productProperty->getPropertyPriceImpact()
+            );
         }
 
         $total_amount = $price * $publicPurchaseProduct->getQuantity();

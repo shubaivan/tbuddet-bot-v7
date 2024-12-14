@@ -8,6 +8,8 @@ use App\Repository\ProductRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints\Count;
@@ -36,11 +38,11 @@ class Product implements AttachmentFilesInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP, ShoppingCart::GROUP_VIEW])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
+    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP, ShoppingCart::GROUP_VIEW])]
     #[NotBlank(message: 'Вкажіть назву')]
     private string $product_name;
 
@@ -70,10 +72,16 @@ class Product implements AttachmentFilesInterface
     #[Groups([Product::PUBLIC_PRODUCT_VIEW_GROUP])]
     private array $file_path = [];
 
+    #[ORM\OneToMany(
+        targetEntity: PurchaseProduct::class,
+        mappedBy: 'product', cascade: ["persist", "remove"], orphanRemoval: true)]
+    private Collection $purchaseProduct;
+
     public function __construct() {
         $this->orders = new ArrayCollection();
         $this->files = new ArrayCollection();
         $this->productCategory = new ArrayCollection();
+        $this->purchaseProduct = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -289,6 +297,39 @@ class Product implements AttachmentFilesInterface
     public function setFilePath(array $file_path): Product
     {
         $this->file_path = $file_path;
+
+        return $this;
+    }
+
+    /**
+     * @param ProductProperties[] $productProperties
+     * @return void
+     */
+    public function checkInputProp(array $productProperties)
+    {
+        foreach ($productProperties as $productProperty) {
+            $prop = $this->getProp(
+                $productProperty->getPropertyName(),
+                $productProperty->getPropertyValue()
+            );
+            if (!$prop) {
+                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
+            }
+
+            if ($prop->getPropertyPriceImpact() != $productProperty->getPropertyPriceImpact()) {
+                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s для продутку %s має інше значення приросту ціни', $productProperty->getPropertyName(), $product->getProductName()));
+            }
+        }
+    }
+
+    public function getPurchaseProduct(): Collection
+    {
+        return $this->purchaseProduct;
+    }
+
+    public function setPurchaseProduct(Collection $purchaseProduct): Product
+    {
+        $this->purchaseProduct = $purchaseProduct;
 
         return $this;
     }

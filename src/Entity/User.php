@@ -91,7 +91,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /** One Customer has One Cart. */
     #[ORM\OneToOne(targetEntity: ShoppingCart::class, mappedBy: 'user')]
-    private ShoppingCart|null $cart = null;
+    private ShoppingCart|null $shoppingCart = null;
 
     /** One User has One Merge. */
     #[ORM\OneToOne(targetEntity: UserMerge::class, mappedBy: 'user')]
@@ -290,14 +290,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return self::$USER_INVITE;
     }
 
-    public function getCart(): ?ShoppingCart
+    public function getShoppingCart(): ?ShoppingCart
     {
-        return $this->cart;
+        return $this->shoppingCart;
     }
 
-    public function setCart(?ShoppingCart $cart): User
+    public function setShoppingCart(?ShoppingCart $shoppingCart): User
     {
-        $this->cart = $cart;
+        $this->shoppingCart = $shoppingCart;
 
         return $this;
     }
