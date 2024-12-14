@@ -5,6 +5,7 @@ namespace App\Controller\API;
 use App\Controller\API\Request\ProductListRequest;
 use App\Controller\API\Request\Purchase\PublicPurchaseProduct;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
+use App\Controller\API\Request\Purchase\ShoppingCartPurchase;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\User;
@@ -210,7 +211,88 @@ class ProductController extends AbstractController
         $userOrder->setQuantityProduct($purchaseProduct->getQuantity());
         $userOrder->setClientUserId($user);
 
-        return $this->handleOrder($userOrder, $purchaseProduct, $product);
+        $product->checkInputProp($purchaseProduct->getProductProperties());
+        $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
+
+        $price = $product->getPrice();
+        $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
+        $propExplainingSet = [];
+        foreach ($purchaseProduct->getProductProperties() as $productProperty) {
+            $price += $productProperty->getPropertyPriceImpact();
+            $propExplainingSet[] = sprintf(
+                $propExplainingTemplate,
+                $productProperty->getPropertyName(),
+                $productProperty->getPropertyValue(),
+                $productProperty->getPropertyPriceImpact()
+            );
+        }
+
+        $total_amount = $price * $purchaseProduct->getQuantity();
+
+        $userOrder->setTotalAmount($total_amount);
+        $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
+            $product->getProductName(),
+            $purchaseProduct->getQuantity()
+        );
+
+        if (count($propExplainingSet)) {
+            $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet);
+        }
+
+        $userOrder->setDescription($description);
+
+        $this->em->persist($userOrder);
+        $this->em->flush();
+
+        $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
+
+        $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
+
+        if ($userOrder->getClientUserId()) {
+            $phoneNumber = $userOrder->getClientUserId()->getPhone();
+        } elseif ($userOrder->getPhone()) {
+            $phoneNumber = $userOrder->getPhone();
+        }
+
+        $params = array(
+            'action' => 'invoice_send',
+            'version' => '3',
+            'phone' => $phoneNumber,
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'description' => $description
+        );
+        $res = $liqpay->api("request", $params);
+        $userOrder->setLiqPayresponse(json_encode($res));
+        $userOrder->setLiqPayorderid($liqPayOrderID);
+        $this->em->flush();
+
+        $params = array(
+            'action' => 'pay',
+            'version' => '3',
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'description' => $description
+        );
+        $cnb_form_raw = $liqpay->cnb_form_raw($params);
+        $link = sprintf(
+            '%s?%s&%s',
+            $cnb_form_raw['url'],
+            'data=' . $cnb_form_raw['data'],
+            'signature=' . $cnb_form_raw['signature'],
+        );
+
+        return $this->json([
+            'order' => $userOrder,
+            'liqpay' => $res,
+            'link' => $link
+        ], Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
     }
 
     #[Route('/public/purchase/{id}', name: 'public_product_purchase_by_id', methods: [Request::METHOD_POST])]
@@ -229,56 +311,6 @@ class ProductController extends AbstractController
         $userOrder->setQuantityProduct($publicPurchaseProduct->getQuantity());
         $userOrder->setPhone($publicPurchaseProduct->getPhone());
 
-        return $this->handleOrder($userOrder, $publicPurchaseProduct, $product);
-    }
-
-    #[isGranted(RoleEnum::USER->value)]
-    #[Route('/user-order/view/{id}', name: 'user_order_view_by_id', methods: [Request::METHOD_GET])]
-    public function userOrderById(
-        string $id,
-        UserOrderRepository $repository,
-        ObjectHandler $objectHandler,
-        #[CurrentUser] User $user
-    ): JsonResponse
-    {
-        $objectHandler->entityLookup($id, UserOrder::class, 'id');
-        $userOrder = $repository->findOneBy(['id' => $id]);
-
-        if (!$user->getClientOrders()->contains($userOrder)) {
-            return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
-        }
-
-        return $this->json($userOrder, Response::HTTP_OK, [], [
-            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
-        ]);
-    }
-
-    #[isGranted(RoleEnum::USER->value)]
-    #[Route('/user-orders', name: 'user_orders', methods: [Request::METHOD_GET])]
-    public function userOrders(
-        #[CurrentUser] User $user
-    ): JsonResponse {
-        $userOrders = $user->getClientOrders();
-        if ($user->getMerge()
-            && $user->getMerge()->getTelegramUser()
-            && $user->getMerge()->getTelegramUser()->getOrders()
-        ) {
-            $telegramUserOrder = $user->getMerge()->getTelegramUser()->getOrders();
-            foreach ($telegramUserOrder as $order) {
-                $userOrders->add($order);
-            }
-        }
-
-        return $this->json($userOrders, Response::HTTP_OK, [], [
-            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
-        ]);
-    }
-
-    public function handleOrder(
-        UserOrder $userOrder,
-        PurchaseProduct $publicPurchaseProduct,
-        Product $product
-    ): JsonResponse {
         $product->checkInputProp($publicPurchaseProduct->getProductProperties());
         $userOrder->setProductProperties($publicPurchaseProduct->getProductPropertiesArray());
 
@@ -359,6 +391,48 @@ class ProductController extends AbstractController
             'liqpay' => $res,
             'link' => $link
         ], Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/user-order/view/{id}', name: 'user_order_view_by_id', methods: [Request::METHOD_GET])]
+    public function userOrderById(
+        string $id,
+        UserOrderRepository $repository,
+        ObjectHandler $objectHandler,
+        #[CurrentUser] User $user
+    ): JsonResponse
+    {
+        $objectHandler->entityLookup($id, UserOrder::class, 'id');
+        $userOrder = $repository->findOneBy(['id' => $id]);
+
+        if (!$user->getClientOrders()->contains($userOrder)) {
+            return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
+        }
+
+        return $this->json($userOrder, Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/user-orders', name: 'user_orders', methods: [Request::METHOD_GET])]
+    public function userOrders(
+        #[CurrentUser] User $user
+    ): JsonResponse {
+        $userOrders = $user->getClientOrders();
+        if ($user->getMerge()
+            && $user->getMerge()->getTelegramUser()
+            && $user->getMerge()->getTelegramUser()->getOrders()
+        ) {
+            $telegramUserOrder = $user->getMerge()->getTelegramUser()->getOrders();
+            foreach ($telegramUserOrder as $order) {
+                $userOrders->add($order);
+            }
+        }
+
+        return $this->json($userOrders, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
     }

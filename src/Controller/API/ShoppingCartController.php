@@ -3,11 +3,11 @@
 namespace App\Controller\API;
 
 use App\Controller\API\Request\Purchase\PurchaseProduct;
+use App\Controller\API\Request\Purchase\ShoppingCartPurchase;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\PurchaseProduct as EntityPurchaseProduct;
 use App\Entity\ShoppingCart;
 use App\Entity\User;
-use App\Entity\UserOrder;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Service\ObjectHandler;
@@ -81,7 +81,7 @@ class ShoppingCartController extends AbstractController
     }
 
     #[isGranted(RoleEnum::USER->value)]
-    #[Route(name: 'remove-purchase-product', methods: Request::METHOD_GET, path: '/{purchase_id}')]
+    #[Route(path: '/{purchase_id}', name: 'remove-purchase-product', methods: Request::METHOD_GET)]
     public function removePurchaseProduct(
         string $purchase_id,
         #[CurrentUser] User $user,
@@ -111,5 +111,23 @@ class ShoppingCartController extends AbstractController
         return $this->json($shoppingCart, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [ShoppingCart::GROUP_VIEW],
         ]);
+    }
+
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('checkout', name: 'checkout-action', methods: [Request::METHOD_POST])]
+    public function checkoutAction(
+        #[MapRequestPayload] ShoppingCartPurchase $purchase,
+        #[CurrentUser] User $user
+    ): JsonResponse
+    {
+        $shoppingCartPurchaseProducts = $purchase->getPurchaseProducts();
+
+        foreach ($shoppingCartPurchaseProducts as $purchaseProduct) {
+            $productId = $purchaseProduct->getProductId();
+            $productProperties = $purchaseProduct->getProductProperties();
+            $quantity = $purchaseProduct->getQuantity();
+        }
+
+        return $this->json(['ok']);
     }
 }
