@@ -31,10 +31,7 @@ class MatchIdValidator extends ConstraintValidator
 
         if (is_array($value)) {
             foreach ($value as $id) {
-                if (!is_string($id)) {
-                    throw new UnexpectedValueException($id, 'string');
-                }
-                $this->processId($constraint, $id);
+                $this->processId($constraint, (string)$id);
             }
         } elseif (is_string($value)) {
             $this->processId($constraint, $value);

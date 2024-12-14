@@ -21,9 +21,14 @@ class PurchaseProduct
     #[ORM\JoinColumn(name: 'shopping_cart_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private ShoppingCart $shoppingCart;
 
+    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'purchaseProduct')]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private Product $product;
+
+    #[ORM\ManyToOne(targetEntity: UserOrder::class, inversedBy: 'purchaseProduct')]
+    #[ORM\JoinColumn(name: 'user_order_id', referencedColumnName: 'id', nullable: true, onDelete: "CASCADE")]
+    private ?UserOrder $userOrder;
 
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups([ShoppingCart::GROUP_VIEW])]
@@ -85,6 +90,18 @@ class PurchaseProduct
     public function setQuantity($quantity)
     {
         $this->quantity = $quantity;
+
+        return $this;
+    }
+
+    public function getUserOrder(): ?UserOrder
+    {
+        return $this->userOrder;
+    }
+
+    public function setUserOrder(?UserOrder $userOrder): PurchaseProduct
+    {
+        $this->userOrder = $userOrder;
 
         return $this;
     }

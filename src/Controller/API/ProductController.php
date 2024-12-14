@@ -5,7 +5,6 @@ namespace App\Controller\API;
 use App\Controller\API\Request\ProductListRequest;
 use App\Controller\API\Request\Purchase\PublicPurchaseProduct;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
-use App\Controller\API\Request\Purchase\ShoppingCartPurchase;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\User;
@@ -206,12 +205,12 @@ class ProductController extends AbstractController
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
+        $product->checkInputProp($purchaseProduct->getProductProperties());
+
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
         $userOrder->setQuantityProduct($purchaseProduct->getQuantity());
         $userOrder->setClientUserId($user);
-
-        $product->checkInputProp($purchaseProduct->getProductProperties());
         $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
 
         $price = $product->getPrice();
@@ -306,12 +305,12 @@ class ProductController extends AbstractController
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
+        $product->checkInputProp($publicPurchaseProduct->getProductProperties());
+
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
         $userOrder->setQuantityProduct($publicPurchaseProduct->getQuantity());
         $userOrder->setPhone($publicPurchaseProduct->getPhone());
-
-        $product->checkInputProp($publicPurchaseProduct->getProductProperties());
         $userOrder->setProductProperties($publicPurchaseProduct->getProductPropertiesArray());
 
         $price = $product->getPrice();

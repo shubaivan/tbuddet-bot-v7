@@ -36,11 +36,26 @@ class ShoppingCart
     #[ORM\OneToMany(
         targetEntity: PurchaseProduct::class,
         mappedBy: 'shoppingCart', cascade: ["persist", "remove"], orphanRemoval: true)]
-    #[Groups([self::GROUP_VIEW])]
     private Collection $purchaseProduct;
 
     public function __construct() {
         $this->purchaseProduct = new ArrayCollection();
+    }
+
+    #[Groups([self::GROUP_VIEW])]
+    public function purchasedProduct()
+    {
+        return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
+            return $purchaseProduct->getUserOrder() ? true : false;
+        });
+    }
+
+    #[Groups([self::GROUP_VIEW])]
+    public function unpurchasedProduct()
+    {
+        return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
+            return $purchaseProduct->getUserOrder() ? false : true;
+        });
     }
 
 

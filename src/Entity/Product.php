@@ -305,7 +305,7 @@ class Product implements AttachmentFilesInterface
      * @param ProductProperties[] $productProperties
      * @return void
      */
-    public function checkInputProp(array $productProperties)
+    public function checkInputProp(array $productProperties): void
     {
         foreach ($productProperties as $productProperty) {
             $prop = $this->getProp(
