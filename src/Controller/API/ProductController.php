@@ -349,6 +349,8 @@ class ProductController extends AbstractController
 
         if ($userOrder->getClientUserId()) {
             $phoneNumber = $userOrder->getClientUserId()->getPhone();
+        } elseif ($userOrder->getTelegramUserId()) {
+            $phoneNumber = $userOrder->getTelegramUserId()->getPhoneNumber();
         } elseif ($userOrder->getPhone()) {
             $phoneNumber = $userOrder->getPhone();
         }
