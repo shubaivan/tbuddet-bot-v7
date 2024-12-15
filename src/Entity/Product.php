@@ -24,6 +24,12 @@ class Product implements AttachmentFilesInterface
     const ADMIN_PRODUCT_VIEW_GROUP = 'admin_product_view_group';
     const PUBLIC_PRODUCT_VIEW_GROUP = 'public_product_view_group';
 
+    private static array $propertyKeyMap = [
+        'property_price_impact' => 'Збільшення ціни',
+        'property_name' => 'Назва',
+        'property_value' => 'Значення',
+    ];
+
     public static array $dataTableFields = [
         'id',
         'categories',
@@ -187,18 +193,18 @@ class Product implements AttachmentFilesInterface
 
     public function getProductPropertiesMessage(): string
     {
-        $prop = [];
-        foreach ($this->product_properties as $property) {
-            $i = 1;
-            $map = array_map(function ($p) use (&$i) {
-                $str = $i == 1 ? '<b>' . $p . '</b>' : $p;
-                $i++;
-                return $str;
-            }, $property);
-            $prop[] = implode(': ', $map);
+        $output = '';
+        foreach ($this->product_properties as $position => $property) {
+            $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
+            foreach ($property as $key => $item) {
+                if (isset(self::$propertyKeyMap[$key])) {
+                    $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
+                }
+            }
+            $output .= PHP_EOL;
         }
 
-        return implode(PHP_EOL, $prop);
+        return $output;
     }
 
     public function setProductProperties(array $product_properties): Product

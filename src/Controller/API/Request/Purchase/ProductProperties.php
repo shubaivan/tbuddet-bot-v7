@@ -8,17 +8,17 @@ use Symfony\Component\Validator\Constraints\Type;
 
 class ProductProperties
 {
-    #[Type('int')]
+    #[Type('string')]
     #[NotBlank(allowNull: false)]
-    private string $property_name;
+    private $property_name;
 
-    #[Type('int')]
+    #[Type('string')]
     #[NotBlank(allowNull: false)]
-    private string $property_value;
+    private $property_value;
 
-    #[Type('int')]
+    #[Type('integer')]
     #[NotBlank(allowNull: false)]
-    private int $property_price_impact;
+    private $property_price_impact;
 
     public function getPropertyName(): string
     {

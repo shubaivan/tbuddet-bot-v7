@@ -46,7 +46,7 @@ class ShoppingCart
      * @return ArrayCollection|Collection|PurchaseProduct[]
      */
     #[Groups([self::GROUP_VIEW])]
-    public function purchasedProduct(): ArrayCollection|Collection
+    public function getPurchasedProduct(): ArrayCollection|Collection
     {
         return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
             return $purchaseProduct->getUserOrder() ? true : false;
@@ -57,7 +57,7 @@ class ShoppingCart
      * @return ArrayCollection|Collection|PurchaseProduct[]
      */
     #[Groups([self::GROUP_VIEW])]
-    public function unpurchasedProduct(): ArrayCollection|Collection
+    public function getUnpurchasedProduct(): ArrayCollection|Collection
     {
         return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
             return $purchaseProduct->getUserOrder() ? false : true;

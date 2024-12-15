@@ -55,7 +55,7 @@ class ShoppingCartController extends AbstractController
         $entityPurchaseProduct = new EntityPurchaseProduct();
         $entityPurchaseProduct
             ->setQuantity($inputPurchaseProduct->getQuantity())
-            ->setProductProperties($inputPurchaseProduct->getProductProperties())
+            ->setProductProperties($inputPurchaseProduct->getProductPropertiesArray())
             ->setProduct($product);
         $em->persist($entityPurchaseProduct);
 
@@ -146,7 +146,7 @@ class ShoppingCartController extends AbstractController
 
         $entityPurchaseProduct
             ->setQuantity($inputPurchaseProduct->getQuantity())
-            ->setProductProperties($inputPurchaseProduct->getProductProperties());
+            ->setProductProperties($inputPurchaseProduct->getProductPropertiesArray());
 
         $em->flush();
 

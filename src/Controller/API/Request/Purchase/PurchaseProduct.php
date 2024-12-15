@@ -5,6 +5,7 @@ namespace App\Controller\API\Request\Purchase;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Constraints\Type;
+use Symfony\Component\Validator\Constraints\Valid;
 
 class PurchaseProduct
 {
@@ -17,6 +18,7 @@ class PurchaseProduct
      * @var ProductProperties[]
      */
     #[Type('array')]
+    #[Valid]
     protected $product_properties = [];
 
     public function getQuantity()
