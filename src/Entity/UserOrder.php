@@ -87,6 +87,7 @@ class UserOrder
         maxMessage: 'Phone cannot be longer than {{ limit }} characters')]
     #[Assert\Regex(pattern: "/^[0-9]*$/", message: "Please use number only")]
     #[ORM\Column(type: 'string', nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $phone;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]

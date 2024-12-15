@@ -52,7 +52,7 @@ class ProductController extends AbstractController
         Paginator $paginator,
         FilesystemOperator $defaultStorage,
         FilesRepository $filesRepository
-    ) {
+    ): JsonResponse {
         //Todo https://github.com/symfony/symfony/issues/50690
         if (is_null($listRequest)) {
             $listRequest = new ProductListRequest();

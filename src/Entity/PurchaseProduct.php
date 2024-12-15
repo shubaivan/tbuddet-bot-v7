@@ -17,7 +17,11 @@ class PurchaseProduct
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP, ShoppingCart::GROUP_VIEW, self::GROUP_VIEW])]
+    #[Groups([
+        UserOrder::PROTECTED_ORDER_VIEW_GROUP,
+        ShoppingCart::GROUP_VIEW,
+        self::GROUP_VIEW
+    ])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: ShoppingCart::class, inversedBy: 'purchaseProduct')]
@@ -34,14 +38,14 @@ class PurchaseProduct
     private ?UserOrder $userOrder;
 
     #[ORM\Column(type: 'json', nullable: true)]
-    #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW])]
+    #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     private array $product_properties = [];
 
     #[Type('int')]
     #[NotBlank]
     #[NotNull]
     #[ORM\Column(type: 'integer', nullable: true)]
-    #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW])]
+    #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
     protected int $quantity;
 
     public function getId(): ?int
