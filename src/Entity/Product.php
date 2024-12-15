@@ -38,21 +38,40 @@ class Product implements AttachmentFilesInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP, ShoppingCart::GROUP_VIEW])]
+    #[Groups([
+        self::ADMIN_PRODUCT_VIEW_GROUP,
+        self::PUBLIC_PRODUCT_VIEW_GROUP,
+        UserOrder::PROTECTED_ORDER_VIEW_GROUP,
+        ShoppingCart::GROUP_VIEW,
+        PurchaseProduct::GROUP_VIEW
+    ])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP, UserOrder::PROTECTED_ORDER_VIEW_GROUP, ShoppingCart::GROUP_VIEW])]
+    #[Groups([
+        self::ADMIN_PRODUCT_VIEW_GROUP,
+        self::PUBLIC_PRODUCT_VIEW_GROUP,
+        UserOrder::PROTECTED_ORDER_VIEW_GROUP,
+        ShoppingCart::GROUP_VIEW,
+        PurchaseProduct::GROUP_VIEW
+    ])]
     #[NotBlank(message: 'Вкажіть назву')]
     private string $product_name;
 
     #[ORM\Column(type: 'json', nullable: true)]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP])]
+    #[Groups([
+        self::ADMIN_PRODUCT_VIEW_GROUP,
+        self::PUBLIC_PRODUCT_VIEW_GROUP
+    ])]
     #[NotBlank(message: 'Вкажіть властивості')]
     private array $product_properties = [];
 
     #[ORM\Column(type: 'integer')]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP, self::PUBLIC_PRODUCT_VIEW_GROUP])]
+    #[Groups([
+        self::ADMIN_PRODUCT_VIEW_GROUP,
+        self::PUBLIC_PRODUCT_VIEW_GROUP,
+        PurchaseProduct::GROUP_VIEW
+    ])]
     #[NotBlank(message: 'Вкажіть ціну')]
     private mixed $price;
 

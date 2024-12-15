@@ -12,16 +12,19 @@ use Symfony\Component\Validator\Constraints\Type;
 #[ORM\Entity(repositoryClass: PurchaseProductRepository::class)]
 class PurchaseProduct
 {
+    const GROUP_VIEW = 'view_purchase_product';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP, ShoppingCart::GROUP_VIEW, self::GROUP_VIEW])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: ShoppingCart::class, inversedBy: 'purchaseProduct')]
     #[ORM\JoinColumn(name: 'shopping_cart_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private ShoppingCart $shoppingCart;
 
-    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
+    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP, self::GROUP_VIEW])]
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'purchaseProduct')]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private Product $product;
@@ -31,15 +34,15 @@ class PurchaseProduct
     private ?UserOrder $userOrder;
 
     #[ORM\Column(type: 'json', nullable: true)]
-    #[Groups([ShoppingCart::GROUP_VIEW])]
+    #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW])]
     private array $product_properties = [];
 
     #[Type('int')]
     #[NotBlank]
     #[NotNull]
     #[ORM\Column(type: 'integer', nullable: true)]
-    #[Groups([ShoppingCart::GROUP_VIEW])]
-    protected $quantity;
+    #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW])]
+    protected int $quantity;
 
     public function getId(): ?int
     {
@@ -82,12 +85,12 @@ class PurchaseProduct
         return $this;
     }
 
-    public function getQuantity()
+    public function getQuantity(): int
     {
         return $this->quantity;
     }
 
-    public function setQuantity($quantity)
+    public function setQuantity(int $quantity): PurchaseProduct
     {
         $this->quantity = $quantity;
 

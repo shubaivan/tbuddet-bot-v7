@@ -42,16 +42,22 @@ class ShoppingCart
         $this->purchaseProduct = new ArrayCollection();
     }
 
+    /**
+     * @return ArrayCollection|Collection|PurchaseProduct[]
+     */
     #[Groups([self::GROUP_VIEW])]
-    public function purchasedProduct()
+    public function purchasedProduct(): ArrayCollection|Collection
     {
         return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
             return $purchaseProduct->getUserOrder() ? true : false;
         });
     }
 
+    /**
+     * @return ArrayCollection|Collection|PurchaseProduct[]
+     */
     #[Groups([self::GROUP_VIEW])]
-    public function unpurchasedProduct()
+    public function unpurchasedProduct(): ArrayCollection|Collection
     {
         return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
             return $purchaseProduct->getUserOrder() ? false : true;
