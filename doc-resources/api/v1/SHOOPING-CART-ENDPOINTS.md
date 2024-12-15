@@ -8,7 +8,7 @@
 - [Shopping-cart-after-update-purchase-product](#32-show-user-shopping-cart-after-one-of-purchase-product-was-deleted)
 - [Checkout](#4-checkout)
 - [Shopping-cart-after-checkout](#41-show-user-shopping-cart-after-checkout)
-- [Oser-order-after-checkout](#5-show-user-all-orders)
+- [User-order-after-checkout](#5-show-user-all-orders)
 
 ## 1. Show user shopping cart
 ### Show own user shopping cart
