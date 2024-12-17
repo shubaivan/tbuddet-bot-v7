@@ -28,7 +28,7 @@ class PurchaseProduct
     #[ORM\JoinColumn(name: 'shopping_cart_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private ShoppingCart $shoppingCart;
 
-    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP, self::GROUP_VIEW])]
+    #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP, self::GROUP_VIEW, ShoppingCart::GROUP_VIEW])]
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'purchaseProduct')]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: "CASCADE")]
     private Product $product;

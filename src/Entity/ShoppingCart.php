@@ -94,15 +94,10 @@ class ShoppingCart
         return $this;
     }
 
-    public function addPurchaseProduct(PurchaseProduct $inputPurchaseProduct) {
+    public function addPurchaseProduct(PurchaseProduct $inputPurchaseProduct): static
+    {
         if ($this->getPurchaseProduct()->contains($inputPurchaseProduct)) {
           return $this;
-        }
-
-        if ($this->getPurchaseProduct()->exists(function ($key, PurchaseProduct $purchaseProduct) use ($inputPurchaseProduct) {
-            return $inputPurchaseProduct->getProduct()->getId() === $purchaseProduct->getProduct()->getId();
-        })) {
-            return $this;
         }
 
         $inputPurchaseProduct->setShoppingCart($this);
