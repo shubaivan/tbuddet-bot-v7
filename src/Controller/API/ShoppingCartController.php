@@ -96,6 +96,33 @@ class ShoppingCartController extends AbstractController
     }
 
     #[isGranted(RoleEnum::USER->value)]
+    #[Route(name: 'clear_cart', methods: Request::METHOD_DELETE)]
+    public function clear(
+        #[CurrentUser] User $user,
+        EntityManagerInterface $em
+    ): JsonResponse
+    {
+        $shoppingCart = $user->getShoppingCart();
+        if (!$shoppingCart) {
+            $shoppingCart = new ShoppingCart();
+            $shoppingCart->setUser($user);
+            $em->persist($shoppingCart);
+            $em->flush();
+        }
+
+        if ($shoppingCart->getUnpurchasedProduct()->count() > 0) {
+            foreach ($shoppingCart->getUnpurchasedProduct() as $product) {
+                $em->remove($product);
+            }
+            $em->flush();
+        }
+
+        return $this->json($shoppingCart, Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [ShoppingCart::GROUP_VIEW],
+        ]);
+    }
+
+    #[isGranted(RoleEnum::USER->value)]
     #[Route(path: '/{purchase_id}', name: 'remove_purchase_product', methods: Request::METHOD_DELETE)]
     public function removePurchaseProduct(
         string $purchase_id,
