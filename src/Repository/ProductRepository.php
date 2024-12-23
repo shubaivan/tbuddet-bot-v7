@@ -232,6 +232,7 @@ class ProductRepository extends ServiceEntityRepository
                 array_agg(f.path) as filePath,                
                 o.product_name,              
                 o.price,
+                o.description,
                 o.product_properties,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at,

@@ -36,6 +36,7 @@ class Product implements AttachmentFilesInterface
         'filePath',
         'product_name',
         'price',
+        'description',
         'product_properties',
         'created_at',
         'updated_at'
@@ -82,6 +83,16 @@ class Product implements AttachmentFilesInterface
     ])]
     #[NotBlank(message: 'Вкажіть ціну')]
     private mixed $price;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups([
+        self::ADMIN_PRODUCT_VIEW_GROUP,
+        self::PUBLIC_PRODUCT_VIEW_GROUP,
+        PurchaseProduct::GROUP_VIEW,
+        ShoppingCart::GROUP_VIEW
+    ])]
+    #[NotBlank(message: 'Вкажіть опис')]
+    private mixed $description;
 
     #[ORM\OneToMany(
         targetEntity: UserOrder::class,
@@ -362,6 +373,18 @@ class Product implements AttachmentFilesInterface
     public function setPurchaseProduct(Collection $purchaseProduct): Product
     {
         $this->purchaseProduct = $purchaseProduct;
+
+        return $this;
+    }
+
+    public function getDescription(): mixed
+    {
+        return $this->description;
+    }
+
+    public function setDescription(mixed $description): Product
+    {
+        $this->description = $description;
 
         return $this;
     }

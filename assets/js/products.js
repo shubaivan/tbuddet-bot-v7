@@ -151,6 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     modal.find('#exampleModalLabel').text('Редагувати продукт')
                     form.find('#product_name').val(data.product_name)
                     form.find('#price').val(data.price)
+                    form.find('#description').val(data.description)
 
                     let product_id_input = $('<input>').attr({
                         type: 'hidden',
