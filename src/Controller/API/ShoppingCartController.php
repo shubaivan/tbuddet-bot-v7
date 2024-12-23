@@ -16,6 +16,7 @@ use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
+use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -79,7 +80,8 @@ class ShoppingCartController extends AbstractController
     #[Route(name: 'show_cart', methods: Request::METHOD_GET)]
     public function show(
         #[CurrentUser] User $user,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        FilesystemOperator $defaultStorage
     ): JsonResponse
     {
         $shoppingCart = $user->getShoppingCart();
@@ -88,6 +90,17 @@ class ShoppingCartController extends AbstractController
             $shoppingCart->setUser($user);
             $em->persist($shoppingCart);
             $em->flush();
+        }
+
+        foreach ($shoppingCart->getPurchaseProduct() as $up) {
+            $product = $up->getProduct();
+            if ($product) {
+                $path = [];
+                foreach ($product->getFiles() as $file) {
+                    $path[] = $defaultStorage->publicUrl($file->getPath());
+                }
+                $product->setFilePath($path);
+            }
         }
 
         return $this->json($shoppingCart, Response::HTTP_OK, [], [

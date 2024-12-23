@@ -67,7 +67,8 @@ class Product implements AttachmentFilesInterface
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups([
         self::ADMIN_PRODUCT_VIEW_GROUP,
-        self::PUBLIC_PRODUCT_VIEW_GROUP
+        self::PUBLIC_PRODUCT_VIEW_GROUP,
+        ShoppingCart::GROUP_VIEW
     ])]
     #[NotBlank(message: 'Вкажіть властивості')]
     private array $product_properties = [];
@@ -76,7 +77,8 @@ class Product implements AttachmentFilesInterface
     #[Groups([
         self::ADMIN_PRODUCT_VIEW_GROUP,
         self::PUBLIC_PRODUCT_VIEW_GROUP,
-        PurchaseProduct::GROUP_VIEW
+        PurchaseProduct::GROUP_VIEW,
+        ShoppingCart::GROUP_VIEW
     ])]
     #[NotBlank(message: 'Вкажіть ціну')]
     private mixed $price;
@@ -87,14 +89,19 @@ class Product implements AttachmentFilesInterface
     private Collection $orders;
 
     #[ORM\OneToMany(targetEntity: Files::class, mappedBy: 'product', orphanRemoval: true, cascade: ["persist"])]
-    #[Groups([self::ADMIN_PRODUCT_VIEW_GROUP])]
+    #[Groups([
+        self::ADMIN_PRODUCT_VIEW_GROUP
+    ])]
     private Collection $files;
 
     #[ORM\OneToMany(targetEntity: ProductCategory::class, mappedBy: 'product', orphanRemoval: true, cascade: ["persist"])]
     #[Count(min: 1, minMessage: "Має бути хоча б одна категорія")]
     private Collection $productCategory;
 
-    #[Groups([Product::PUBLIC_PRODUCT_VIEW_GROUP])]
+    #[Groups([
+        Product::PUBLIC_PRODUCT_VIEW_GROUP,
+        ShoppingCart::GROUP_VIEW
+    ])]
     private array $file_path = [];
 
     #[ORM\OneToMany(
