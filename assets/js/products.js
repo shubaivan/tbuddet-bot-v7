@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var common_defs = [];
     common_defs.push({
-        "targets": 5,
+        "targets": 6,
         "orderable": false,
         "render": function (data, type, row, meta) {
             var divTag = $('<div/>');
@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
     })
 
     common_defs.push({
-        "targets": 8,
+        "targets": 9,
         data: 'action',
         render: function (data, type, row, meta) {
             return '    <!-- Button trigger modal -->\n' +
