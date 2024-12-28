@@ -43,25 +43,25 @@ class ShoppingCart
     }
 
     /**
-     * @return ArrayCollection|Collection|PurchaseProduct[]
+     * @return PurchaseProduct[]
      */
     #[Groups([self::GROUP_VIEW])]
-    public function getPurchasedProduct(): ArrayCollection|Collection
+    public function getPurchasedProduct(): array
     {
-        return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
+        return array_values($this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
             return $purchaseProduct->getUserOrder() ? true : false;
-        });
+        })->toArray());
     }
 
     /**
-     * @return ArrayCollection|Collection|PurchaseProduct[]
+     * @return PurchaseProduct[]
      */
     #[Groups([self::GROUP_VIEW])]
-    public function getUnpurchasedProduct(): ArrayCollection|Collection
+    public function getUnpurchasedProduct(): array
     {
-        return $this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
+        return array_values($this->purchaseProduct->filter(function (PurchaseProduct $purchaseProduct) {
             return $purchaseProduct->getUserOrder() ? false : true;
-        });
+        })->toArray());
     }
 
 
