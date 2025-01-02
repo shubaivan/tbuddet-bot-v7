@@ -123,7 +123,7 @@ class ShoppingCartController extends AbstractController
             $em->flush();
         }
 
-        if ($shoppingCart->getUnpurchasedProduct()->count() > 0) {
+        if (count($shoppingCart->getUnpurchasedProduct()) > 0) {
             foreach ($shoppingCart->getUnpurchasedProduct() as $product) {
                 $em->remove($product);
             }

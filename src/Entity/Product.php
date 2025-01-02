@@ -356,11 +356,21 @@ class Product implements AttachmentFilesInterface
                 $productProperty->getPropertyValue()
             );
             if (!$prop) {
-                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s не існує для продутку %s', $productProperty->getPropertyName(), $product->getProductName()));
+                throw new HttpException(
+                    Response::HTTP_BAD_REQUEST,
+                    sprintf('Властивість %s не існує для продутку %s',
+                        $productProperty->getPropertyName(),
+                        $this->getProductName())
+                );
             }
 
             if ($prop->getPropertyPriceImpact() != $productProperty->getPropertyPriceImpact()) {
-                throw new HttpException(Response::HTTP_BAD_REQUEST, sprintf('Властивість %s для продутку %s має інше значення приросту ціни', $productProperty->getPropertyName(), $product->getProductName()));
+                throw new HttpException(
+                    Response::HTTP_BAD_REQUEST,
+                    sprintf('Властивість %s для продутку %s має інше значення приросту ціни',
+                        $productProperty->getPropertyName(),
+                        $this->getProductName())
+                );
             }
         }
     }
