@@ -463,6 +463,11 @@ class AdminController extends AbstractController
     )
     {
         $params = $request->request->all();
+
+        if (isset($params['order_category'])) {
+            $params['order_category'] = (int) $params['order_category'];
+        }
+
         $context = [];
         if ($request->request->get('category_id')) {
             $currentProduct = $repository->find($request->request->get('category_id'));
