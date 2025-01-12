@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 '        Редагувати\n' +
                 '    </button>' +
                 '    <button class="btn btn-danger delete-product" data-product-id="' + row.id + '">Видалити</button>   ' +
-                '    <button class="btn btn-danger duplicate-product" data-model-id="' + row.id + '">Зробити копію</button>   '
+                '    <button class="btn btn-secondary duplicate-product" data-product-id="' + row.id + '">Зробити копію</button>   '
                 ;
         }
     });
