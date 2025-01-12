@@ -31,6 +31,10 @@ class CategoryController extends AbstractController
             $three[] = $categoryThreeResponse;
         }
 
+        usort($three, function(CategoryThreeResponse $a, CategoryThreeResponse $b) {
+            return $a->getOrderCategory() < $b->getOrderCategory();
+        });
+
         return $this->json($three);
     }
 
@@ -45,7 +49,11 @@ class CategoryController extends AbstractController
             $path[] = $this->defaultStorage->publicUrl($file->getPath());
         }
 
-        $categoryThreeResponse = new CategoryThreeResponse($category->getCategoryName(), $category->getId());
+        $categoryThreeResponse = new CategoryThreeResponse(
+            $category->getCategoryName(),
+            $category->getId(),
+            $category->getOrderCategory()
+        );
         $categoryThreeResponse->setFilePath($path);
 
         $setChild = [];
@@ -55,6 +63,11 @@ class CategoryController extends AbstractController
                 $setChild[] = $this->getThreeResponse($child);
             }
         }
+
+        usort($setChild, function(CategoryThreeResponse $a, CategoryThreeResponse $b) {
+            return $a->getOrderCategory() < $b->getOrderCategory();
+        });
+
         $categoryThreeResponse->setChild($setChild);
 
         return $categoryThreeResponse;

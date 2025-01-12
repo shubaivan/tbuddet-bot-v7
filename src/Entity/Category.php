@@ -24,6 +24,7 @@ class Category implements AttachmentFilesInterface
         'parents',
         'filePath',
         'category_name',
+        'order_category',
         'created_at',
         'updated_at'
     ];
@@ -37,6 +38,11 @@ class Category implements AttachmentFilesInterface
     #[NotBlank(message: 'Вкажіть назву')]
     #[Groups([self::ADMIN_CATEGORY_VIEW_GROUP])]
     private string $category_name;
+
+    #[ORM\Column(type: 'integer', options: ['default' => 0])]
+    #[NotBlank(message: 'Вкажіть порядок')]
+    #[Groups([self::ADMIN_CATEGORY_VIEW_GROUP])]
+    private int $order_category = 0;
 
     #[ORM\OneToMany(targetEntity: ProductCategory::class, mappedBy: 'category', orphanRemoval: true, cascade: ["persist"])]
     private Collection $productCategory;
@@ -58,6 +64,7 @@ class Category implements AttachmentFilesInterface
         $this->files = new ArrayCollection();
         $this->parent = new ArrayCollection();
         $this->child = new ArrayCollection();
+        $this->order_category = 0;
     }
 
 
@@ -176,6 +183,18 @@ class Category implements AttachmentFilesInterface
     public function setChild(ArrayCollection|Collection|PersistentCollection $child): Category
     {
         $this->child = $child;
+
+        return $this;
+    }
+
+    public function getOrderCategory(): int
+    {
+        return $this->order_category;
+    }
+
+    public function setOrderCategory(int $order_category): Category
+    {
+        $this->order_category = $order_category;
 
         return $this;
     }

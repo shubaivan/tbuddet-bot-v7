@@ -9,16 +9,14 @@ class CategoryThreeResponse
     private CategoryThreeResponse $parent;
     private array $child;
     private array $filePath = [];
-    /**
-     * @param string $category_name
-     * @param int $category_id
-     */
-    public function __construct(string $category_name, int $category_id)
+    private int $order_category = 0;
+
+    public function __construct(string $category_name, int $category_id, int $order_category)
     {
         $this->category_name = $category_name;
         $this->category_id = $category_id;
+        $this->order_category = $order_category;
     }
-
 
     public function getCategoryName(): string
     {
@@ -76,6 +74,18 @@ class CategoryThreeResponse
     public function setFilePath(array $filePath): CategoryThreeResponse
     {
         $this->filePath = $filePath;
+
+        return $this;
+    }
+
+    public function getOrderCategory(): int
+    {
+        return $this->order_category;
+    }
+
+    public function setOrderCategory(int $order_category): CategoryThreeResponse
+    {
+        $this->order_category = $order_category;
 
         return $this;
     }

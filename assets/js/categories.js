@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     console.log(data);
                     modal.find('#exampleModalLabel').text('Редагувати категорію')
                     form.find('#category_name').val(data.category_name)
+                    form.find('#order_category').val(data.order_category)
 
                     let category_id_input = $('<input>').attr({
                         type: 'hidden',
