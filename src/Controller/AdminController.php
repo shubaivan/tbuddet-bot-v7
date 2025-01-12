@@ -325,7 +325,7 @@ class AdminController extends AbstractController
         return new JsonResponse($response, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/admin/product/duplicate/{id}', name: 'admin-product-duplicate', options: ['expose' => true], methods: Request::METHOD_POST)]
+    #[Route('/admin/product/duplicate/{id}', name: 'admin-product-duplicate', options: ['expose' => true], methods: Request::METHOD_GET)]
     public function productDuplicate(
         #[MapEntity(id: 'id')] Product $product,
         EntityManagerInterface $em
