@@ -123,6 +123,7 @@ class Files
     public function setProduct(Product $product): Files
     {
         $this->product = $product;
+        $product->addFile($this);
 
         return $this;
     }

@@ -398,4 +398,34 @@ class Product implements AttachmentFilesInterface
 
         return $this;
     }
+
+    public function setId(?int $id = null): Product
+    {
+        $this->id = $id;
+
+        return $this;
+    }
+
+    public function makeDuplicate(): Product|static
+    {
+        $product = clone $this;
+        $product->setId();
+
+        $this->setOrders(new ArrayCollection());
+
+        foreach ($this->getFiles() as $file) {
+            $newFile = clone $file;
+            $newFile->setProduct($product);
+        }
+
+        foreach ($this->getProductCategory() as $productCategory) {
+            (new ProductCategory())
+                ->setCategory($productCategory->getCategory())
+                ->setProduct($product);
+        }
+
+        $this->setPurchaseProduct(new ArrayCollection());
+
+        return $product;
+    }
 }

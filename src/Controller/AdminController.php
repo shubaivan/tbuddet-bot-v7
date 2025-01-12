@@ -325,6 +325,26 @@ class AdminController extends AbstractController
         return new JsonResponse($response, Response::HTTP_OK, [], true);
     }
 
+    #[Route('/admin/product/duplicate/{id}', name: 'admin-product-duplicate', options: ['expose' => true], methods: Request::METHOD_POST)]
+    public function productDuplicate(
+        #[MapEntity(id: 'id')] Product $product,
+        EntityManagerInterface $em
+    )
+    {
+        $duplicateProduct = $product->makeDuplicate();
+        $em->persist($duplicateProduct);
+        $em->flush();
+
+        $response = $this->serializer->serialize(
+            $duplicateProduct, 'json',
+            [AbstractNormalizer::GROUPS => [
+                Product::ADMIN_PRODUCT_VIEW_GROUP,
+            ]]
+        );
+
+        return new JsonResponse($response, Response::HTTP_OK, [], true);
+    }
+
     #[Route('/admin/product/{id}', name: 'admin-product-get', options: ['expose' => true], methods: [Request::METHOD_GET])]
     public function getProduct(
         #[MapEntity(id: 'id')] Product $product,

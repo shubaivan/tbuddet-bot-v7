@@ -29,6 +29,24 @@ document.addEventListener("DOMContentLoaded", function () {
         })
     });
 
+    $(document).on('click', '.duplicate-product', function () {
+        alert('Копія?')
+        var button = $(this); // Button that triggered the modal
+        let productId = button.data('productId');
+        $.ajax({
+            type: "GET",
+            url: window.Routing
+                .generate('admin-product-duplicate') + '/' + productId,
+            error: (result) => {
+                console.log(result);
+            },
+            success: (data) => {
+                console.log(data);
+                table.ajax.reload(null, false);
+            }
+        })
+    });
+
     var common_defs = [];
     common_defs.push({
         "targets": 6,
@@ -82,7 +100,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 '    <button type="button" class="btn btn-primary" data-product-id="' + row.id + '" data-toggle="modal" data-target="#exampleModal">\n' +
                 '        Редагувати\n' +
                 '    </button>' +
-                '    <button class="btn btn-danger delete-product" data-product-id="' + row.id + '">Видалити</button>   '
+                '    <button class="btn btn-danger delete-product" data-product-id="' + row.id + '">Видалити</button>   ' +
+                '    <button class="btn btn-danger duplicate-product" data-model-id="' + row.id + '">Зробити копію</button>   '
                 ;
         }
     });
