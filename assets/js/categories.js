@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", function () {
     })
 
     common_defs.push({
-        "targets": 6,
+        "targets": 7,
         data: 'action',
         render: function (data, type, row, meta) {
             return '    <!-- Button trigger modal -->\n' +
