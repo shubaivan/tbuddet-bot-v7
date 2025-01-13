@@ -249,11 +249,9 @@ class ProductRepository extends ServiceEntityRepository
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
             $or[] = 'ILIKE(o.product_name, :var_search) = TRUE';
-            $or[] = 'ILIKE(o.price, :var_search) = TRUE';
 
             $bindParams['var_search'] = '%' . $parameterBag->get('search') . '%';
             $conditions[] = '(' . implode(' OR ', $or) . ')';
-
         }
 
         if ($parameterBag->has('filter_category_id') && !$total) {
