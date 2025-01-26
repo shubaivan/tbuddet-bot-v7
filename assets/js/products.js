@@ -206,9 +206,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 success: (data) => {
                     console.log(data);
                     modal.find('#exampleModalLabel').text('Редагувати продукт')
-                    form.find('#product_name').val(data.product_name)
+
+                    form.find('#product_name_ua').val(data.product_name.ua)
+                    form.find('#product_name_en').val(data.product_name.en)
+
                     form.find('#price').val(data.price)
-                    form.find('#description').val(data.description)
+
+                    form.find('#description_ua').val(data.description.ua)
+                    form.find('#description_en').val(data.description.en)
 
                     let product_id_input = $('<input>').attr({
                         type: 'hidden',
