@@ -92,7 +92,7 @@ class CategoryRepository extends ServiceEntityRepository
                 SELECT 
                 o.id,                
                 array_agg(f.path) as filePath,                
-                array_agg(parent.category_name) as parents,                
+                array_to_json(array_agg(parent.category_name)) as parents,                
                 o.category_name,              
                 o.order_category,              
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
