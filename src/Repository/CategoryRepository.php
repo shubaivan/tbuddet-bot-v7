@@ -153,7 +153,7 @@ class CategoryRepository extends ServiceEntityRepository
      * @throws \Doctrine\ORM\NoResultException
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function getShopsForSelect2(
+    public function getCategoriesForSelect2(
         ParameterBag $parameterBag,
         bool $count = false
     ): mixed {

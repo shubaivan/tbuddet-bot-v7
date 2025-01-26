@@ -589,16 +589,18 @@ class AdminController extends AbstractController
     public function categorySelect2Action(
         Request $request,
         CategoryRepository $categoryRepository
-    )
+    ): JsonResponse
     {
         $parameterBag = new ParameterBag($request->request->all());
-        $data = $categoryRepository->getShopsForSelect2($parameterBag);
-        /** @var Category[] $more */
-        $more = $parameterBag->get('page') * 25 < $categoryRepository
-                ->getShopsForSelect2($parameterBag, true);
 
-        foreach ($more as $category) {
-            $category->setCategoryName($category->getCategoryName(UserLanguageEnum::UA));
+        /** @var array $data */
+        $data = $categoryRepository->getCategoriesForSelect2($parameterBag);
+
+        $more = $parameterBag->get('page') * 25 < $categoryRepository
+                ->getCategoriesForSelect2($parameterBag, true);
+
+        foreach ($data as $key => $category) {
+            $data[$key]['text'] = $category['text'][UserLanguageEnum::UA->value];
         }
 
         return $this->json(array_merge(
