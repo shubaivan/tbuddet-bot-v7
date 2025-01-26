@@ -93,9 +93,27 @@ class ProductController extends AbstractController
                 $path[] = $defaultStorage->publicUrl($file->getPath());
             }
             $productData['file_path'] = $path;
-            $productData['product_name'] = json_decode($productData['product_name'], true)[$this->localizationService->getLanguage()->value];
-            $productData['description'] = json_decode($productData['description'], true)[$this->localizationService->getLanguage()]->value;
-            $productData['product_properties'] = json_decode($productData['product_properties'], true);
+            $product_name = json_decode($productData['product_name'], true);
+            if (isset($product_name[$this->localizationService->getLanguage()->value])) {
+                $productData['product_name'] = $product_name[$this->localizationService->getLanguage()->value];
+            }
+
+            $description = json_decode($productData['description'], true);
+            if (isset($description[$this->localizationService->getLanguage()->value])) {
+                $productData['description'] = $description[$this->localizationService->getLanguage()->value];
+            }
+
+            $product_properties = json_decode($productData['product_properties'], true);
+            $productData['product_properties'] = [];
+            foreach ($product_properties as $product_property_language) {
+                foreach ($product_property_language as $lang => $prop) {
+                    if (isset($product_property_language[$this->localizationService->getLanguage()->value])) {
+                        $productData['product_properties'][] = $product_property_language[$this->localizationService->getLanguage()->value];
+                        break;
+                    }
+                }
+            }
+
 
             $products[$key] = $productData;
         }

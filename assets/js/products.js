@@ -92,13 +92,18 @@ document.addEventListener("DOMContentLoaded", function () {
         "render": function (data, type, row, meta) {
             var divTag = $('<div/>');
             if (Object.keys(data).length) {
-                $.each(data, function (index, value) {
-                    var pOrder = $('<p/>')
-                        .append('<b>Назва: ' + value.property_name + '</b>; ')
-                        .append('<i>Значення: ' + value.property_value + '</i>; ')
-                        .append('<b>Збільшення ціни: ' + value.property_price_impact + '</b> ')
-                    ;
-                    divTag.append(pOrder);
+                $.each(data, function (index, propByLanguage) {
+                    var pIndex = $('<p/>').text('Номер властивості ' + (index + 1));
+                    divTag.append(pIndex);
+                    $.each(propByLanguage, function (language, prop) {
+                        var bLanguage = $('<b/>').text(language)
+                        divTag.append(bLanguage);
+                        var pOrder = $('<p/>')
+                            .append('<b>Назва: ' + prop.property_name + '</b>; ').append('<br>')
+                            .append('<i>Значення: ' + prop.property_value + '</i>; ').append('<br>')
+                            .append('<b>Збільшення ціни: ' + prop.property_price_impact + '</b> ');
+                        divTag.append(pOrder);
+                    })
                 });
             }
 
@@ -325,13 +330,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
         modal.on('click', '.remove_block .fa-minus-square', function () {
             let current = $(this);
-            let block = current.closest('.form-group');
-            block.remove();
+            let divTagOneProp = current.attr('divtagoneprop');
+            $('#' + divTagOneProp).remove();
         });
 
         divPropConf.on('click', function () {
             let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
-            divPropSet.append(addPropertiesBlock(order));
+
+            var divTagOneProp = $('<div/>', {'class': "form-group", 'id': 'one_prop_' + order});
+            divTagOneProp.append(addPropertiesBlock(order));
+
+            var rowMinus = $('<div/>', {'class': "row"});
+            var colMinus = $('<div/>', {'class': "col"});
+            var divTagMinus = $('<div/>', {'class': "form-group"});
+
+            var divTagColMinus = $('<div/>', {'class': "form-group text-right remove_block", 'text': "Видалити"});
+
+            var iMinus = $('<i/>', {'class': "fas fa-minus-square", 'divtagoneprop': 'one_prop_' + order});
+            divTagColMinus.append(iMinus)
+
+            divTagMinus
+                .append(divTagColMinus);
+
+            colMinus.append(divTagMinus);
+            rowMinus.append(colMinus);
+            divTagOneProp.append(rowMinus);
+
+            divPropSet.append(divTagOneProp);
+
             $('#createProduct .prop_conf').attr('order', order);
         })
 
@@ -448,64 +474,121 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function addPropertiesBlock(
         order,
-        inputName = null,
-        inputValue = null,
-        inputPriceImpact = null,
+        inputNameUa = null,
+        inputValueUa = null,
+        inputPriceImpactUa = null,
+        inputNameEn = null,
+        inputValueEn = null,
+        inputPriceImpactEn = null,
     ) {
-        var divTag = $('<div/>', {'class': "form-group"});
+        var row = $('<div/>', {'class': "row"});
 
-        let label1 = $("<label>");
-        label1.attr({'for': 'property_value'});
-        let input1 = $('<input>', {
-            'id': 'property_value',
+        var colUa = $('<div/>', {'class': "col"});
+        var divTagUa = $('<div/>', {'class': "form-group"});
+
+
+        let inputValueUaTag = $('<input>', {
+            'id': 'property_value_ua',
             'class': 'form-control',
-            'name': 'product_properties[' + order + '][property_value]'
+            'name': 'product_properties[' + order + '][ua][property_value]'
         });
-        if (inputValue !== null) {
-            input1.val(inputValue)
+        if (inputValueUa !== null) {
+            inputValueUaTag.val(inputValueUa)
         }
-        let small1 = $("<small>", {
+        let smallValueUa = $("<small>", {
             'class': 'form-text text-muted'
-        }).text('значення властивості');
+        }).text('значення властивості укр');
 
-        let label2 = $("<label>");
-        label2.attr({'for': 'property_name'});
-        let input2 = $('<input>', {
-            'id': 'property_name',
+
+        let inputNameUaTag = $('<input>', {
+            'id': 'property_name_ua',
             'class': 'form-control',
-            'name': 'product_properties[' + order + '][property_name]'
+            'name': 'product_properties[' + order + '][ua][property_name]'
         });
-        if (inputName !== null) {
-            input2.val(inputName)
+        if (inputNameUa !== null) {
+            inputNameUaTag.val(inputNameUa)
         }
-        let small2 = $("<small>", {
+        let smallNamePropUa = $("<small>", {
             'class': 'form-text text-muted'
-        }).text('назва властивості');
+        }).text('назва властивості укр');
 
-        let label3 = $("<label>");
-        label3.attr({'for': 'property_price_impact'});
-        let input3 = $('<input>', {
-            'id': 'property_price_impact',
+
+        let inputImpactUaTag = $('<input>', {
+            'id': 'property_price_impact_ua',
             'type': 'number',
             'class': 'form-control',
-            'name': 'product_properties[' + order + '][property_price_impact]'
+            'name': 'product_properties[' + order + '][ua][property_price_impact]'
         });
-        if (inputPriceImpact !== null) {
-            input3.val(inputPriceImpact)
+        if (inputPriceImpactUa !== null) {
+            inputImpactUaTag.val(inputPriceImpactUa)
         }
-        let small3 = $("<small>", {
+        let smallImpactUa = $("<small>", {
             'class': 'form-text text-muted'
         }).text('збільшення ціни властвивості на продукт у грн');
 
-        divTag.append(label3).append(input3).append(small3);
-        divTag.append(label2).append(input2).append(small2);
-        divTag.append(label1).append(input1).append(small1);
 
-        var divTagColMinus = $('<div/>', {'class': "col text-right remove_block", 'text': "Видалити"});
-        divTagColMinus.append('<i class="fas fa-minus-square"></i>')
-        divTag.append(divTagColMinus);
+        divTagUa
+            .append(inputValueUaTag).append(smallValueUa)
+            .append(inputNameUaTag).append(smallNamePropUa)
+            .append(inputImpactUaTag).append(smallImpactUa);
 
-        return divTag;
+        colUa.append(divTagUa);
+        row.append(colUa);
+
+
+
+        var colEn = $('<div/>', {'class': "col"});
+        var divTagEn = $('<div/>', {'class': "form-group"});
+
+
+        let inputValueEnTag = $('<input>', {
+            'id': 'property_value_en',
+            'class': 'form-control',
+            'name': 'product_properties[' + order + '][en][property_value]'
+        });
+        if (inputValueEn !== null) {
+            inputValueEnTag.val(inputValueEn)
+        }
+        let smallValueEn = $("<small>", {
+            'class': 'form-text text-muted'
+        }).text('значення властивості english');
+
+
+
+        let inputNameEnTag = $('<input>', {
+            'id': 'property_name_en',
+            'class': 'form-control',
+            'name': 'product_properties[' + order + '][en][property_name]'
+        });
+        if (inputNameEn !== null) {
+            inputNameUaTag.val(inputNameEn)
+        }
+        let smallNamePropEn = $("<small>", {
+            'class': 'form-text text-muted'
+        }).text('назва властивості english');
+
+
+        let inputImpactEnTag = $('<input>', {
+            'id': 'property_price_impact_en',
+            'type': 'number',
+            'class': 'form-control',
+            'name': 'product_properties[' + order + '][en][property_price_impact]'
+        });
+        if (inputPriceImpactEn !== null) {
+            inputImpactEnTag.val(inputPriceImpactEn)
+        }
+        let smallImpactEn = $("<small>", {
+            'class': 'form-text text-muted'
+        }).text('збільшення ціни властвивості на продукт у usd');
+
+        divTagEn
+            .append(inputValueEnTag).append(smallValueEn)
+            .append(inputNameEnTag).append(smallNamePropEn)
+            .append(inputImpactEnTag).append(smallImpactEn);
+        colEn.append(divTagEn);
+        row.append(colEn);
+
+        return row;
     }
 
     function initiateCategoriesSelect() {

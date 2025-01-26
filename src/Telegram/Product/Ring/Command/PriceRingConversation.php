@@ -65,7 +65,7 @@ class PriceRingConversation extends Conversation
             $bot->sendMessage(
                 text: sprintf('
 Категорія продуктів: %s, кількість продуктів %s',
-                    $categorySet->getCategory()->getCategoryName(),
+                    $categorySet->getCategory()->getCategoryName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
                     $categorySet->getTotalProduct(),
                 ),
                 parse_mode: ParseMode::HTML,

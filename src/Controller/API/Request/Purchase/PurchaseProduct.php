@@ -55,7 +55,7 @@ class PurchaseProduct
             ];
         }
 
-        return $productPropertiesArray;
+        return array_values($productPropertiesArray);
     }
 
     public function setProductProperties(array $product_properties): PurchaseProduct

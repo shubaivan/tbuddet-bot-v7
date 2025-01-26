@@ -176,19 +176,6 @@ class Product implements AttachmentFilesInterface
         return $this->product_properties;
     }
 
-    public function hasProp(string $name): bool
-    {
-        foreach ($this->product_properties as $property) {
-            if (array_key_exists('property_name', $property)
-                && $property['property_name'] === $name
-            ) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
      * @param string $propertyName
      * @param string $propertyValue
@@ -196,16 +183,19 @@ class Product implements AttachmentFilesInterface
      */
     public function getProp(string $propertyName, string $propertyValue): mixed
     {
-        foreach ($this->product_properties as $property) {
-            if (array_key_exists('property_name', $property)
-                && $property['property_name'] === $propertyName
-                && $property['property_value'] === $propertyValue
-            ) {
-                return (new ProductProperties())
-                    ->setPropertyName($property['property_name'])
-                    ->setPropertyValue($property['property_value'])
-                    ->setPropertyPriceImpact((int)$property['property_price_impact'])
-                ;
+        foreach ($this->product_properties as $propertyByLanguage) {
+            foreach ($propertyByLanguage as $property) {
+                if (array_key_exists('property_name', $property)
+                    && $property['property_name'] === $propertyName
+                    && array_key_exists('property_value', $property)
+                    && $property['property_value'] === $propertyValue
+                ) {
+                    return (new ProductProperties())
+                        ->setPropertyName($property['property_name'])
+                        ->setPropertyValue($property['property_value'])
+                        ->setPropertyPriceImpact((int)$property['property_price_impact'])
+                        ;
+                }
             }
         }
 
@@ -215,14 +205,16 @@ class Product implements AttachmentFilesInterface
     public function getProductPropertiesMessage(): string
     {
         $output = '';
-        foreach ($this->product_properties as $position => $property) {
-            $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
-            foreach ($property as $key => $item) {
-                if (isset(self::$propertyKeyMap[$key])) {
-                    $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
+        foreach ($this->product_properties as $propertyByLanguage) {
+            foreach ($propertyByLanguage as $position => $property) {
+                $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
+                foreach ($property as $key => $item) {
+                    if (isset(self::$propertyKeyMap[$key])) {
+                        $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
+                    }
                 }
+                $output .= PHP_EOL;
             }
-            $output .= PHP_EOL;
         }
 
         return $output;

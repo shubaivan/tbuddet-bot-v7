@@ -237,7 +237,7 @@ class AdminController extends AbstractController
         FilesRepository $filesRepository,
         ValidatorInterface $validator,
         ProductCategoryRepository $productCategoryRepository
-    )
+    ): JsonResponse
     {
         $params = $request->request->all();
         if (isset($params['price'])) {
