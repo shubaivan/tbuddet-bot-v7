@@ -228,7 +228,7 @@ class ProductRepository extends ServiceEntityRepository
             $dql = '
                 SELECT 
                 o.id,
-                array_agg(category.category_name) as categories, 
+                array_to_json(array_agg(category.category_name)) as categories, 
                 array_agg(f.path) as filePath,                
                 o.product_name,              
                 o.price,

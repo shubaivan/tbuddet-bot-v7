@@ -178,19 +178,16 @@ class AdminController extends AbstractController
             ->getDataTablesData($request->request->all())->getResult();
 
         foreach ($dataTable as $key => $product) {
+
             if (isset($product['categories'])) {
-                $setCategory = [];
-                $categories = explode(',', $product['categories']);
-                foreach ($categories as $category) {
-                    $category = trim($category, '}');
-                    $category = trim($category, '{');
-                    if ($category == 'NULL') {
+                $parentCategories = json_decode($product['categories'], true);
+                $dataTable[$key]['categories'] = [];
+                foreach ($parentCategories as $parentCategory) {
+                    if (is_null($parentCategory)) {
                         continue;
                     }
-                    $setCategory[$category] = 1;
+                    $dataTable[$key]['categories'][] = $parentCategory[UserLanguageEnum::UA->value];
                 }
-
-                $dataTable[$key]['categories'] = array_keys($setCategory);
             }
         }
 
