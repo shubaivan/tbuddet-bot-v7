@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\Category;
 use App\Entity\CategoryRelation;
 use App\Entity\Product;
@@ -592,9 +593,13 @@ class AdminController extends AbstractController
     {
         $parameterBag = new ParameterBag($request->request->all());
         $data = $categoryRepository->getShopsForSelect2($parameterBag);
-
+        /** @var Category[] $more */
         $more = $parameterBag->get('page') * 25 < $categoryRepository
                 ->getShopsForSelect2($parameterBag, true);
+
+        foreach ($more as $category) {
+            $category->setCategoryName($category->getCategoryName(UserLanguageEnum::UA));
+        }
 
         return $this->json(array_merge(
             [

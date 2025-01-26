@@ -156,7 +156,7 @@ class CategoryRepository extends ServiceEntityRepository
     public function getShopsForSelect2(
         ParameterBag $parameterBag,
         bool $count = false
-    ) {
+    ): mixed {
         if ($count) {
             $dql = '
                 SELECT COUNT(c.id) as count    
