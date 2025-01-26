@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "render": function ( data, type, row, meta ) {
             var divTag = $('<div/>');
             $.each(row.parents, function( index, value ) {
-                var pOrder = $('<p/>').append('<b>' + value + ':</b> ');
+                var pOrder = $('<p/>').append('<b>' + value + '</b> ');
                 divTag.append(pOrder);
             })
             return divTag.html();
