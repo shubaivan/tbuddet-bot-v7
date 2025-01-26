@@ -7,7 +7,10 @@ use App\Repository\UserOrderRepository;
 
 class OrderService
 {
-    public function __construct(private UserOrderRepository $repository) {}
+    public function __construct(
+        private UserOrderRepository $repository,
+        private LocalizationService $localizationService
+    ) {}
 
     public function getOwnOrders(TelegramUser $user): array
     {
@@ -28,7 +31,7 @@ class OrderService
 
             $info[$id][] = '<b><i><u>Статус покупки</u></i></b>: <b><i>' . $status . '</i></b>';
             $product = $order->getProductId();
-            $info[$id][] = '<b>Назва продукту</b>: ' . $product->getProductName();
+            $info[$id][] = '<b>Назва продукту</b>: ' . $product->getProductName($this->localizationService->getLanguage($user->getLanguageCode()));
             $info[$id][] = '<b>Ціна продукту за одинцу</b>: ' . $product->getPrice() . ' грн';
             $info[$id][] = PHP_EOL;
             $info[$id][] = '<b>Опис продукту</b>: ' . PHP_EOL . $product->getProductPropertiesMessage();

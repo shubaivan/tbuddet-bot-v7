@@ -14,6 +14,7 @@ use App\Pagination\Paginator;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\UserOrderRepository;
+use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
@@ -31,12 +32,15 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\ConstraintViolationList;
+use Symfony\Component\Validator\Exception\ValidationFailedException;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route(path: 'api/v1/product')]
 class ProductController extends AbstractController
 {
-
     public function __construct(
+        private LocalizationService $localizationService,
         protected EntityManagerInterface $em,
         protected LoggerInterface $logger,
         protected readonly SerializerInterface $serializer,
@@ -51,11 +55,23 @@ class ProductController extends AbstractController
         ProductRepository $repository,
         Paginator $paginator,
         FilesystemOperator $defaultStorage,
-        FilesRepository $filesRepository
+        FilesRepository $filesRepository,
+        Request $request,
+        ValidatorInterface $validator
     ): JsonResponse {
         //Todo https://github.com/symfony/symfony/issues/50690
         if (is_null($listRequest)) {
             $listRequest = new ProductListRequest();
+
+            $violations = new ConstraintViolationList();
+
+            if (null !== $listRequest && !\count($violations)) {
+                $violations->addAll($validator->validate($listRequest));
+            }
+
+            if (\count($violations)) {
+                throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, implode("\n", array_map(static fn ($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($listRequest, $violations));
+            }
         }
 
         $total = $repository->nativeSqlFilterProducts($listRequest, true);
@@ -69,6 +85,7 @@ class ProductController extends AbstractController
         $listRequest->setOffset($offset);
 
         $products = $repository->nativeSqlFilterProducts($listRequest);
+
         foreach ($products as $key => $productData) {
             $files = $filesRepository->getFileByProductId($productData['id']);
             $path = [];
@@ -77,6 +94,8 @@ class ProductController extends AbstractController
                 $path[] = $defaultStorage->publicUrl($file->getPath());
             }
             $productData['file_path'] = $path;
+            $productData['product_name'] = json_decode($productData['product_name'], true)[$this->localizationService->getLanguage()->value];
+            $productData['description'] = json_decode($productData['description'], true)[$this->localizationService->getLanguage()]->value;
             $productData['product_properties'] = json_decode($productData['product_properties'], true);
 
             $products[$key] = $productData;
@@ -187,6 +206,9 @@ class ProductController extends AbstractController
         }
         $product->setFilePath($path);
 
+        $product->setProductName($product->getProductName($this->localizationService->getLanguage()));
+        $product->setDescription($product->getDescription($this->localizationService->getLanguage()));
+
         return $this->json($product, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [Product::PUBLIC_PRODUCT_VIEW_GROUP],
         ]);
@@ -199,7 +221,8 @@ class ProductController extends AbstractController
         ProductRepository $repository,
         ObjectHandler $objectHandler,
         #[MapRequestPayload] PurchaseProduct $purchaseProduct,
-        #[CurrentUser] User $user
+        #[CurrentUser] User $user,
+        LocalizationService $localizationService
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -230,7 +253,7 @@ class ProductController extends AbstractController
 
         $userOrder->setTotalAmount($total_amount);
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $product->getProductName(),
+            $product->getProductName($localizationService->getLanguage()),
             $purchaseProduct->getQuantity()
         );
 
@@ -299,7 +322,8 @@ class ProductController extends AbstractController
         string $id,
         ProductRepository $repository,
         ObjectHandler $objectHandler,
-        #[MapRequestPayload] PublicPurchaseProduct $publicPurchaseProduct
+        #[MapRequestPayload] PublicPurchaseProduct $publicPurchaseProduct,
+        LocalizationService $localizationService
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -330,7 +354,7 @@ class ProductController extends AbstractController
 
         $userOrder->setTotalAmount($total_amount);
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $product->getProductName(),
+            $product->getProductName($localizationService->getLanguage()),
             $publicPurchaseProduct->getQuantity()
         );
 

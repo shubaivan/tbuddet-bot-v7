@@ -1,5 +1,27 @@
 doctrine:
     dbal:
+        mapping_types:
+            bool[]: bool[]
+            _bool: bool[]
+            smallint[]: smallint[]
+            _int2: smallint[]
+            integer[]: integer[]
+            _int4: integer[]
+            bigint[]: bigint[]
+            _int8: bigint[]
+            text[]: text[]
+            _text: text[]
+            jsonb: jsonb
+            jsonb[]: jsonb[]
+            _jsonb: jsonb[]
+        types: # register the new types\JsonbArray
+            bool[]: MartinGeorgiev\Doctrine\DBAL\Types\BooleanArray
+            smallint[]: MartinGeorgiev\Doctrine\DBAL\Types\SmallIntArray
+            integer[]: MartinGeorgiev\Doctrine\DBAL\Types\IntegerArray
+            bigint[]: MartinGeorgiev\Doctrine\DBAL\Types\BigIntArray
+            text[]: MartinGeorgiev\Doctrine\DBAL\Types\TextArray
+            jsonb: MartinGeorgiev\Doctrine\DBAL\Types\Jsonb
+            jsonb[]: MartinGeorgiev\Doctrine\DBAL\Types\JsonbArray
         url: '%env(resolve:DATABASE_URL)%'
 
         # IMPORTANT: You MUST configure your server version,

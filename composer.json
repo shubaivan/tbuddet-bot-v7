@@ -17,7 +17,7 @@
         "league/flysystem-aws-s3-v3": "^3.28",
         "league/flysystem-bundle": "^3.3",
         "lexik/jwt-authentication-bundle": "^3.1",
-        "martin-georgiev/postgresql-for-doctrine": "^2.7",
+        "martin-georgiev/postgresql-for-doctrine": "^2.8",
         "nelmio/cors-bundle": "^2.5",
         "nutgram/symfony-bundle": "^1.1",
         "oro/doctrine-extensions": "^2.0",

@@ -3,11 +3,13 @@
 namespace App\Controller\API\Request\Purchase;
 
 use App\Validator\MatchId;
+use App\Validator\UserLanguage;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Constraints\Type;
 use App\Entity\PurchaseProduct;
 
+#[UserLanguage]
 class CheckoutRequest
 {
     #[Type('array')]

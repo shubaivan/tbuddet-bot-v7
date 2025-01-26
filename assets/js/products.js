@@ -49,6 +49,44 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var common_defs = [];
     common_defs.push({
+        "targets": 3,
+        "orderable": false,
+        "render": function (data, type, row, meta) {
+            var divTag = $('<div/>');
+            if (Object.keys(data).length) {
+                $.each(data, function (language, valueOfLanguage) {
+                    var pOrder = $('<p/>')
+                        .append('<b>Мова: ' + language + '</b>; ')
+                        .append('<i>' + valueOfLanguage + '</i>; ')
+                    ;
+                    divTag.append(pOrder);
+                });
+            }
+
+            return divTag.html();
+        }
+    });
+
+    common_defs.push({
+        "targets": 5,
+        "orderable": false,
+        "render": function (data, type, row, meta) {
+            var divTag = $('<div/>');
+            if (Object.keys(data).length) {
+                $.each(data, function (language, valueOfLanguage) {
+                    var pOrder = $('<p/>')
+                        .append('<b>Мова: ' + language + '</b>; ')
+                        .append('<i>' + valueOfLanguage + '</i>; ')
+                    ;
+                    divTag.append(pOrder);
+                });
+            }
+
+            return divTag.html();
+        }
+    });
+
+    common_defs.push({
         "targets": 6,
         "orderable": false,
         "render": function (data, type, row, meta) {

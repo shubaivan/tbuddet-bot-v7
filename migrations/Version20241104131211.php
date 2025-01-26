@@ -26,7 +26,7 @@ final class Version20241104131211 extends AbstractMigration
         CREATE FUNCTION product_ts_trigger() RETURNS trigger AS $$
 begin
   new.common_fts :=
-     setweight(to_tsvector(coalesce(new.product_name,\'\')), \'A\') ||	 
+     setweight(to_tsvector(coalesce(new.product_name,\'{}\')), \'A\') ||	 
      setweight(to_tsvector(coalesce(new.product_properties,\'{}\')), \'B\');
   return new;
 end
@@ -44,6 +44,6 @@ $$ LANGUAGE plpgsql
     {
         $this->addSql('DROP TRIGGER IF EXISTS tsvectorupdate ON product');
         $this->addSql('DROP FUNCTION IF EXISTS product_ts_trigger');
-
+        $this->addSql('ALTER TABLE product DROP common_fts');
     }
 }

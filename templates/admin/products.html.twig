@@ -44,17 +44,37 @@
                 </div>
                 <div class="modal-body">
                     <form id="createProduct">
-                        <div class="form-group">
-                            <label for="product_name" class="col-form-label">Назва продукта</label>
-                            <input type="text" id="product_name" class="form-control" name="product_name"/>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="product_name" class="col-form-label">Назва продукта(Українська)</label>
+                                    <input type="text" id="product_name" class="form-control" name="product_name[ua]" placeholder="Українська"/>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="product_name" class="col-form-label">Назва продукта(English)</label>
+                                    <input type="text" id="product_name" class="form-control" name="product_name[en]" placeholder="English"/>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="price" class="col-form-label">Ціна заодиницю(грн)</label>
                             <input type="number" id="price" class="form-control" name="price"/>
                         </div>
-                        <div class="form-group">
-                            <label for="description" class="col-form-label">Опис</label>
-                            <input type="text" id="description" class="form-control" name="description"/>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="description" class="col-form-label">Опис(Українська)</label>
+                                    <input type="text" id="description" class="form-control" name="description[ua]" placeholder="Українська"/>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="description" class="col-form-label">Опис(English)</label>
+                                    <input type="text" id="description" class="form-control" name="description[en]" placeholder="English"/>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="attachment_files_template">

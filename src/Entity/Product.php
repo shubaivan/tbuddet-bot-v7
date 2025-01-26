@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\ProductRepository;
@@ -54,7 +55,7 @@ class Product implements AttachmentFilesInterface
     ])]
     private ?int $id = null;
 
-    #[ORM\Column(type: 'string', length: 255)]
+    #[ORM\Column(type: 'jsonb')]
     #[Groups([
         self::ADMIN_PRODUCT_VIEW_GROUP,
         self::PUBLIC_PRODUCT_VIEW_GROUP,
@@ -63,9 +64,9 @@ class Product implements AttachmentFilesInterface
         PurchaseProduct::GROUP_VIEW
     ])]
     #[NotBlank(message: 'Вкажіть назву')]
-    private string $product_name;
+    private mixed $product_name;
 
-    #[ORM\Column(type: 'json', nullable: true)]
+    #[ORM\Column(type: 'jsonb', nullable: true)]
     #[Groups([
         self::ADMIN_PRODUCT_VIEW_GROUP,
         self::PUBLIC_PRODUCT_VIEW_GROUP,
@@ -84,7 +85,7 @@ class Product implements AttachmentFilesInterface
     #[NotBlank(message: 'Вкажіть ціну')]
     private mixed $price;
 
-    #[ORM\Column(type: 'text', nullable: true)]
+    #[ORM\Column(type: 'jsonb', nullable: true)]
     #[Groups([
         self::ADMIN_PRODUCT_VIEW_GROUP,
         self::PUBLIC_PRODUCT_VIEW_GROUP,
@@ -132,12 +133,14 @@ class Product implements AttachmentFilesInterface
         return $this->id;
     }
 
-    public function getProductName(): string
+    public function getProductName(?UserLanguageEnum $language = null): mixed
     {
-        return $this->product_name;
+        return ($language !== null && isset($this->product_name[$language->value]))
+            ? $this->product_name[$language->value]
+            : $this->product_name;
     }
 
-    public function setProductName(string $product_name): Product
+    public function setProductName(mixed $product_name): Product
     {
         $this->product_name = $product_name;
 
@@ -360,7 +363,7 @@ class Product implements AttachmentFilesInterface
                     Response::HTTP_BAD_REQUEST,
                     sprintf('Властивість %s не існує для продутку %s',
                         $productProperty->getPropertyName(),
-                        $this->getProductName())
+                        $this->getProductName(UserLanguageEnum::UA))
                 );
             }
 
@@ -369,7 +372,7 @@ class Product implements AttachmentFilesInterface
                     Response::HTTP_BAD_REQUEST,
                     sprintf('Властивість %s для продутку %s має інше значення приросту ціни',
                         $productProperty->getPropertyName(),
-                        $this->getProductName())
+                        $this->getProductName(UserLanguageEnum::UA))
                 );
             }
         }
@@ -387,9 +390,11 @@ class Product implements AttachmentFilesInterface
         return $this;
     }
 
-    public function getDescription(): mixed
+    public function getDescription(?UserLanguageEnum $language = null): mixed
     {
-        return $this->description;
+        return ($language !== null && isset($this->description[$language->value]))
+            ? $this->description[$language->value]
+            : $this->description;
     }
 
     public function setDescription(mixed $description): Product

@@ -4,6 +4,7 @@ namespace App\Telegram\Product\Ring\Command;
 
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
+use App\Service\LocalizationService;
 use App\Service\ProductService;
 use App\Service\TelegramUserService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,6 +31,7 @@ class PriceRingConversation extends Conversation
     public ?bool $confirmPhone = false;
 
     public function __construct(
+        private LocalizationService $localizationService,
         private FilesystemOperator $defaultStorage,
         private TelegramUserService $telegramUserService,
         private ProductService $productService,
@@ -113,7 +115,7 @@ class PriceRingConversation extends Conversation
 Продукт: %s, ціна: %s грн;%s
 %s
                         ',
-                        $product->getProductName(),
+                        $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
                         $product->getPrice(),
                         PHP_EOL,
                         $product->getProductPropertiesMessage()
@@ -141,16 +143,17 @@ class PriceRingConversation extends Conversation
         }
         $this->productId = str_replace('product_', '', $bot->callbackQuery()->data);
 
+        $product = $this->productService->getProduct($this->productId);
         $bot->sendMessage(
             text: sprintf('
 <b>Ви ОБРАЛИ</b>            
 Продукт: %s, ціна: %s грн;%s
 %s 
                         ',
-                $this->productService->getProduct($this->productId)->getProductName(),
-                $this->productService->getProduct($this->productId)->getPrice(),
+                $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
+                $product->getPrice(),
                 PHP_EOL,
-                $this->productService->getProduct($this->productId)->getProductPropertiesMessage()
+                $product->getProductPropertiesMessage()
             ),
             parse_mode: ParseMode::HTML,
         );
@@ -178,15 +181,16 @@ class PriceRingConversation extends Conversation
 
         $this->quantity = (int)$text;
 
+        $product = $this->productService->getProduct($this->productId);
         $bot->sendMessage(
             sprintf('<b>Ваше замовлення</b>: <strong>%s</strong>: в <b>кількості</b>: <u>%s одиниць</u>',
-                $this->productService->getProduct($this->productId)->getProductName(),
+                $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
                 $this->quantity
             ),
             parse_mode: ParseMode::HTML
         );
 
-        $totalAmount = $this->productService->getProduct($this->productId)->getPrice() * $this->quantity;
+        $totalAmount = $product->getPrice() * $this->quantity;
         $bot->sendMessage(
             '<b>Кінцева ціна</b>: ' . $totalAmount . ' грн',
             parse_mode: ParseMode::HTML
@@ -283,12 +287,13 @@ class PriceRingConversation extends Conversation
         }
 
         $userOrder = new UserOrder();
-        $userOrder->setProductId($this->productService->getProduct($this->productId));
+        $product = $this->productService->getProduct($this->productId);
+        $userOrder->setProductId($product);
         $userOrder->setQuantityProduct($this->quantity);
         $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
-        $userOrder->setTotalAmount($this->productService->getProduct($this->productId)->getPrice() * $this->quantity);
+        $userOrder->setTotalAmount($product->getPrice() * $this->quantity);
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $this->productService->getProduct($this->productId)->getProductName(),
+            $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
             $this->quantity
         );
         $userOrder->setDescription($description);

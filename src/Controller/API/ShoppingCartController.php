@@ -14,6 +14,7 @@ use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
+use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
@@ -201,7 +202,8 @@ class ShoppingCartController extends AbstractController
         #[MapRequestPayload] CheckoutRequest $checkoutRequest,
         #[CurrentUser] User $user,
         PurchaseProductRepository $purchaseProductRepository,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        LocalizationService $localizationService
     ): JsonResponse
     {
         $userOrder = new UserOrder();
@@ -243,7 +245,7 @@ class ShoppingCartController extends AbstractController
             $total_amount += $price * $purchaseProduct->getQuantity();
 
             $description .= sprintf('Ваше замовлення: %s: в кількості: %s одиниць' . PHP_EOL,
-                $product->getProductName(),
+                $product->getProductName($localizationService->getLanguage()),
                 $purchaseProduct->getQuantity()
             );
 

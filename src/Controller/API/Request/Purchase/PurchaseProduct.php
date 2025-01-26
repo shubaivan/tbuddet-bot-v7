@@ -2,11 +2,13 @@
 
 namespace App\Controller\API\Request\Purchase;
 
+use App\Validator\UserLanguage;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Constraints\Type;
 use Symfony\Component\Validator\Constraints\Valid;
 
+#[UserLanguage]
 class PurchaseProduct
 {
     #[Type('int')]
