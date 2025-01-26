@@ -175,6 +175,46 @@ document.addEventListener("DOMContentLoaded", function () {
         "columnDefs": common_defs
     });
     let exampleModal = $('#exampleModal');
+
+    function getDivTagOneProp(
+        order,
+        inputNameUa = null,
+        inputValueUa = null,
+        inputPriceImpactUa = null,
+        inputNameEn = null,
+        inputValueEn = null,
+        inputPriceImpactEn = null,
+    ) {
+        var divTagOneProp = $('<div/>', {'class': "form-group", 'id': 'one_prop_' + order});
+        divTagOneProp.append(addPropertiesBlock(
+            order,
+            inputNameUa,
+            inputValueUa,
+            inputPriceImpactUa,
+            inputNameEn,
+            inputValueEn,
+            inputPriceImpactEn
+        ));
+
+        var rowMinus = $('<div/>', {'class': "row"});
+        var colMinus = $('<div/>', {'class': "col"});
+        var divTagMinus = $('<div/>', {'class': "form-group"});
+
+        var divTagColMinus = $('<div/>', {'class': "form-group text-right remove_block", 'text': "Видалити"});
+
+        var iMinus = $('<i/>', {'class': "fas fa-minus-square", 'divtagoneprop': 'one_prop_' + order});
+        divTagColMinus.append(iMinus)
+
+        divTagMinus
+            .append(divTagColMinus);
+
+        colMinus.append(divTagMinus);
+        rowMinus.append(colMinus);
+        divTagOneProp.append(rowMinus);
+
+        return divTagOneProp;
+    }
+
     exampleModal.on('show.bs.modal', function (event) {
         var modal = $(this);
         let form = modal.find("form");
@@ -232,7 +272,15 @@ document.addEventListener("DOMContentLoaded", function () {
                         $.each(data.product_properties, function (index, productProperty) {
                             if (Object.keys(productProperty).length) {
                                 let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
-                                divPropSet.append(addPropertiesBlock(order, productProperty.property_name, productProperty.property_value, productProperty.property_price_impact));
+                                divPropSet.append(getDivTagOneProp(
+                                    order,
+                                    productProperty.ua.property_name,
+                                    productProperty.ua.property_value,
+                                    productProperty.ua.property_price_impact,
+                                    productProperty.en.property_name,
+                                    productProperty.en.property_value,
+                                    productProperty.en.property_price_impact
+                                ));
                                 $('#createProduct .prop_conf').attr('order', order)
                             }
                         });
@@ -255,7 +303,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             categories_select.val(category.id).trigger('change');
                         } else {
                             // Create a DOM Option and pre-select by default
-                            var newOption = new Option(category.name, category.id, true, true);
+                            var newOption = new Option(category.name.ua, category.id, true, true);
                             // Append it to the select
                             categories_select.append(newOption).trigger('change');
                         }
@@ -337,26 +385,7 @@ document.addEventListener("DOMContentLoaded", function () {
         divPropConf.on('click', function () {
             let order = parseInt($('#createProduct .prop_conf').attr('order')) + 1;
 
-            var divTagOneProp = $('<div/>', {'class': "form-group", 'id': 'one_prop_' + order});
-            divTagOneProp.append(addPropertiesBlock(order));
-
-            var rowMinus = $('<div/>', {'class': "row"});
-            var colMinus = $('<div/>', {'class': "col"});
-            var divTagMinus = $('<div/>', {'class': "form-group"});
-
-            var divTagColMinus = $('<div/>', {'class': "form-group text-right remove_block", 'text': "Видалити"});
-
-            var iMinus = $('<i/>', {'class': "fas fa-minus-square", 'divtagoneprop': 'one_prop_' + order});
-            divTagColMinus.append(iMinus)
-
-            divTagMinus
-                .append(divTagColMinus);
-
-            colMinus.append(divTagMinus);
-            rowMinus.append(colMinus);
-            divTagOneProp.append(rowMinus);
-
-            divPropSet.append(divTagOneProp);
+            divPropSet.append(getDivTagOneProp(order));
 
             $('#createProduct .prop_conf').attr('order', order);
         })
@@ -561,7 +590,7 @@ document.addEventListener("DOMContentLoaded", function () {
             'name': 'product_properties[' + order + '][en][property_name]'
         });
         if (inputNameEn !== null) {
-            inputNameUaTag.val(inputNameEn)
+            inputNameEnTag.val(inputNameEn)
         }
         let smallNamePropEn = $("<small>", {
             'class': 'form-text text-muted'
