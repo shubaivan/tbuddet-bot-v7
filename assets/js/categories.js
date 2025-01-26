@@ -55,6 +55,24 @@ document.addEventListener("DOMContentLoaded", function () {
     })
 
     common_defs.push({
+        "targets": 3,
+        "render": function ( data, type, row, meta ) {
+            var divTag = $('<div/>');
+            if (Object.keys(data).length) {
+                $.each(data, function (language, valueOfLanguage) {
+                    var pOrder = $('<p/>')
+                        .append('<b>Мова: ' + language + '</b>; ')
+                        .append('<i>' + valueOfLanguage + '</i>; ')
+                    ;
+                    divTag.append(pOrder);
+                });
+            }
+
+            return divTag.html();
+        }
+    })
+
+    common_defs.push({
         "targets": 7,
         data: 'action',
         render: function (data, type, row, meta) {
@@ -110,7 +128,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 success: (data) => {
                     console.log(data);
                     modal.find('#exampleModalLabel').text('Редагувати категорію')
-                    form.find('#category_name').val(data.category_name)
+
+                    form.find('#category_name_ua').val(data.category_name.ua)
+                    form.find('#category_name_en').val(data.category_name.en)
+
                     form.find('#order_category').val(data.order_category)
 
                     let category_id_input = $('<input>').attr({

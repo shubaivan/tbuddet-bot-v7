@@ -56,7 +56,6 @@ class ProductController extends AbstractController
         Paginator $paginator,
         FilesystemOperator $defaultStorage,
         FilesRepository $filesRepository,
-        Request $request,
         ValidatorInterface $validator
     ): JsonResponse {
         //Todo https://github.com/symfony/symfony/issues/50690

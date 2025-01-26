@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\CategoryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -34,10 +35,10 @@ class Category implements AttachmentFilesInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: 'string', length: 255)]
+    #[ORM\Column(type: 'jsonb')]
     #[NotBlank(message: 'Вкажіть назву')]
     #[Groups([self::ADMIN_CATEGORY_VIEW_GROUP])]
-    private string $category_name;
+    private mixed $category_name;
 
     #[ORM\Column(type: 'integer', options: ['default' => 0])]
     #[NotBlank(message: 'Вкажіть порядок')]
@@ -148,12 +149,14 @@ class Category implements AttachmentFilesInterface
         return $this;
     }
 
-    public function getCategoryName(): string
+    public function getCategoryName(?UserLanguageEnum $language = null): mixed
     {
-        return $this->category_name;
+        return ($language !== null && isset($this->category_name[$language->value]))
+            ? $this->category_name[$language->value]
+            : $this->category_name;
     }
 
-    public function setCategoryName(string $category_name): Category
+    public function setCategoryName(mixed $category_name): Category
     {
         $this->category_name = $category_name;
 

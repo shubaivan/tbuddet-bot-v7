@@ -45,8 +45,20 @@
                 <div class="modal-body">
                     <form id="createCategory">
                         <div class="form-group">
-                            <label for="category_name" class="col-form-label">Назва категорії</label>
-                            <input type="text" id="category_name" class="form-control" name="category_name"/>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label for="category_name_ua" class="col-form-label">Назва категорії(Українська)</label>
+                                        <input type="text" id="category_name_ua" class="form-control" name="category_name[ua]" placeholder="Українська"/>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label for="category_name_en" class="col-form-label">Назва категорії(English)</label>
+                                        <input type="text" id="category_name_en" class="form-control" name="category_name[en]" placeholder="English"/>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="order_category" class="col-form-label">Порядок в списку</label>
