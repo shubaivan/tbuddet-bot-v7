@@ -225,6 +225,7 @@ class ProductController extends AbstractController
 
         $product->setProductName($product->getProductName($this->localizationService->getLanguage()));
         $product->setDescription($product->getDescription($this->localizationService->getLanguage()));
+        $product->setProductProperties($product->getProductProperties($this->localizationService->getLanguage()));
 
         return $this->json($product, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [Product::PUBLIC_PRODUCT_VIEW_GROUP],

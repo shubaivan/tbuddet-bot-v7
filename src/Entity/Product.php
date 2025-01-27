@@ -171,9 +171,18 @@ class Product implements AttachmentFilesInterface
         return $this;
     }
 
-    public function getProductProperties(): array
+    public function getProductProperties(?UserLanguageEnum $language = null): array
     {
-        return $this->product_properties;
+        $r = [];
+        foreach ($this->product_properties as $product_property) {
+            if ($language !== null && isset($product_property[$language->value])) {
+                $r[] = $product_property[$language->value];
+            } else {
+                $r[] = $product_property;
+            }
+        }
+
+        return $r;
     }
 
     /**
