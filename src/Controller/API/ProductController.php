@@ -462,7 +462,8 @@ class ProductController extends AbstractController
     #[isGranted(RoleEnum::USER->value)]
     #[Route('/user-orders', name: 'user_orders', methods: [Request::METHOD_GET])]
     public function userOrders(
-        #[CurrentUser] User $user
+        #[CurrentUser] User $user,
+        UserOrderRepository $orderRepository
     ): JsonResponse {
         $userOrders = $user->getClientOrders();
         if ($user->getMerge()
@@ -471,6 +472,12 @@ class ProductController extends AbstractController
         ) {
             $telegramUserOrder = $user->getMerge()->getTelegramUser()->getOrders();
             foreach ($telegramUserOrder as $order) {
+                $userOrders->add($order);
+            }
+        }
+        $userOrdersByPhone = $orderRepository->findBy(['phone' => $user->getPhone()]);
+        if ($userOrdersByPhone) {
+            foreach ($userOrdersByPhone as $order) {
                 $userOrders->add($order);
             }
         }
