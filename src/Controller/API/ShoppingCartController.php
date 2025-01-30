@@ -82,7 +82,8 @@ class ShoppingCartController extends AbstractController
     public function show(
         #[CurrentUser] User $user,
         EntityManagerInterface $em,
-        FilesystemOperator $defaultStorage
+        FilesystemOperator $defaultStorage,
+        LocalizationService $localizationService
     ): JsonResponse
     {
         $shoppingCart = $user->getShoppingCart();
@@ -101,6 +102,10 @@ class ShoppingCartController extends AbstractController
                     $path[] = $defaultStorage->publicUrl($file->getPath());
                 }
                 $product->setFilePath($path);
+
+                $product->setProductName($product->getProductName($localizationService->getLanguage()));
+                $product->setDescription($product->getDescription($localizationService->getLanguage()));
+                $product->setProductProperties($product->getProductProperties($localizationService->getLanguage()));
             }
         }
 
