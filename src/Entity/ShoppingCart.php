@@ -106,6 +106,9 @@ class ShoppingCart
         return $this;
     }
 
+    /**
+     * @return Collection|PurchaseProduct[]
+     */
     public function getPurchaseProduct(): Collection
     {
         return $this->purchaseProduct ? : new ArrayCollection();

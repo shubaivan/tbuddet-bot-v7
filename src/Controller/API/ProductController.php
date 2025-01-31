@@ -463,7 +463,8 @@ class ProductController extends AbstractController
     #[Route('/user-orders', name: 'user_orders', methods: [Request::METHOD_GET])]
     public function userOrders(
         #[CurrentUser] User $user,
-        UserOrderRepository $orderRepository
+        UserOrderRepository $orderRepository,
+        LocalizationService $localizationService
     ): JsonResponse {
         $userOrders = $user->getClientOrders();
         if ($user->getMerge()
@@ -479,6 +480,15 @@ class ProductController extends AbstractController
         if ($userOrdersByPhone) {
             foreach ($userOrdersByPhone as $order) {
                 $userOrders->add($order);
+            }
+        }
+        /** @var UserOrder $order */
+        foreach ($userOrders as $order) {
+            /** @var \App\Entity\PurchaseProduct[] $purchaseProduct */
+            $purchaseProduct = $order->getPurchaseProduct();
+            foreach ($purchaseProduct as $pp) {
+                $product = $pp->getProduct();
+                $product->setProductName($product->getProductName($localizationService->getLanguage()));
             }
         }
 
