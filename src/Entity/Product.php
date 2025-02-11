@@ -211,21 +211,17 @@ class Product implements AttachmentFilesInterface
         return false;
     }
 
-    public function getProductPropertiesMessage(): string
+    public function getProductPropertiesMessage(?UserLanguageEnum $language = null): string
     {
         $output = '';
-        foreach ($this->product_properties as $propertyByLanguage) {
-            foreach ($propertyByLanguage as $lng => $properties) {
-                foreach ($properties as $position => $property) {
-                    $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
-                    foreach ($property as $key => $item) {
-                        if (isset(self::$propertyKeyMap[$key])) {
-                            $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
-                        }
-                    }
-                    $output .= PHP_EOL;
+        foreach ($this->getProductProperties($language) as $position => $property) {
+            $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
+            foreach ($property as $key => $item) {
+                if (isset(self::$propertyKeyMap[$key])) {
+                    $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
                 }
             }
+            $output .= PHP_EOL;
         }
 
         return $output;

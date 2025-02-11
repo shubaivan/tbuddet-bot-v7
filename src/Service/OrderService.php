@@ -34,7 +34,7 @@ class OrderService
             $info[$id][] = '<b>Назва продукту</b>: ' . $product->getProductName($this->localizationService->getLanguage($user->getLanguageCode()));
             $info[$id][] = '<b>Ціна продукту за одинцу</b>: ' . $product->getPrice() . ' грн';
             $info[$id][] = PHP_EOL;
-            $info[$id][] = '<b>Опис продукту</b>: ' . PHP_EOL . $product->getProductPropertiesMessage();
+            $info[$id][] = '<b>Опис продукту</b>: ' . PHP_EOL . $product->getProductPropertiesMessage($this->localizationService->getLanguage($user->getLanguageCode()));
         }
 
         return $info;
