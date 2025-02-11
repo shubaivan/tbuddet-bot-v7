@@ -14,6 +14,7 @@ doctrine:
             jsonb: jsonb
             jsonb[]: jsonb[]
             _jsonb: jsonb[]
+            tsvector: tsvector
         types: # register the new types\JsonbArray
             bool[]: MartinGeorgiev\Doctrine\DBAL\Types\BooleanArray
             smallint[]: MartinGeorgiev\Doctrine\DBAL\Types\SmallIntArray
@@ -22,6 +23,7 @@ doctrine:
             text[]: MartinGeorgiev\Doctrine\DBAL\Types\TextArray
             jsonb: MartinGeorgiev\Doctrine\DBAL\Types\Jsonb
             jsonb[]: MartinGeorgiev\Doctrine\DBAL\Types\JsonbArray
+            tsvector: App\Doctrine\DBAL\Types\TsVector
         url: '%env(resolve:DATABASE_URL)%'
 
         # IMPORTANT: You MUST configure your server version,

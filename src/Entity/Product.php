@@ -121,6 +121,9 @@ class Product implements AttachmentFilesInterface
         mappedBy: 'product', cascade: ["persist", "remove"], orphanRemoval: true)]
     private Collection $purchaseProduct;
 
+    #[ORM\Column(type: 'tsvector')]
+    private string $common_fts;
+
     public function __construct() {
         $this->orders = new ArrayCollection();
         $this->files = new ArrayCollection();
