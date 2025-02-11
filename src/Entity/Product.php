@@ -215,14 +215,16 @@ class Product implements AttachmentFilesInterface
     {
         $output = '';
         foreach ($this->product_properties as $propertyByLanguage) {
-            foreach ($propertyByLanguage as $position => $property) {
-                $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
-                foreach ($property as $key => $item) {
-                    if (isset(self::$propertyKeyMap[$key])) {
-                        $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
+            foreach ($propertyByLanguage as $lng => $properties) {
+                foreach ($properties as $position => $property) {
+                    $output .= sprintf('Властивість %s:%s', ($position + 1), PHP_EOL);
+                    foreach ($property as $key => $item) {
+                        if (isset(self::$propertyKeyMap[$key])) {
+                            $output .= sprintf('%s: %s', self::$propertyKeyMap[$key], $item) . PHP_EOL;
+                        }
                     }
+                    $output .= PHP_EOL;
                 }
-                $output .= PHP_EOL;
             }
         }
 
