@@ -86,30 +86,30 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    common_defs.push({
-        "targets": 6,
-        "orderable": false,
-        "render": function (data, type, row, meta) {
-            var divTag = $('<div/>');
-            if (Object.keys(data).length) {
-                $.each(data, function (index, propByLanguage) {
-                    var pIndex = $('<p/>').text('Номер властивості ' + (index + 1));
-                    divTag.append(pIndex);
-                    $.each(propByLanguage, function (language, prop) {
-                        var bLanguage = $('<b/>').text(language)
-                        divTag.append(bLanguage);
-                        var pOrder = $('<p/>')
-                            .append('<b>Назва: ' + prop.property_name + '</b>; ').append('<br>')
-                            .append('<i>Значення: ' + prop.property_value + '</i>; ').append('<br>')
-                            .append('<b>Збільшення ціни: ' + prop.property_price_impact + '</b> ');
-                        divTag.append(pOrder);
-                    })
-                });
-            }
-
-            return divTag.html();
-        }
-    });
+    // common_defs.push({
+    //     "targets": 6,
+    //     "orderable": false,
+    //     "render": function (data, type, row, meta) {
+    //         var divTag = $('<div/>');
+    //         if (Object.keys(data).length) {
+    //             $.each(data, function (index, propByLanguage) {
+    //                 var pIndex = $('<p/>').text('Номер властивості ' + (index + 1));
+    //                 divTag.append(pIndex);
+    //                 $.each(propByLanguage, function (language, prop) {
+    //                     var bLanguage = $('<b/>').text(language)
+    //                     divTag.append(bLanguage);
+    //                     var pOrder = $('<p/>')
+    //                         .append('<b>Назва: ' + prop.property_name + '</b>; ').append('<br>')
+    //                         .append('<i>Значення: ' + prop.property_value + '</i>; ').append('<br>')
+    //                         .append('<b>Збільшення ціни: ' + prop.property_price_impact + '</b> ');
+    //                     divTag.append(pOrder);
+    //                 })
+    //             });
+    //         }
+    //
+    //         return divTag.html();
+    //     }
+    // });
 
     common_defs.push({
         "targets": 2,

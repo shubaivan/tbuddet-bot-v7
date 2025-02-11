@@ -16,7 +16,7 @@ class LocalizationService
         $language = UserLanguageEnum::EN;
 
         if ($language_code && UserLanguageEnum::tryFrom($language_code)) {
-            return UserLanguageEnum::tryFrom($language_code);
+            $language = UserLanguageEnum::tryFrom($language_code);
         }
 
         if ($this->requestStack->getCurrentRequest()
@@ -25,6 +25,10 @@ class LocalizationService
             $language = UserLanguageEnum::tryFrom($language);
         }
 
-        return $language;
+        if ($language === UserLanguageEnum::UK) {
+            $language = UserLanguageEnum::UA;
+        }
+
+        return $language ;
     }
 }

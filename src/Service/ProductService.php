@@ -14,7 +14,8 @@ class ProductService
 
     public function __construct(
         private ProductRepository $productRepository,
-        private CategoryRepository $categoryRepository
+        private CategoryRepository $categoryRepository,
+        private LocalizationService $localizationService
     ) {}
 
     /**
@@ -25,7 +26,7 @@ class ProductService
         $group = [];
         $category = $this->categoryRepository->find($categoryId);
         foreach ($this->productRepository->getProducts($categoryId) as $product) {
-            $group[$category->getCategoryName()][] = $product;
+            $group[$category->getCategoryName($this->localizationService->getLanguage())][] = $product;
         }
 
         return $group;

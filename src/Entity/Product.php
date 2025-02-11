@@ -38,7 +38,7 @@ class Product implements AttachmentFilesInterface
         'product_name',
         'price',
         'description',
-        'product_properties',
+//        'product_properties',
         'created_at',
         'updated_at'
     ];
