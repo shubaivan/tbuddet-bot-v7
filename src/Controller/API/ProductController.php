@@ -114,7 +114,7 @@ class ProductController extends AbstractController
                 }
             }
 
-
+            unset($productData['common_fts']);
             $products[$key] = $productData;
         }
 
