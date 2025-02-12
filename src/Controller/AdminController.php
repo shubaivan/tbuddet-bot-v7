@@ -188,6 +188,8 @@ class AdminController extends AbstractController
                     }
                     $dataTable[$key]['categories'][] = $parentCategory[UserLanguageEnum::UA->value];
                 }
+
+                $dataTable[$key]['categories'] = array_unique($dataTable[$key]['categories']);
             }
         }
 
