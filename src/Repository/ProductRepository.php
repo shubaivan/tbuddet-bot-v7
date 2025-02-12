@@ -285,7 +285,7 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         if ($bindParams) {
-            $bindParams = array_unique($bindParams);
+            $bindParams = array_unique($bindParams, SORT_REGULAR);
             $query
                 ->setParameters($bindParams);
         }
