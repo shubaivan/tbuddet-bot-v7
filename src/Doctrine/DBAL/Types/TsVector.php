@@ -54,10 +54,10 @@ class TsVector extends Type
     }
 
     /**
-     * @param array|string $value
+     * @param array|string|null $value
      * @psalm-suppress all
      */
-    public function convertToDatabaseValue($value, AbstractPlatform $platform) : string
+    public function convertToDatabaseValue($value, AbstractPlatform $platform) : ?string
     {
         if (is_array($value)) {
             $value = implode(' ', $value);

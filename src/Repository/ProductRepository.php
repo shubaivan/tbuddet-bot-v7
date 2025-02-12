@@ -248,9 +248,10 @@ class ProductRepository extends ServiceEntityRepository
         $condition = ' WHERE ';
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
+            $handleSearchValue = $this->handleSearchValue($parameterBag->get('search'));
             $or[] = 'TSMATCH(o.common_fts, TO_TSQUERY(:var_search)) = TRUE';
 
-            $bindParams['var_search'] = $parameterBag->get('search');
+            $bindParams['var_search'] = $handleSearchValue;
             $conditions[] = '(' . implode(' OR ', $or) . ')';
         }
 

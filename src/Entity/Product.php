@@ -12,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\NotBlank;
@@ -122,7 +123,8 @@ class Product implements AttachmentFilesInterface
     private Collection $purchaseProduct;
 
     #[ORM\Column(type: 'tsvector')]
-    private string $common_fts;
+    #[Ignore]
+    private array $common_fts;
 
     public function __construct() {
         $this->orders = new ArrayCollection();
@@ -434,5 +436,17 @@ class Product implements AttachmentFilesInterface
         $this->setPurchaseProduct(new ArrayCollection());
 
         return $product;
+    }
+
+    public function getCommonFts(): array
+    {
+        return $this->common_fts;
+    }
+
+    public function setCommonFts(array $common_fts): Product
+    {
+        $this->common_fts = $common_fts;
+
+        return $this;
     }
 }
