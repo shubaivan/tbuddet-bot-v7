@@ -153,7 +153,7 @@ class PriceRingConversation extends Conversation
                 $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
                 $product->getPrice(),
                 PHP_EOL,
-                $product->getProductPropertiesMessage()
+                $product->getProductPropertiesMessage($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode()))
             ),
             parse_mode: ParseMode::HTML,
         );
