@@ -65,7 +65,7 @@ class ProductRepository extends ServiceEntityRepository
         if ($listRequest->getCategoryId()) {
             $andX = [];
             foreach ($listRequest->getCategoryId() as $key => $categoryId) {
-                $from .= ' left join public.product_category pc_'. $key.' on c.id = pc.product_id';
+                $from .= ' left join public.product_category pc_'. $key.' on c.id = pc_'.$key.'.product_id';
                 $andX[] = ' pc_'. $key .'.category_id = :category_' . $key;
                 $bind['category_' . $key] = $categoryId;
             }
