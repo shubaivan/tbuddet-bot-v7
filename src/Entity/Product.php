@@ -76,7 +76,6 @@ class Product implements AttachmentFilesInterface
     #[NotBlank(message: 'Вкажіть властивості')]
     private array $product_properties = [];
 
-    #[ORM\Column(type: 'integer')]
     #[Groups([
         self::ADMIN_PRODUCT_VIEW_GROUP,
         self::PUBLIC_PRODUCT_VIEW_GROUP,
@@ -84,6 +83,7 @@ class Product implements AttachmentFilesInterface
         ShoppingCart::GROUP_VIEW
     ])]
     #[NotBlank(message: 'Вкажіть ціну')]
+    #[ORM\Column(type: 'jsonb', nullable: true, options: ['default' => '{}'])]
     private mixed $price;
 
     #[ORM\Column(type: 'jsonb', nullable: true)]
