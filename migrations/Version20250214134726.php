@@ -39,8 +39,11 @@ final class Version20250214134726 extends AbstractMigration implements Migration
 
         foreach ($allAssociative as $product) {
             $this->addSql(
-                'update product set price = :price',
-                ['price' => json_encode(['ua' => $product['price']])]
+                'update product set price = :price where id = :id',
+                [
+                    'price' => json_encode(['ua' => $product['price']]),
+                    'id' => $product['id']
+                ]
             );
         }
     }
