@@ -45,6 +45,10 @@ doctrine:
                 TO_TSVECTOR: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\ToTsvector
                 TSMATCH: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\Tsmatch
 
+                JSON_GET_FIELD_AS_TEXT: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\JsonGetFieldAsText
+                JSON_GET_FIELD_AS_INTEGER: MartinGeorgiev\Doctrine\ORM\Query\AST\Functions\JsonGetFieldAsInteger
+
+
                 group_concat: App\Doctrine\Functions\GroupConcat
                 date_format: App\Doctrine\Functions\DateFormat
 

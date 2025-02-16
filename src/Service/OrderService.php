@@ -32,7 +32,7 @@ class OrderService
             $info[$id][] = '<b><i><u>Статус покупки</u></i></b>: <b><i>' . $status . '</i></b>';
             $product = $order->getProductId();
             $info[$id][] = '<b>Назва продукту</b>: ' . $product->getProductName($this->localizationService->getLanguage($user->getLanguageCode()));
-            $info[$id][] = '<b>Ціна продукту за одинцу</b>: ' . $product->getPrice() . ' грн';
+            $info[$id][] = '<b>Ціна продукту за одинцу</b>: ' . $product->getPrice($this->localizationService->getLanguage($user->getLanguageCode())) . ' грн';
             $info[$id][] = PHP_EOL;
             $info[$id][] = '<b>Опис продукту</b>: ' . PHP_EOL . $product->getProductPropertiesMessage($this->localizationService->getLanguage($user->getLanguageCode()));
         }

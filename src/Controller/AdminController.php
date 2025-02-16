@@ -242,9 +242,7 @@ class AdminController extends AbstractController
     ): JsonResponse
     {
         $params = $request->request->all();
-        if (isset($params['price'])) {
-            $params['price'] = (int) $params['price'];
-        }
+
         $context = [
             AbstractNormalizer::CALLBACKS => [
                 'product_properties' => function (?array $product_properties): ?array {
@@ -253,10 +251,7 @@ class AdminController extends AbstractController
                     }
 
                     return array_values($product_properties);
-                },
-                'price' => function (mixed $price): ?int {
-                    return is_null($price) ? null : (int)$price;
-                },
+                }
             ]
         ];
         if ($request->request->get('product_id')) {

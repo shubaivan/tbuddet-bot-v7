@@ -152,14 +152,19 @@ class Product implements AttachmentFilesInterface
         return $this;
     }
 
-    public function getPrice(): int
+    public function getPrice(?UserLanguageEnum $language = null): mixed
     {
-        return $this->price;
+        return ($language !== null && isset($this->price[$language->value]))
+            ? $this->price[$language->value]
+            : $this->price;
     }
 
     public function setPrice(mixed $price): Product
     {
-        $this->price = (int)$price;
+        if (is_string($price)) {
+            $price = (int) $price;
+        }
+        $this->price = $price;
 
         return $this;
     }

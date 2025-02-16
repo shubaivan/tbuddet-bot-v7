@@ -2,6 +2,7 @@
 
 namespace App\Telegram\Product\Ring\Command;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Service\LocalizationService;
@@ -116,7 +117,7 @@ class PriceRingConversation extends Conversation
 %s
                         ',
                         $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
-                        $product->getPrice(),
+                        $product->getPrice($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
                         PHP_EOL,
                         $product->getProductPropertiesMessage($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode()))
                     ),
@@ -151,7 +152,7 @@ class PriceRingConversation extends Conversation
 %s 
                         ',
                 $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
-                $product->getPrice(),
+                $product->getPrice($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
                 PHP_EOL,
                 $product->getProductPropertiesMessage($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode()))
             ),
@@ -190,7 +191,7 @@ class PriceRingConversation extends Conversation
             parse_mode: ParseMode::HTML
         );
 
-        $totalAmount = $product->getPrice() * $this->quantity;
+        $totalAmount = $product->getPrice($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())) * $this->quantity;
         $bot->sendMessage(
             '<b>Кінцева ціна</b>: ' . $totalAmount . ' грн',
             parse_mode: ParseMode::HTML
@@ -289,9 +290,9 @@ class PriceRingConversation extends Conversation
         $userOrder = new UserOrder();
         $product = $this->productService->getProduct($this->productId);
         $userOrder->setProductId($product);
-        $userOrder->setQuantityProduct($this->quantity);
+        $userOrder->setQuantityProduct($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode()), $this->quantity);
         $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
-        $userOrder->setTotalAmount($product->getPrice() * $this->quantity);
+
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
             $product->getProductName($this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode())),
             $this->quantity
@@ -310,7 +311,7 @@ class PriceRingConversation extends Conversation
             'version' => '3',
             'phone' => $userOrder->getTelegramUserid()->getPhoneNumber(),
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $this->localizationService->getLanguage($this->telegramUserService->getCurrentUser()->getLanguageCode()) === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description

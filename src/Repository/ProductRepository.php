@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\ProductListRequest;
 use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -46,6 +47,7 @@ class ProductRepository extends ServiceEntityRepository
     }
 
     public function nativeSqlFilterProducts(
+        UserLanguageEnum $languageEnum,
         ProductListRequest $listRequest,
         bool $total = false,
         bool $minPrice = false,
@@ -89,13 +91,13 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         if ($listRequest->getPriceFrom() && is_null($listRequest->getPriceTo())) {
-            $where[] = 'c.price >= :price_from';
+            $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) >= :price_from', $languageEnum->value);
             $bind['price_from'] = $listRequest->getPriceFrom();
         } elseif ($listRequest->getPriceTo() && is_null($listRequest->getPriceFrom())) {
-            $where[] = 'c.price <= :price_to';
+            $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) <= :price_to', $languageEnum->value);
             $bind['price_to'] = $listRequest->getPriceFrom();
         } elseif ($listRequest->getPriceFrom() && $listRequest->getPriceTo()) {
-            $where[] = 'c.price between :price_from and :price_to';
+            $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) between :price_from and :price_to', $languageEnum->value);
             $bind['price_to'] = $listRequest->getPriceTo();
             $bind['price_from'] = $listRequest->getPriceFrom();
         }
@@ -114,13 +116,13 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         if ($minPrice) {
-            $select = 'select min(c.price) as min_price';
+            $select = sprintf('select min(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
             $limitOfSet = '';
             $orderBy = '';
         }
 
         if ($maxPrice) {
-            $select = 'select max(c.price) as max_price';
+            $select = sprintf('select max(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
             $limitOfSet = '';
             $orderBy = '';
         }
@@ -138,18 +140,18 @@ class ProductRepository extends ServiceEntityRepository
         return ($total || $maxPrice || $minPrice) ? $result->fetchOne() : $result->fetchAllAssociative();
     }
 
-    public function getMinPrice()
+    public function getMinPrice(UserLanguageEnum $languageEnum)
     {
         return $this->createQueryBuilder('p')
-            ->select('MIN(p.price)')
+            ->select(sprintf('MIN(JSON_GET_FIELD_AS_INTEGER(p.price, \'%s\'))', $languageEnum->value))
             ->getQuery()
             ->getSingleScalarResult();
     }
 
-    public function getMaxPrice()
+    public function getMaxPrice(UserLanguageEnum $languageEnum)
     {
         return $this->createQueryBuilder('p')
-            ->select('MAX(p.price)')
+            ->select(sprintf('MAX(JSON_GET_FIELD_AS_INTEGER(p.price, \'%s\'))', $languageEnum->value))
             ->getQuery()
             ->getSingleScalarResult();
     }

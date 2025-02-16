@@ -2,6 +2,7 @@
 
 namespace App\Controller\API;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\ProductListRequest;
 use App\Controller\API\Request\Purchase\PublicPurchaseProduct;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
@@ -73,7 +74,9 @@ class ProductController extends AbstractController
             }
         }
 
-        $total = $repository->nativeSqlFilterProducts($listRequest, true);
+        $total = $repository->nativeSqlFilterProducts(
+            $this->localizationService->getLanguage(), $listRequest, true
+        );
         if ($listRequest->getLimit() >= $total) {
             $offset = 0;
         } else {
@@ -83,7 +86,7 @@ class ProductController extends AbstractController
 
         $listRequest->setOffset($offset);
 
-        $products = $repository->nativeSqlFilterProducts($listRequest);
+        $products = $repository->nativeSqlFilterProducts($this->localizationService->getLanguage(), $listRequest);
 
         foreach ($products as $key => $productData) {
             $files = $filesRepository->getFileByProductId($productData['id']);
@@ -101,6 +104,11 @@ class ProductController extends AbstractController
             $description = json_decode($productData['description'], true);
             if (isset($description[$this->localizationService->getLanguage()->value])) {
                 $productData['description'] = $description[$this->localizationService->getLanguage()->value];
+            }
+
+            $description = json_decode($productData['price'], true);
+            if (isset($description[$this->localizationService->getLanguage()->value])) {
+                $productData['price'] = (int)$description[$this->localizationService->getLanguage()->value];
             }
 
             $product_properties = json_decode($productData['product_properties'], true);
@@ -151,10 +159,10 @@ class ProductController extends AbstractController
                 'to' => $offset + $listRequest->getLimit(),
                 'per_page' => $listRequest->getLimit(),
                 'total' => $total,
-                'min_price' => $repository->nativeSqlFilterProducts($listRequest, false, true),
-                'max_price' => $repository->nativeSqlFilterProducts($listRequest, false, false, true),
-                'total_min_price' => $repository->getMinPrice(),
-                'total_max_price' => $repository->getMaxPrice()
+                'min_price' => $repository->nativeSqlFilterProducts($this->localizationService->getLanguage(), $listRequest, false, true),
+                'max_price' => $repository->nativeSqlFilterProducts($this->localizationService->getLanguage(), $listRequest, false, false, true),
+                'total_min_price' => $repository->getMinPrice($this->localizationService->getLanguage()),
+                'total_max_price' => $repository->getMaxPrice($this->localizationService->getLanguage())
             ],
             'links' => [
                 'first' => $this->generateUrl(
@@ -223,6 +231,7 @@ class ProductController extends AbstractController
         }
         $product->setFilePath($path);
 
+        $product->setPrice($product->getPrice($this->localizationService->getLanguage()));
         $product->setProductName($product->getProductName($this->localizationService->getLanguage()));
         $product->setDescription($product->getDescription($this->localizationService->getLanguage()));
         $product->setProductProperties($product->getProductProperties($this->localizationService->getLanguage()));
@@ -250,11 +259,11 @@ class ProductController extends AbstractController
 
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
-        $userOrder->setQuantityProduct($purchaseProduct->getQuantity());
+        $userOrder->setQuantityProduct($localizationService->getLanguage(), $purchaseProduct->getQuantity());
         $userOrder->setClientUserId($user);
         $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
 
-        $price = $product->getPrice();
+        $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
         foreach ($purchaseProduct->getProductProperties() as $productProperty) {
@@ -299,7 +308,7 @@ class ProductController extends AbstractController
             'version' => '3',
             'phone' => $phoneNumber,
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
@@ -313,7 +322,7 @@ class ProductController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
@@ -351,11 +360,11 @@ class ProductController extends AbstractController
 
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
-        $userOrder->setQuantityProduct($publicPurchaseProduct->getQuantity());
+        $userOrder->setQuantityProduct($localizationService->getLanguage(), $publicPurchaseProduct->getQuantity());
         $userOrder->setPhone($publicPurchaseProduct->getPhone());
         $userOrder->setProductProperties($publicPurchaseProduct->getProductPropertiesArray());
 
-        $price = $product->getPrice();
+        $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
         foreach ($publicPurchaseProduct->getProductProperties() as $productProperty) {
@@ -402,7 +411,7 @@ class ProductController extends AbstractController
             'version' => '3',
             'phone' => $phoneNumber,
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
@@ -416,7 +425,7 @@ class ProductController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description

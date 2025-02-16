@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Repository\UserOrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -146,10 +147,10 @@ class UserOrder
         return $this->quantity_product;
     }
 
-    public function setQuantityProduct(?string $quantity_product): UserOrder
+    public function setQuantityProduct(UserLanguageEnum $language, ?string $quantity_product): UserOrder
     {
         $this->quantity_product = $quantity_product;
-        $this->total_amount = $this->product_id->getPrice() * $quantity_product;
+        $this->total_amount = $this->product_id->getPrice($language) * $quantity_product;
 
         return $this;
     }

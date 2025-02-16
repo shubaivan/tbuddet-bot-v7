@@ -2,6 +2,7 @@
 
 namespace App\Controller\API;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\Purchase\CheckoutRequest;
 use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
@@ -234,7 +235,7 @@ class ShoppingCartController extends AbstractController
             }, $purchaseProduct->getProductProperties());
             $product->checkInputProp($productProperties);
 
-            $price = $product->getPrice();
+            $price = $product->getPrice($localizationService->getLanguage());
 
             $propExplainingSet = [];
             foreach ($productProperties as $productProperty) {
@@ -279,7 +280,7 @@ class ShoppingCartController extends AbstractController
             'version' => '3',
             'phone' => $phoneNumber,
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
@@ -293,7 +294,7 @@ class ShoppingCartController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => 'UAH',
+            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description

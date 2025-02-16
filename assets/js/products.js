@@ -68,6 +68,25 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     common_defs.push({
+        "targets": 4,
+        "orderable": false,
+        "render": function (data, type, row, meta) {
+            var divTag = $('<div/>');
+            if (Object.keys(data).length) {
+                $.each(data, function (language, valueOfLanguage) {
+                    var pOrder = $('<p/>')
+                        .append('<b>Мова: ' + language + '</b>; ')
+                        .append('<i>' + valueOfLanguage + '</i>; ')
+                    ;
+                    divTag.append(pOrder);
+                });
+            }
+
+            return divTag.html();
+        }
+    });
+
+    common_defs.push({
         "targets": 5,
         "orderable": false,
         "render": function (data, type, row, meta) {
@@ -255,7 +274,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     form.find('#product_name_ua').val(data.product_name.ua)
                     form.find('#product_name_en').val(data.product_name.en)
 
-                    form.find('#price').val(data.price)
+                    form.find('#price_ua').val(data.price.ua)
+                    form.find('#price_en').val(data.price.en)
 
                     form.find('#description_ua').val(data.description.ua)
                     form.find('#description_en').val(data.description.en)
