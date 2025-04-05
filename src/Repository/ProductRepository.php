@@ -71,21 +71,20 @@ class ProductRepository extends ServiceEntityRepository
                 if (count($categoryIds)) {
                     foreach ($categoryIds as $key => $categoryId) {
                         $andX = [];
-                        $from .= ' left join public.product_category pc_'. $main . '_' . $key.' on c.id = pc_'.$main . '_' . $key.'.product_id';
-                        $andX[] = ' pc_'. $main . '_' . $key .'.category_id = :category_' . $main . '_' . $key;
-                        $bind['category_' . $main . '_' . $key] = $categoryId;
+                        $from .= ' left join public.product_category pc_'. $main . '_' . $categoryId.' on c.id = pc_'.$main . '_' . $categoryId.'.product_id';
+                        $andX[] = ' pc_'. $main . '_' . $categoryId .'.category_id = :category_' . $main . '_' . $categoryId;
+                        $bind['category_' . $main . '_' . $categoryId] = $categoryId;
 
-                        $from .= ' left join public.product_category pc_'. $main . '_' . ($key + 1).' on c.id = pc_'. $main . '_' . ($key + 1).'.product_id';
-                        $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
-                        $bind['category_' . $main . '_' . ( $key + 1)] = $main;
+                        $from .= ' left join public.product_category pc_'. $main . '_' . $categoryId .'_1 on c.id = pc_'. $main . '_' . $categoryId . '_1.product_id';
+                        $andX[] = ' pc_'. $main . '_' . $categoryId . '_1.category_id = :category_' . $main . '_' . $categoryId .'_1';
+                        $bind['category_' . $main . '_' . $categoryId . '_1'] = $main;
 
                         $mainOrX[] = '(' . implode(' AND ' , $andX) . ')';
                     }
                 } else {
-                    $key = 0;
-                    $from .= ' left join public.product_category pc_'. $main . '_' . ($key + 1).' on c.id = pc_'. $main . '_' . ($key + 1).'.product_id';
-                    $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
-                    $bind['category_' . $main . '_' . ( $key + 1)] = $main;
+                    $from .= ' left join public.product_category pc_'. $main . '_1 on c.id = pc_'. $main . '_1.product_id';
+                    $andX[] = ' pc_'. $main . '_1.category_id = :category_' . $main . '_1';
+                    $bind['category_' . $main . '_1'] = $main;
 
                     $mainOrX[] = '(' . implode(' ' , $andX) . ')';
                 }
