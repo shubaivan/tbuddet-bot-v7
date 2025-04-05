@@ -79,7 +79,7 @@ class ProductRepository extends ServiceEntityRepository
                 $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
                 $bind['category_' . $main . '_' . ( $key + 1)] = $main;
 
-                $orX[] = '(' . implode(' AND ' , $andX) . ')';
+                $orX[] = '(' . implode(' OR ' , $andX) . ')';
             }
 
             $where[] = '(' . implode(' OR ' , $orX) . ')';
