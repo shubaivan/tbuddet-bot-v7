@@ -65,24 +65,33 @@ class ProductRepository extends ServiceEntityRepository
         $bind = [];
         $orderBy = '';
         if ($listRequest->getCategoryId()) {
-            $orX = [];
+            $mainOrX = [];
             foreach ($listRequest->getCategoryId() as $main => $categoryIds) {
                 $andX = [];
-                $key = 0;
-                foreach ($categoryIds as $key => $categoryId) {
-                    $from .= ' left join public.product_category pc_'. $main . '_' . $key.' on c.id = pc_'.$main . '_' . $key.'.product_id';
-                    $andX[] = ' pc_'. $main . '_' . $key .'.category_id = :category_' . $main . '_' . $key;
-                    $bind['category_' . $main . '_' . $key] = $categoryId;
+                if (count($categoryIds)) {
+                    foreach ($categoryIds as $key => $categoryId) {
+                        $andX = [];
+                        $from .= ' left join public.product_category pc_'. $main . '_' . $key.' on c.id = pc_'.$main . '_' . $key.'.product_id';
+                        $andX[] = ' pc_'. $main . '_' . $key .'.category_id = :category_' . $main . '_' . $key;
+                        $bind['category_' . $main . '_' . $key] = $categoryId;
+
+                        $from .= ' left join public.product_category pc_'. $main . '_' . ($key + 1).' on c.id = pc_'. $main . '_' . ($key + 1).'.product_id';
+                        $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
+                        $bind['category_' . $main . '_' . ( $key + 1)] = $main;
+
+                        $mainOrX[] = '(' . implode(' AND ' , $andX) . ')';
+                    }
+                } else {
+                    $key = 0;
+                    $from .= ' left join public.product_category pc_'. $main . '_' . ($key + 1).' on c.id = pc_'. $main . '_' . ($key + 1).'.product_id';
+                    $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
+                    $bind['category_' . $main . '_' . ( $key + 1)] = $main;
+
+                    $mainOrX[] = '(' . implode(' ' , $andX) . ')';
                 }
-
-                $from .= ' left join public.product_category pc_'. $main . '_' . ($key + 1).' on c.id = pc_'. $main . '_' . ($key + 1).'.product_id';
-                $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
-                $bind['category_' . $main . '_' . ( $key + 1)] = $main;
-
-                $orX[] = '(' . implode(' OR ' , $andX) . ')';
             }
 
-            $where[] = '(' . implode(' OR ' , $orX) . ')';
+            $where[] = '(' . implode(' OR ' , $mainOrX) . ')';
         }
 
         if ($listRequest->getFullTextSearch()) {
