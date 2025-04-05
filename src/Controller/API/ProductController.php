@@ -6,12 +6,14 @@ use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\ProductListRequest;
 use App\Controller\API\Request\Purchase\PublicPurchaseProduct;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
+use App\Entity\CategoryRelation;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\User;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Pagination\Paginator;
+use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\UserOrderRepository;
@@ -57,6 +59,7 @@ class ProductController extends AbstractController
         Paginator $paginator,
         FilesystemOperator $defaultStorage,
         FilesRepository $filesRepository,
+        CategoryRepository $categoryRepository,
         ValidatorInterface $validator
     ): JsonResponse {
         //Todo https://github.com/symfony/symfony/issues/50690
@@ -73,6 +76,38 @@ class ProductController extends AbstractController
                 throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, implode("\n", array_map(static fn ($e) => $e->getMessage(), iterator_to_array($violations))), new ValidationFailedException($listRequest, $violations));
             }
         }
+        $categoryIds = $listRequest->getCategoryId();
+
+        if (count($categoryIds) > 0) {
+            $categories = $categoryRepository->getByIds($categoryIds);
+
+            $mainCategories = [];
+            $categoryCriteria = [];
+
+            foreach ($categories as $category) {
+                if ($category->getChild()->count() === 0) {
+                    $mainCategories[$category->getId()] = $category;
+                    $categoryCriteria[$category->getId()] = [];
+                }
+            }
+
+            foreach ($categories as $category) {
+                if (isset($mainCategories[$category->getId()])) {
+                    continue;
+                }
+                foreach ($mainCategories as $mainCategory) {
+                    $arrayCollection = $mainCategory->getParent();
+                    $filter = $arrayCollection->filter(function (CategoryRelation $categoryRelation) use ($category) {
+                        return $categoryRelation->getChild() === $category;
+                    });
+                    if ($filter->count()) {
+                        $categoryCriteria[$mainCategory->getId()][] = $category->getId();
+                    }
+                }
+            }
+
+            $listRequest->setCategoryId($categoryCriteria);
+        }
 
         $total = $repository->nativeSqlFilterProducts(
             $this->localizationService->getLanguage(), $listRequest, true
@@ -86,7 +121,10 @@ class ProductController extends AbstractController
 
         $listRequest->setOffset($offset);
 
-        $products = $repository->nativeSqlFilterProducts($this->localizationService->getLanguage(), $listRequest);
+        $products = $repository->nativeSqlFilterProducts(
+            $this->localizationService->getLanguage(),
+            $listRequest
+        );
 
         foreach ($products as $key => $productData) {
             $files = $filesRepository->getFileByProductId($productData['id']);

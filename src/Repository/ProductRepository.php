@@ -65,15 +65,24 @@ class ProductRepository extends ServiceEntityRepository
         $bind = [];
         $orderBy = '';
         if ($listRequest->getCategoryId()) {
-            $andX = [];
-            foreach ($listRequest->getCategoryId() as $key => $categoryId) {
-                $from .= ' left join public.product_category pc_'. $key.' on c.id = pc_'.$key.'.product_id';
-                $andX[] = ' pc_'. $key .'.category_id = :category_' . $key;
-                $bind['category_' . $key] = $categoryId;
+            $orX = [];
+            foreach ($listRequest->getCategoryId() as $main => $categoryIds) {
+                $andX = [];
+
+                foreach ($categoryIds as $key => $categoryId) {
+                    $from .= ' left join public.product_category pc_'. $main . '_' . $key.' on c.id = pc_'.$main . '_' . $key.'.product_id';
+                    $andX[] = ' pc_'. $main . '_' . $key .'.category_id = :category_' . $main . '_' . $key;
+                    $bind['category_' . $main . '_' . $key] = $categoryId;
+                }
+
+                $from .= ' left join public.product_category pc_'. $main . '_' . ($key + 1).' on c.id = pc_'. $main . '_' . ($key + 1).'.product_id';
+                $andX[] = ' pc_'. $main . '_' . ($key + 1) .'.category_id = :category_' . $main . '_' . ($key + 1);
+                $bind['category_' . $main . '_' . ( $key + 1)] = $main;
+
+                $orX[] = '(' . implode(' AND ' , $andX) . ')';
             }
 
-            $orC = implode(' AND ' , $andX);
-            $where[] = '(' . $orC . ')';
+            $where[] = '(' . implode(' OR ' , $orX) . ')';
         }
 
         if ($listRequest->getFullTextSearch()) {
