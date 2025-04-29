@@ -119,7 +119,7 @@ class UserOrderRepository extends ServiceEntityRepository
 
         if (!$count) {
             $dql .= '
-                GROUP BY o.id p.id';
+                GROUP BY o.id';
             $sortBy = 'o.'.$sortBy;
             $dql .= '
                 ORDER BY ' . $sortBy . ' ' . $sortOrder;
