@@ -84,7 +84,7 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.quantity_product,
                 o.liq_pay_status,          
                 o.liq_pay_order_id,
-                GROUP_CONCAT(p.product_name, \' ціна за шт:\', p.price, \' грн\') as product_info,
+                GROUP_CONCAT(p.product_name.ua, \' ціна за шт:\', p.price, \' грн\') as product_info,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username) as t_user_info,
                 GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone) as c_user_info,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
