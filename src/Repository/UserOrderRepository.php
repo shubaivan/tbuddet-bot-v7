@@ -84,7 +84,6 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.quantity_product,
                 o.liq_pay_status,          
                 o.liq_pay_order_id,
-                p.id as product_info,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username) as t_user_info,
                 GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone) as c_user_info,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
@@ -120,7 +119,7 @@ class UserOrderRepository extends ServiceEntityRepository
 
         if (!$count) {
             $dql .= '
-                GROUP BY o.id';
+                GROUP BY o.id p.id';
             $sortBy = 'o.'.$sortBy;
             $dql .= '
                 ORDER BY ' . $sortBy . ' ' . $sortOrder;

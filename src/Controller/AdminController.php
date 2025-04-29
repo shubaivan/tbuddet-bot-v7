@@ -137,12 +137,12 @@ class AdminController extends AbstractController
             ->getDataTablesData($request->request->all());
 
         foreach ($dataTable as $key => $order) {
-            if (isset($order['product_info'])) {
-                $product = $productRepository->findOneBy(['id' => $order['product_info']]);
-                if ($product) {
+            if (isset($order['id'])) {
+                $order = $repository->findOneBy(['id' => $order['id']]);
+                if ($order->getProductId()) {
                     $dataTable[$key]['product_info'] = sprintf('%s ціна за шт: %s грн',
-                        $product->getProductName(UserLanguageEnum::UA),
-                        $product->getPrice(UserLanguageEnum::UA)
+                        $order->getProductId()->getProductName(UserLanguageEnum::UA),
+                        $order->getProductId()->getPrice(UserLanguageEnum::UA)
                     );
                 }
             }
