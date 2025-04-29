@@ -27,7 +27,6 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
@@ -128,10 +127,26 @@ class AdminController extends AbstractController
     }
 
     #[Route('/admin/orders/data-table', name: 'admin-orders-data-table', options: ['expose' => true])]
-    public function ordersDatTable(UserOrderRepository $repository, Request $request)
+    public function ordersDatTable(
+        UserOrderRepository $repository,
+        Request $request,
+        ProductRepository $productRepository
+    )
     {
         $dataTable = $repository
             ->getDataTablesData($request->request->all());
+
+        foreach ($dataTable as $key => $order) {
+            if (isset($order['product_info'])) {
+                $product = $productRepository->findOneBy(['id' => $order['product_info']]);
+                if ($product) {
+                    $dataTable[$key]['product_info'] = sprintf('%s ціна за шт: %s грн',
+                        $product->getProductName(UserLanguageEnum::UA),
+                        $product->getPrice(UserLanguageEnum::UA)
+                    );
+                }
+            }
+        }
 
         return $this->json(
             array_merge(
