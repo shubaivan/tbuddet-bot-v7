@@ -3,6 +3,7 @@
 namespace App\Controller\API\Request;
 
 use App\Validator\UserLanguage;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[UserLanguage]
 class ProductListRequest
@@ -15,6 +16,9 @@ class ProductListRequest
     private ?int $price_from;
     private ?int $price_to;
 
+    #[Ignore]
+    private ?int $top_category_id = null;
+
     public function __construct()
     {
         $this->page = 0;
@@ -24,6 +28,7 @@ class ProductListRequest
         $this->full_text_search = null;
         $this->price_from = null;
         $this->price_to = null;
+        $this->top_category_id = null;
     }
 
     public function getPage(): int
@@ -31,7 +36,7 @@ class ProductListRequest
         return $this->page;
     }
 
-    public function setPage(int $page): ProductListRequest
+    public function setPage(int $page): self
     {
         $this->page = $page;
 
@@ -43,7 +48,7 @@ class ProductListRequest
         return $this->limit;
     }
 
-    public function setLimit(int $limit): ProductListRequest
+    public function setLimit(int $limit): self
     {
         $this->limit = $limit;
 
@@ -55,7 +60,7 @@ class ProductListRequest
         return $this->category_id;
     }
 
-    public function setCategoryId(array $category_id): ProductListRequest
+    public function setCategoryId(array $category_id): self
     {
         $this->category_id = $category_id;
 
@@ -67,7 +72,7 @@ class ProductListRequest
         return $this->full_text_search;
     }
 
-    public function setFullTextSearch(?string $full_text_search): ProductListRequest
+    public function setFullTextSearch(?string $full_text_search): self
     {
         $this->full_text_search = $full_text_search;
 
@@ -79,7 +84,7 @@ class ProductListRequest
         return $this->price_from;
     }
 
-    public function setPriceFrom(?int $price_from): ProductListRequest
+    public function setPriceFrom(?int $price_from): self
     {
         $this->price_from = $price_from;
 
@@ -91,7 +96,7 @@ class ProductListRequest
         return $this->price_to;
     }
 
-    public function setPriceTo(?int $price_to): ProductListRequest
+    public function setPriceTo(?int $price_to): self
     {
         $this->price_to = $price_to;
 
@@ -103,9 +108,21 @@ class ProductListRequest
         return $this->offset;
     }
 
-    public function setOffset(?int $offset): ProductListRequest
+    public function setOffset(?int $offset): self
     {
         $this->offset = $offset;
+
+        return $this;
+    }
+
+    public function getTopCategoryId(): ?int
+    {
+        return $this->top_category_id;
+    }
+
+    public function setTopCategoryId(?int $top_category_id): self
+    {
+        $this->top_category_id = $top_category_id;
 
         return $this;
     }

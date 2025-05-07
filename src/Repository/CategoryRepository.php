@@ -38,6 +38,9 @@ class CategoryRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return Category[]
+     */
     public function getMainCategories()
     {
         $dql = '

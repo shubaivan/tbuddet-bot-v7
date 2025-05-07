@@ -107,6 +107,7 @@ class ShoppingCartController extends AbstractController
                 $product->setProductName($product->getProductName($localizationService->getLanguage()));
                 $product->setDescription($product->getDescription($localizationService->getLanguage()));
                 $product->setProductProperties($product->getProductProperties($localizationService->getLanguage()));
+                $product->setPrice($product->getPrice($localizationService->getLanguage()));
             }
         }
 

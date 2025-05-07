@@ -130,18 +130,17 @@ class ProductRepository extends ServiceEntityRepository
             $select = 'select COUNT(DISTINCT c.id) as total';
             $limitOfSet = '';
             $orderBy = '';
-        }
-
-        if ($minPrice) {
+        } elseif ($minPrice) {
             $select = sprintf('select min(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
             $limitOfSet = '';
             $orderBy = '';
-        }
-
-        if ($maxPrice) {
+        } elseif ($maxPrice) {
             $select = sprintf('select max(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
             $limitOfSet = '';
             $orderBy = '';
+        } elseif (!strlen($orderBy) && $listRequest->getTopCategoryId() !== null) {
+            $orderBy = ' CASE WHEN pc.category_id = :top_category_id THEN 0 ELSE 1 END ';
+            $bind['top_category_id'] = $listRequest->getTopCategoryId();
         }
 
         $q = sprintf('%s %s %s %s %s %s', $select

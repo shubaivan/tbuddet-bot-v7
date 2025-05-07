@@ -107,6 +107,17 @@ class ProductController extends AbstractController
             }
 
             $listRequest->setCategoryId($categoryCriteria);
+        } else {
+            $mainCategories = $categoryRepository->getMainCategories();
+            $biggestOrder = 0;
+            $topCategoryId = null;
+            foreach ($mainCategories as $mainCategory) {
+                if ($biggestOrder < $mainCategory->getOrderCategory()) {
+                    $biggestOrder = $mainCategory->getOrderCategory();
+                    $topCategoryId = $mainCategory->getId();
+                }
+            }
+            $listRequest->setTopCategoryId($topCategoryId);
         }
 
         $total = $repository->nativeSqlFilterProducts(
