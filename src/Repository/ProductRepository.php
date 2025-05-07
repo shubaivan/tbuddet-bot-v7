@@ -102,13 +102,13 @@ class ProductRepository extends ServiceEntityRepository
                 $select .= ' ts_rank_cd(
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
-                    c.*';
+                    DISTINCT c.*';
                 $orderBy = 'order by rank desc';
             }
             $where[] = 'c.common_fts @@ to_tsquery(:search)';
             $bind['search'] = $handleSearchValue;
         } else {
-            $select .= ' c.*';
+            $select .= ' DISTINCT c.* ';
         }
 
         if ($listRequest->getPriceFrom() && is_null($listRequest->getPriceTo())) {
@@ -150,7 +150,6 @@ class ProductRepository extends ServiceEntityRepository
             $bind['top_category_id'] = $listRequest->getTopCategoryId();
             $groupBy = ' GROUP BY c.id, pc.category_id ';
         }
-
 
         $q = sprintf('%s %s %s %s %s %s', $select
             , $from,
