@@ -139,7 +139,7 @@ class ProductRepository extends ServiceEntityRepository
             $limitOfSet = '';
             $orderBy = '';
         } elseif (!strlen($orderBy) && $listRequest->getTopCategoryId() !== null) {
-            $orderBy = ' CASE WHEN pc.category_id = :top_category_id THEN 0 ELSE 1 END ';
+            $orderBy = 'order by CASE WHEN pc.category_id = :top_category_id THEN 0 ELSE 1 END ';
             $bind['top_category_id'] = $listRequest->getTopCategoryId();
         }
 
