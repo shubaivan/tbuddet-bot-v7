@@ -91,6 +91,8 @@ class ProductRepository extends ServiceEntityRepository
             }
 
             $where[] = '(' . implode(' OR ' , $mainOrX) . ')';
+        } else {
+            $from .= ' left join public.product_category pc on c.id = pc.product_id';
         }
 
         if ($listRequest->getFullTextSearch()) {
