@@ -107,7 +107,7 @@ class ProductRepository extends ServiceEntityRepository
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
                    c.*';
-                $orderBy = 'order by rank desc, c.updated_at desc ';
+                $orderBy = 'order by rank desc';
             }
             $where[] = 'c.common_fts @@ to_tsquery(:search)';
             $bind['search'] = $handleSearchValue;
@@ -145,12 +145,12 @@ class ProductRepository extends ServiceEntityRepository
         } elseif ($minPrice) {
             $select = sprintf('select min(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
             $limitOfSet = '';
-            $orderBy = ' order by c.updated_at DESC ';
+            $orderBy = '';
             $groupBy = '';
         } elseif ($maxPrice) {
             $select = sprintf('select max(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
             $limitOfSet = '';
-            $orderBy = ' order by c.updated_at DESC ';
+            $orderBy = '';
             $groupBy = '';
         } elseif (!strlen($orderBy) && $listRequest->getTopCategoryId() !== null) {
             $orderBy = 'order by updated_at DESC ';
