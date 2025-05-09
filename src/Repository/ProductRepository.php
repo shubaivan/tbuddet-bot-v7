@@ -153,7 +153,7 @@ class ProductRepository extends ServiceEntityRepository
             $orderBy = '';
             $groupBy = '';
         } elseif (!strlen($orderBy) && $listRequest->getTopCategoryId() !== null) {
-            $orderBy = 'order by created_at DESC ';
+            $orderBy = 'order by updated_at DESC ';
         }
 
         $q = sprintf(
