@@ -8,6 +8,7 @@ use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use Psr\Log\LoggerInterface;
 
 /**
  * @extends ServiceEntityRepository<Product>
@@ -21,9 +22,12 @@ class ProductRepository extends ServiceEntityRepository
 {
     use DataTablesApproachRepository;
 
-    public function __construct(ManagerRegistry $registry)
+    private LoggerInterface $logger;
+
+    public function __construct(ManagerRegistry $registry, LoggerInterface $logger)
     {
         parent::__construct($registry, Product::class);
+        $this->logger = $logger;
     }
 
     /**
@@ -159,6 +163,8 @@ class ProductRepository extends ServiceEntityRepository
             $orderBy,
             $limitOfSet
         );
+
+        $this->logger->info('################# ' . $q);
 
         $result = $connection->executeQuery($q, $bind);
 
