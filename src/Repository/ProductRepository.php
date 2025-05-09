@@ -67,7 +67,7 @@ class ProductRepository extends ServiceEntityRepository
         $select = 'select';
         $where = [];
         $bind = [];
-        $orderBy = '';
+        $orderBy = ' order by updated_at DESC ';
         $groupBy = ' group by c.id ';
 
         if ($listRequest->getCategoryId()) {
@@ -107,7 +107,7 @@ class ProductRepository extends ServiceEntityRepository
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
                    c.*';
-                $orderBy = 'order by rank desc';
+                $orderBy = 'order by rank desc, updated_at desc';
             }
             $where[] = 'c.common_fts @@ to_tsquery(:search)';
             $bind['search'] = $handleSearchValue;
@@ -152,8 +152,6 @@ class ProductRepository extends ServiceEntityRepository
             $limitOfSet = '';
             $orderBy = '';
             $groupBy = '';
-        } elseif (!strlen($orderBy) && $listRequest->getTopCategoryId() !== null) {
-            $orderBy = 'order by updated_at DESC ';
         }
 
         $q = sprintf(
