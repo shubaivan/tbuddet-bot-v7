@@ -153,10 +153,7 @@ class ProductRepository extends ServiceEntityRepository
             $orderBy = '';
             $groupBy = '';
         } elseif (!strlen($orderBy) && $listRequest->getTopCategoryId() !== null) {
-            $select = 'select DISTINCT ON (c.id) c.*, CASE WHEN pc.category_id = :top_category_id THEN 0 ELSE 1 END AS order_priority';
-            $orderBy = 'order by c.id, order_priority ';
-            $bind['top_category_id'] = $listRequest->getTopCategoryId();
-            $groupBy = '';
+            $orderBy = 'order by created_at DESC ';
         }
 
         $q = sprintf(
