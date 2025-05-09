@@ -77,26 +77,26 @@ class ProductRepository extends ServiceEntityRepository
                 if (count($categoryIds)) {
                     foreach ($categoryIds as $key => $categoryId) {
                         $andX = [];
-                        $from .= ' left join public.product_category pc_'. $main . '_' . $categoryId.' on c.id = pc_'.$main . '_' . $categoryId.'.product_id';
-                        $andX[] = ' pc_'. $main . '_' . $categoryId .'.category_id = :category_' . $main . '_' . $categoryId;
+                        $from .= ' left join public.product_category pc_' . $main . '_' . $categoryId . ' on c.id = pc_' . $main . '_' . $categoryId . '.product_id';
+                        $andX[] = ' pc_' . $main . '_' . $categoryId . '.category_id = :category_' . $main . '_' . $categoryId;
                         $bind['category_' . $main . '_' . $categoryId] = $categoryId;
 
-                        $from .= ' left join public.product_category pc_'. $main . '_' . $categoryId .'_1 on c.id = pc_'. $main . '_' . $categoryId . '_1.product_id';
-                        $andX[] = ' pc_'. $main . '_' . $categoryId . '_1.category_id = :category_' . $main . '_' . $categoryId .'_1';
+                        $from .= ' left join public.product_category pc_' . $main . '_' . $categoryId . '_1 on c.id = pc_' . $main . '_' . $categoryId . '_1.product_id';
+                        $andX[] = ' pc_' . $main . '_' . $categoryId . '_1.category_id = :category_' . $main . '_' . $categoryId . '_1';
                         $bind['category_' . $main . '_' . $categoryId . '_1'] = $main;
 
-                        $mainOrX[] = '(' . implode(' AND ' , $andX) . ')';
+                        $mainOrX[] = '(' . implode(' AND ', $andX) . ')';
                     }
                 } else {
-                    $from .= ' left join public.product_category pc_'. $main . '_1 on c.id = pc_'. $main . '_1.product_id';
-                    $andX[] = ' pc_'. $main . '_1.category_id = :category_' . $main . '_1';
+                    $from .= ' left join public.product_category pc_' . $main . '_1 on c.id = pc_' . $main . '_1.product_id';
+                    $andX[] = ' pc_' . $main . '_1.category_id = :category_' . $main . '_1';
                     $bind['category_' . $main . '_1'] = $main;
 
-                    $mainOrX[] = '(' . implode(' ' , $andX) . ')';
+                    $mainOrX[] = '(' . implode(' ', $andX) . ')';
                 }
             }
 
-            $where[] = '(' . implode(' OR ' , $mainOrX) . ')';
+            $where[] = '(' . implode(' OR ', $mainOrX) . ')';
         } else {
             $from .= ' left join public.product_category pc on c.id = pc.product_id';
         }
@@ -122,7 +122,10 @@ class ProductRepository extends ServiceEntityRepository
             $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) <= :price_to', $languageEnum->value);
             $bind['price_to'] = $listRequest->getPriceFrom();
         } elseif ($listRequest->getPriceFrom() && $listRequest->getPriceTo()) {
-            $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) between :price_from and :price_to', $languageEnum->value);
+            $where[] = sprintf(
+                'CAST(c.price ->> \'%s\' as BIGINT) between :price_from and :price_to',
+                $languageEnum->value
+            );
             $bind['price_to'] = $listRequest->getPriceTo();
             $bind['price_from'] = $listRequest->getPriceFrom();
         }
@@ -156,19 +159,31 @@ class ProductRepository extends ServiceEntityRepository
             $groupBy = ' GROUP BY c.id, pc.category_id ';
         }
 
-        $q = sprintf('%s %s %s %s %s %s', $select
-            , $from,
-            (count($where) ? 'WHERE ' .implode(' AND ', $where) : ''),
+        $q = sprintf(
+            '%s %s %s %s %s %s',
+            $select
+            ,
+            $from,
+            (count($where) ? 'WHERE ' . implode(' AND ', $where) : ''),
             $groupBy,
             $orderBy,
             $limitOfSet
         );
 
-        $this->logger->info('################# ' . $q);
+        $this->logger->info('################# Query');
 
         $result = $connection->executeQuery($q, $bind);
+        if (($total || $maxPrice || $minPrice)) {
+            return $result->fetchOne();
+        } else {
+            $allAssociative = $result->fetchAllAssociative();
+            $ids = array_map(function ($t) {
+                return $t['id'];
+            }, $allAssociative);
+            $this->logger->info('################# ids:' . implode(',', $ids));
 
-        return ($total || $maxPrice || $minPrice) ? $result->fetchOne() : $result->fetchAllAssociative();
+            return $allAssociative;
+        }
     }
 
     public function getMinPrice(UserLanguageEnum $languageEnum)
@@ -197,7 +212,7 @@ class ProductRepository extends ServiceEntityRepository
             $orX = $queryBuilder->expr()->orX();
             foreach ($listRequest->getCategoryId() as $key => $categoryId) {
                 $orX->add('product_category.category = :category_' . $key);
-                $queryBuilder->setParameter('category_'.$key, $categoryId);
+                $queryBuilder->setParameter('category_' . $key, $categoryId);
             }
             $queryBuilder->andWhere($orX);
         }
@@ -207,7 +222,9 @@ class ProductRepository extends ServiceEntityRepository
         } elseif ($listRequest->getPriceTo() && is_null($listRequest->getPriceFrom())) {
             $queryBuilder->andWhere($queryBuilder->expr()->lte('p.price', $listRequest->getPriceFrom()));
         } elseif ($listRequest->getPriceFrom() && $listRequest->getPriceTo()) {
-            $queryBuilder->andWhere($queryBuilder->expr()->between('p.price', $listRequest->getPriceFrom(), $listRequest->getPriceTo()));
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->between('p.price', $listRequest->getPriceFrom(), $listRequest->getPriceTo())
+            );
         }
 
         return $queryBuilder
@@ -224,8 +241,7 @@ class ProductRepository extends ServiceEntityRepository
             ->where('product_category.category = :category ')
             ->setParameter('category', $categoryId)
             ->getQuery()
-            ->getSingleScalarResult()
-        ;
+            ->getSingleScalarResult();
     }
 
     /**
@@ -240,8 +256,7 @@ class ProductRepository extends ServiceEntityRepository
         array $params,
         bool $count = false,
         bool $total = false
-    )
-    {
+    ) {
         $parameterBag = $this->handleDataTablesRequest($params);
 
         $limit = $parameterBag->get('limit');
@@ -292,7 +307,6 @@ class ProductRepository extends ServiceEntityRepository
                 category.id IN (:filter_category_id)
             ';
             $bindParams['filter_category_id'] = $parameterBag->get('filter_category_id');
-
         }
 
         if (count($conditions)) {
@@ -337,8 +351,7 @@ class ProductRepository extends ServiceEntityRepository
      */
     public function handleSearchValue(
         $searchField
-    ): string
-    {
+    ): string {
         $result = preg_replace('!\s+!', ' ', $searchField);
         $result = explode(' ', $result);
 
