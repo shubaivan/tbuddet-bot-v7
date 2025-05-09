@@ -102,7 +102,7 @@ class ProductRepository extends ServiceEntityRepository
                 $select .= ' ts_rank_cd(
                    c.common_fts,
                    to_tsquery(:search)) AS rank,
-                    DISTINCT c.*';
+                   c.*';
                 $orderBy = 'order by rank desc';
             }
             $where[] = 'c.common_fts @@ to_tsquery(:search)';
