@@ -438,7 +438,7 @@ api/v1/cartcheckout
 ## 5. Show user all orders
 ### Show user all orders after one product was bought directly and two product was bought through CHECKOUT flow 
 ### Security: PRIVATE
-### Method: DELETE
+### Method: GET
 ```
 api/v1/product/user-orders
 ```
