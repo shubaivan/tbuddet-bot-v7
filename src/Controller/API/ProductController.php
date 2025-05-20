@@ -542,11 +542,21 @@ class ProductController extends AbstractController
         }
         /** @var UserOrder $order */
         foreach ($userOrders as $order) {
+            if ($order->getProductId()) {
+                $order->getProductId()->setProductName($order->getProductId()->getProductName($localizationService->getLanguage()));
+                $order->getProductId()->setDescription($order->getProductId()->getDescription($localizationService->getLanguage()));
+                $order->getProductId()->setProductProperties($order->getProductId()->getProductProperties($localizationService->getLanguage()));
+                $order->getProductId()->setPrice($order->getProductId()->getPrice($localizationService->getLanguage()));
+            }
+
             /** @var \App\Entity\PurchaseProduct[] $purchaseProduct */
             $purchaseProduct = $order->getPurchaseProduct();
             foreach ($purchaseProduct as $pp) {
                 $product = $pp->getProduct();
                 $product->setProductName($product->getProductName($localizationService->getLanguage()));
+                $product->setDescription($product->getDescription($localizationService->getLanguage()));
+                $product->setProductProperties($product->getProductProperties($localizationService->getLanguage()));
+                $product->setPrice($product->getPrice($localizationService->getLanguage()));
             }
         }
 
