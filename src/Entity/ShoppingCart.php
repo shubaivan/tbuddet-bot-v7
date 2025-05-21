@@ -29,7 +29,7 @@ class ShoppingCart
     private TelegramUser|null $telegramUser = null;
 
     /** One Cart has One User. */
-    #[ORM\OneToOne(targetEntity: User::class, inversedBy: 'cart')]
+    #[ORM\OneToOne(targetEntity: User::class, inversedBy: 'shoppingCart')]
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'cascade')]
     private User|null $user = null;
 
