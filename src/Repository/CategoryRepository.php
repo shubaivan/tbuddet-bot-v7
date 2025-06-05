@@ -181,8 +181,8 @@ class CategoryRepository extends ServiceEntityRepository
 
         if ($parameterBag->get('search')) {
             $conditions[] = '
-                ((category_name->>\'en\' ILIKE :search)
-                   OR (category_name->>\'ua\' ILIKE :search))
+                (category_name->>\'en\' ILIKE :search
+                   OR category_name->>\'ua\' ILIKE :search)
             ';
             $bindParams['search'] = '%' . $parameterBag->get('search'). '%';
         }
