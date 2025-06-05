@@ -99,8 +99,10 @@ class UserOrderRepository extends ServiceEntityRepository
         $condition = ' WHERE ';
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
-            $or[] = 'ILIKE(p.product_name, :var_search) = TRUE';
-            $or[] = 'ILIKE(p.price, :var_search) = TRUE';
+            $or[] = 'ILIKE(JSON_GET_FIELD_AS_TEXT(p.product_name, \'en\'), :var_search) = TRUE';
+            $or[] = 'ILIKE(JSON_GET_FIELD_AS_TEXT(p.product_name, \'ua\'), :var_search) = TRUE';
+            $or[] = 'ILIKE(JSON_GET_FIELD_AS_TEXT(p.price, \'en\'), :var_search) = TRUE';
+            $or[] = 'ILIKE(JSON_GET_FIELD_AS_TEXT(p.price, \'ua\'), :var_search) = TRUE';
 
             $or[] = 'ILIKE(o.description, :var_search) = TRUE';
 

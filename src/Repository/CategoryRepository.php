@@ -111,7 +111,10 @@ class CategoryRepository extends ServiceEntityRepository
         $condition = ' WHERE ';
         $conditions = [];
         if ($parameterBag->get('search') && !$total) {
-            $or[] = 'ILIKE(o.category_name, :var_search) = TRUE';
+            $or[] = '(
+                    ILIKE(JSON_GET_FIELD_AS_TEXT(o.category_name, \'en\'), :search) = TRUE
+                    OR ILIKE(JSON_GET_FIELD_AS_TEXT(o.category_name, \'ua\'), :search) = TRUE
+                )';
 
             $bindParams['var_search'] = '%' . $parameterBag->get('search') . '%';
             $conditions[] = '(' . implode(' OR ', $or) . ')';
