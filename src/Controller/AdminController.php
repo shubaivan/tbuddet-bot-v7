@@ -7,6 +7,7 @@ use App\Entity\Category;
 use App\Entity\CategoryRelation;
 use App\Entity\Product;
 use App\Entity\ProductCategory;
+use App\Entity\PurchaseProduct;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
 use App\Repository\CategoryRepository;
@@ -144,6 +145,13 @@ class AdminController extends AbstractController
                         $order->getProductId()->getProductName(UserLanguageEnum::UA),
                         $order->getProductId()->getPrice(UserLanguageEnum::UA)
                     );
+                } elseif ($order->getPurchaseProduct()->count()) {
+                    $dataTable[$key]['product_info'] = implode(';', $order->getPurchaseProduct()->map(function (PurchaseProduct $purchaseProduct) {
+                        return sprintf('%s ціна за шт: %s грн',
+                            $purchaseProduct->getProduct()->getProductName(UserLanguageEnum::UA),
+                            $purchaseProduct->getProduct()->getPrice(UserLanguageEnum::UA)
+                        );
+                    })->toArray());
                 }
             }
         }
