@@ -3,7 +3,6 @@
 namespace App\Repository;
 
 use App\Entity\Category;
-use App\Entity\Files;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\ParameterBag;
@@ -32,6 +31,7 @@ class CategoryRepository extends ServiceEntityRepository
     public function getByIds(array $ids): array
     {
         $queryBuilder = $this->createQueryBuilder('f');
+
         return $queryBuilder
             ->where($queryBuilder->expr()->in('f.id', $ids))
             ->getQuery()
@@ -76,8 +76,7 @@ class CategoryRepository extends ServiceEntityRepository
         array $params,
         bool $count = false,
         bool $total = false
-    )
-    {
+    ) {
         $parameterBag = $this->handleDataTablesRequest($params);
 
         $limit = $parameterBag->get('limit');
@@ -114,9 +113,8 @@ class CategoryRepository extends ServiceEntityRepository
         if ($parameterBag->get('search') && !$total) {
             $or[] = 'ILIKE(o.category_name, :var_search) = TRUE';
 
-            $bindParams['var_search'] = '%'.$parameterBag->get('search').'%';
-            $conditions[] = '(' . implode(' OR ', $or) .')';
-
+            $bindParams['var_search'] = '%' . $parameterBag->get('search') . '%';
+            $conditions[] = '(' . implode(' OR ', $or) . ')';
         }
 
         if (count($conditions)) {
@@ -127,7 +125,7 @@ class CategoryRepository extends ServiceEntityRepository
         if (!$count) {
             $dql .= '
                 GROUP BY o.id';
-            $sortBy = 'o.'.$sortBy;
+            $sortBy = 'o.' . $sortBy;
             $dql .= '
                 ORDER BY ' . $sortBy . ' ' . $sortOrder;
         }
@@ -181,10 +179,13 @@ class CategoryRepository extends ServiceEntityRepository
 
         if ($parameterBag->get('search')) {
             $conditions[] = '
-                (JSON_GET_FIELD_AS_TEXT(c.category_name, \'en\') ILIKE :search
-                   OR JSON_GET_FIELD_AS_TEXT(c.category_name, \'ua\') ILIKE :search)
+                (
+                    ILIKE(JSON_GET_FIELD_AS_TEXT(c.category_name, \'en\'), :search) = TRUE
+                    OR ILIKE(JSON_GET_FIELD_AS_TEXT(c.category_name, \'ua\'), :search) = TRUE
+                )
             ';
-            $bindParams['search'] = '%' . $parameterBag->get('search'). '%';
+
+            $bindParams['search'] = '%' . $parameterBag->get('search') . '%';
         }
 
         if (count($conditions)) {
