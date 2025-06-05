@@ -182,7 +182,7 @@ class CategoryRepository extends ServiceEntityRepository
         if ($parameterBag->get('search')) {
             $conditions[] = '
                 (JSON_GET_FIELD_AS_TEXT(category_name, \'en\') ILIKE :search
-                   JSON_GET_FIELD_AS_TEXT(category_name, \'ua\') ILIKE :search)
+                   OR JSON_GET_FIELD_AS_TEXT(category_name, \'ua\') ILIKE :search)
             ';
             $bindParams['search'] = '%' . $parameterBag->get('search'). '%';
         }
