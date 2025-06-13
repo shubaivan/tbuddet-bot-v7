@@ -115,13 +115,13 @@ class ProductRepository extends ServiceEntityRepository
             $select .= ' DISTINCT c.* ';
         }
 
-        if ($listRequest->getPriceFrom() && is_null($listRequest->getPriceTo())) {
+        if (!is_null($listRequest->getPriceFrom()) && is_null($listRequest->getPriceTo())) {
             $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) >= :price_from', $languageEnum->value);
             $bind['price_from'] = $listRequest->getPriceFrom();
-        } elseif ($listRequest->getPriceTo() && is_null($listRequest->getPriceFrom())) {
+        } elseif (!is_null($listRequest->getPriceTo()) && is_null($listRequest->getPriceFrom())) {
             $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) <= :price_to', $languageEnum->value);
             $bind['price_to'] = $listRequest->getPriceFrom();
-        } elseif ($listRequest->getPriceFrom() && $listRequest->getPriceTo()) {
+        } elseif (!is_null($listRequest->getPriceFrom()) && !is_null($listRequest->getPriceTo())) {
             $where[] = sprintf(
                 'CAST(c.price ->> \'%s\' as BIGINT) between :price_from and :price_to',
                 $languageEnum->value
