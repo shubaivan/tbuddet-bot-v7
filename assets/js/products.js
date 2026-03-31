@@ -5,6 +5,13 @@ import {createErrorImgPlaceHolder, delay, getBlobFromImageUri} from './photos_co
 
 import {addInitPhotoToUppy, renderAttachmentFilesBlock} from "./uppy_attachment_files";
 
+// Expose globally for product-form.html.twig
+window.renderAttachmentFilesBlock = renderAttachmentFilesBlock;
+window.addInitPhotoToUppy = addInitPhotoToUppy;
+window.getBlobFromImageUri = getBlobFromImageUri;
+window.createErrorImgPlaceHolder = createErrorImgPlaceHolder;
+window.delay = delay;
+
 document.addEventListener("DOMContentLoaded", function () {
     console.log("admin list!");
 
