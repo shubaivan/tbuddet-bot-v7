@@ -363,6 +363,22 @@ class AdminController extends AbstractController
         return new JsonResponse($response, Response::HTTP_OK, [], true);
     }
 
+    #[Route('/admin/product/form/{id}', name: 'admin-product-form', defaults: ['id' => null], methods: [Request::METHOD_GET])]
+    public function productForm(
+        ?int $id,
+        ProductRepository $productRepository,
+        CategoryRepository $categoryRepository,
+    ): Response
+    {
+        $product = $id ? $productRepository->find($id) : null;
+        $categories = $categoryRepository->findAll();
+
+        return $this->render('admin/product-form.html.twig', [
+            'product' => $product,
+            'categories' => $categories,
+        ]);
+    }
+
     #[Route('/admin/product/{id}', name: 'admin-product-get', options: ['expose' => true], methods: [Request::METHOD_GET])]
     public function getProduct(
         #[MapEntity(id: 'id')] Product $product,

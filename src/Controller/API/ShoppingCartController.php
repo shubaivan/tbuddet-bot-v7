@@ -215,6 +215,10 @@ class ShoppingCartController extends AbstractController
     {
         $userOrder = new UserOrder();
         $userOrder->setClientUserId($user);
+        $userOrder->setDeliveryCity($checkoutRequest->getDeliveryCity());
+        $userOrder->setDeliveryCityRef($checkoutRequest->getDeliveryCityRef());
+        $userOrder->setDeliveryDepartment($checkoutRequest->getDeliveryDepartment());
+        $userOrder->setDeliveryDepartmentRef($checkoutRequest->getDeliveryDepartmentRef());
         $em->persist($userOrder);
 
         $purchaseProductIds = $checkoutRequest->getPurchaseProductIds();
@@ -259,6 +263,14 @@ class ShoppingCartController extends AbstractController
             if (count($propExplainingSet)) {
                 $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet) . PHP_EOL;
             }
+        }
+
+        if ($checkoutRequest->getDeliveryCity()) {
+            $description .= sprintf('%sДоставка: %s, %s',
+                PHP_EOL,
+                $checkoutRequest->getDeliveryCity(),
+                $checkoutRequest->getDeliveryDepartment() ?? ''
+            );
         }
 
         $userOrder->setTotalAmount($total_amount);

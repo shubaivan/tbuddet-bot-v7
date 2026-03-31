@@ -158,12 +158,9 @@ document.addEventListener("DOMContentLoaded", function () {
         "targets": 9,
         data: 'action',
         render: function (data, type, row, meta) {
-            return '    <!-- Button trigger modal -->\n' +
-                '    <button type="button" class="btn btn-primary" data-product-id="' + row.id + '" data-toggle="modal" data-target="#exampleModal">\n' +
-                '        Редагувати\n' +
-                '    </button>' +
-                '    <button class="btn btn-danger delete-product" data-product-id="' + row.id + '">Видалити</button>   ' +
-                '    <button class="btn btn-secondary duplicate-product" data-product-id="' + row.id + '">Зробити копію</button>   '
+            return '    <a href="/admin/product/form/' + row.id + '" target="_blank" class="btn btn-primary btn-sm">Редагувати</a> ' +
+                '    <button class="btn btn-danger btn-sm delete-product" data-product-id="' + row.id + '">Видалити</button> ' +
+                '    <button class="btn btn-secondary btn-sm duplicate-product" data-product-id="' + row.id + '">Копія</button>'
                 ;
         }
     });

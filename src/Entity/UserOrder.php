@@ -91,6 +91,22 @@ class UserOrder
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $phone;
 
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $delivery_city = null;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $delivery_city_ref = null;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $delivery_department = null;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $delivery_department_ref = null;
+
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\OneToMany(
         targetEntity: PurchaseProduct::class,
@@ -259,6 +275,54 @@ class UserOrder
     public function setPurchaseProduct(Collection $purchaseProduct): UserOrder
     {
         $this->purchaseProduct = $purchaseProduct;
+
+        return $this;
+    }
+
+    public function getDeliveryCity(): ?string
+    {
+        return $this->delivery_city;
+    }
+
+    public function setDeliveryCity(?string $delivery_city): UserOrder
+    {
+        $this->delivery_city = $delivery_city;
+
+        return $this;
+    }
+
+    public function getDeliveryCityRef(): ?string
+    {
+        return $this->delivery_city_ref;
+    }
+
+    public function setDeliveryCityRef(?string $delivery_city_ref): UserOrder
+    {
+        $this->delivery_city_ref = $delivery_city_ref;
+
+        return $this;
+    }
+
+    public function getDeliveryDepartment(): ?string
+    {
+        return $this->delivery_department;
+    }
+
+    public function setDeliveryDepartment(?string $delivery_department): UserOrder
+    {
+        $this->delivery_department = $delivery_department;
+
+        return $this;
+    }
+
+    public function getDeliveryDepartmentRef(): ?string
+    {
+        return $this->delivery_department_ref;
+    }
+
+    public function setDeliveryDepartmentRef(?string $delivery_department_ref): UserOrder
+    {
+        $this->delivery_department_ref = $delivery_department_ref;
 
         return $this;
     }

@@ -9,10 +9,9 @@
 
 {% block body %}
     {{ parent() }}
-    <!-- Button trigger modal -->
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
-        Створити Продукт
-    </button>
+    <a href="{{ path('admin-product-form') }}" target="_blank" class="btn btn-primary">
+        + Створити Продукт
+    </a>
     {% if th_keys|length %}
         <!-- Table -->
         <table id='telegramUserTable' class='display dataTable'>

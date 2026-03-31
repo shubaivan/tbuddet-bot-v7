@@ -1,0 +1,316 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ product ? 'Редагувати' : 'Новий' }} продукт{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .product-form { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+        .section { background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #007bff; }
+        .lang-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-label { font-weight: 500; margin-bottom: 4px; display: block; font-size: 14px; color: #555; }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,.15); }
+        .form-group { margin-bottom: 16px; }
+        .lang-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+        .lang-ua { background: #fff3cd; color: #856404; }
+        .lang-en { background: #d1ecf1; color: #0c5460; }
+        .prop-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 16px; margin-bottom: 12px; position: relative; }
+        .prop-remove { position: absolute; top: 8px; right: 8px; background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+        .prop-remove:hover { background: #c82333; }
+        .btn-add-prop { background: #28a745; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 14px; }
+        .btn-add-prop:hover { background: #218838; }
+        .btn-save { background: #007bff; color: #fff; border: none; border-radius: 6px; padding: 12px 40px; cursor: pointer; font-size: 16px; font-weight: 600; }
+        .btn-save:hover { background: #0069d9; }
+        .btn-save:disabled { background: #6c757d; cursor: not-allowed; }
+        .btn-back { background: #6c757d; color: #fff; border: none; border-radius: 6px; padding: 12px 24px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .btn-back:hover { background: #5a6268; color: #fff; text-decoration: none; }
+        .actions-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+        .error-message { color: #dc3545; font-size: 13px; margin-top: 4px; }
+        .success-banner { background: #d4edda; color: #155724; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; display: none; }
+        .prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .prop-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        #upload-area { min-height: 200px; }
+        .category-select { width: 100%; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+
+    <div class="product-form">
+        <div class="actions-bar" style="margin-bottom: 20px;">
+            <h2>{{ product ? 'Редагувати продукт #' ~ product.id : 'Новий продукт' }}</h2>
+            <a href="{{ path('app_admin_products') }}" class="btn-back">← Назад до списку</a>
+        </div>
+
+        <div class="success-banner" id="successBanner">Продукт збережено!</div>
+
+        <form id="productForm">
+            {% if product %}
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+            {% endif %}
+
+            {# ── Section: Basic Info ── #}
+            <div class="section">
+                <div class="section-title">Основна інформація</div>
+
+                <div class="form-group">
+                    <label class="form-label">Категорії</label>
+                    <select name="category_ids[]" id="productCategory" class="category-select" multiple></select>
+                </div>
+
+                <div class="lang-row">
+                    <div class="form-group">
+                        <label class="form-label">Назва продукту <span class="lang-badge lang-ua">UA</span></label>
+                        <input type="text" class="form-input" name="product_name[ua]" id="product_name_ua"
+                               value="{{ product ? product.productName.ua|default('') : '' }}" placeholder="Назва українською">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Product name <span class="lang-badge lang-en">EN</span></label>
+                        <input type="text" class="form-input" name="product_name[en]" id="product_name_en"
+                               value="{{ product ? product.productName.en|default('') : '' }}" placeholder="Name in English">
+                    </div>
+                </div>
+
+                <div class="lang-row">
+                    <div class="form-group">
+                        <label class="form-label">Ціна <span class="lang-badge lang-ua">UA грн</span></label>
+                        <input type="text" class="form-input" name="price[ua]" id="price_ua"
+                               value="{{ product ? product.price.ua|default('') : '' }}" placeholder="грн">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Price <span class="lang-badge lang-en">EN usd</span></label>
+                        <input type="text" class="form-input" name="price[en]" id="price_en"
+                               value="{{ product ? product.price.en|default('') : '' }}" placeholder="usd">
+                    </div>
+                </div>
+
+                <div class="lang-row">
+                    <div class="form-group">
+                        <label class="form-label">Опис <span class="lang-badge lang-ua">UA</span></label>
+                        <textarea class="form-input" name="description[ua]" id="description_ua" rows="3"
+                                  placeholder="Опис українською">{{ product ? product.description.ua|default('') : '' }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="lang-badge lang-en">EN</span></label>
+                        <textarea class="form-input" name="description[en]" id="description_en" rows="3"
+                                  placeholder="Description in English">{{ product ? product.description.en|default('') : '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Section: Photos ── #}
+            <div class="section">
+                <div class="section-title">Фотографії</div>
+                <div id="attachment_files_template"></div>
+            </div>
+
+            {# ── Section: Properties ── #}
+            <div class="section">
+                <div class="section-title">Характеристики</div>
+                <div id="propertiesContainer"></div>
+                <button type="button" class="btn-add-prop" id="addProperty">+ Додати характеристику</button>
+            </div>
+
+            {# ── Save ── #}
+            <div class="actions-bar" style="margin-top: 24px; margin-bottom: 40px;">
+                <a href="{{ path('app_admin_products') }}" class="btn-back">← Скасувати</a>
+                <button type="button" class="btn-save" id="saveProduct">Зберегти</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+
+    <script>
+        // Pass product data to JS
+        window._productData = {{ product ? product.id : 'null' }};
+        window._productProperties = {{ product ? product.productProperties|json_encode|raw : '[]' }};
+        window._productCategories = {{ product ? product.categoriesSelect2Info|json_encode|raw : '[]' }};
+    </script>
+
+    {{ encore_entry_script_tags('index/js/products.min') }}
+
+    <script defer>
+        document.addEventListener("DOMContentLoaded", function() {
+            let propOrder = 0;
+            const container = document.getElementById('propertiesContainer');
+
+            function createPropertyCard(order, uaName, uaValue, uaImpact, enName, enValue, enImpact) {
+                const card = document.createElement('div');
+                card.className = 'prop-card';
+                card.id = 'prop_' + order;
+                card.innerHTML = `
+                    <button type="button" class="prop-remove" onclick="this.parentElement.remove()">Видалити</button>
+                    <div class="prop-grid">
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">Назва <span class="lang-badge lang-ua">UA</span></label>
+                                <input type="text" class="form-input" name="product_properties[${order}][ua][property_name]"
+                                       value="${uaName || ''}" placeholder="напр. Колір">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Значення <span class="lang-badge lang-ua">UA</span></label>
+                                <input type="text" class="form-input" name="product_properties[${order}][ua][property_value]"
+                                       value="${uaValue || ''}" placeholder="напр. Білий">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Вплив на ціну (грн)</label>
+                                <input type="text" class="form-input" name="product_properties[${order}][ua][property_price_impact]"
+                                       value="${uaImpact || '0'}" placeholder="0">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label class="form-label">Name <span class="lang-badge lang-en">EN</span></label>
+                                <input type="text" class="form-input" name="product_properties[${order}][en][property_name]"
+                                       value="${enName || ''}" placeholder="e.g. Color">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Value <span class="lang-badge lang-en">EN</span></label>
+                                <input type="text" class="form-input" name="product_properties[${order}][en][property_value]"
+                                       value="${enValue || ''}" placeholder="e.g. White">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Price impact (usd)</label>
+                                <input type="text" class="form-input" name="product_properties[${order}][en][property_price_impact]"
+                                       value="${enImpact || '0'}" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return card;
+            }
+
+            // Load existing properties
+            if (window._productProperties && window._productProperties.length) {
+                window._productProperties.forEach(function(prop) {
+                    propOrder++;
+                    const ua = prop.ua || {};
+                    const en = prop.en || {};
+                    container.appendChild(createPropertyCard(
+                        propOrder,
+                        ua.property_name, ua.property_value, ua.property_price_impact,
+                        en.property_name, en.property_value, en.property_price_impact
+                    ));
+                });
+            }
+
+            document.getElementById('addProperty').addEventListener('click', function() {
+                propOrder++;
+                container.appendChild(createPropertyCard(propOrder));
+            });
+
+            // Category Select2
+            const catSelect = $('#productCategory');
+            catSelect.select2({
+                placeholder: 'Оберіть категорію',
+                multiple: true,
+                allowClear: true,
+                ajax: {
+                    type: 'post',
+                    url: window.Routing.generate('admin-category-select2'),
+                    data: function(params) {
+                        return { search: params.term, page: params.page || 1, type: 'public' };
+                    },
+                }
+            });
+
+            // Pre-select categories
+            if (window._productCategories && window._productCategories.length) {
+                window._productCategories.forEach(function(cat) {
+                    var option = new Option(cat.name.ua || cat.name, cat.id, true, true);
+                    catSelect.append(option).trigger('change');
+                });
+            }
+
+            // File upload
+            if (window._productData) {
+                // Edit mode — load existing files
+                $.ajax({
+                    type: "POST",
+                    url: window.Routing.generate('app_attachmentfile_getattachmentfileslist'),
+                    data: { id: window._productData, entity: 'App\\Entity\\Product' },
+                    success: function(data) {
+                        if (typeof renderAttachmentFilesBlock === 'function') {
+                            renderAttachmentFilesBlock(window._productData, $('#productForm'), null, null, data, function(uppy, data) {
+                                (async function(arr) {
+                                    for (let item of arr) {
+                                        try {
+                                            let blob = await getBlobFromImageUri(item.path);
+                                            await delay(1000);
+                                            addInitPhotoToUppy(uppy, blob, false, item);
+                                        } catch(e) {
+                                            let blob = await createErrorImgPlaceHolder();
+                                            await delay(1000);
+                                            addInitPhotoToUppy(uppy, blob, true, item);
+                                        } finally {
+                                            uppy.getFiles().forEach(function(file) {
+                                                uppy.setFileState(file.id, { progress: { uploadComplete: true, uploadStarted: true } });
+                                            });
+                                        }
+                                    }
+                                })(data);
+                            }, 'App\\Entity\\Product');
+                        }
+                    }
+                });
+            } else {
+                // Create mode
+                if (typeof renderAttachmentFilesBlock === 'function') {
+                    renderAttachmentFilesBlock(null, $('#productForm'), null, null, [], null, 'App\\Entity\\Product');
+                }
+            }
+
+            // Save
+            document.getElementById('saveProduct').addEventListener('click', function() {
+                const btn = this;
+                btn.disabled = true;
+                btn.textContent = 'Збереження...';
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+                const formData = $('#productForm').serialize();
+
+                $.ajax({
+                    type: "POST",
+                    url: window.Routing.generate('admin-products-create'),
+                    data: formData,
+                    success: function(data) {
+                        btn.disabled = false;
+                        btn.textContent = 'Зберегти';
+                        document.getElementById('successBanner').style.display = 'block';
+                        setTimeout(() => { document.getElementById('successBanner').style.display = 'none'; }, 3000);
+
+                        // If new product, redirect to edit page
+                        if (!window._productData && data.id) {
+                            window.location.href = '/admin/product/form/' + data.id;
+                        }
+                    },
+                    error: function(result) {
+                        btn.disabled = false;
+                        btn.textContent = 'Зберегти';
+                        if (result.responseJSON && result.responseJSON.errors) {
+                            $.each(result.responseJSON.errors, function(field, errors) {
+                                const input = document.getElementById(field);
+                                if (input) {
+                                    errors.forEach(function(err) {
+                                        const span = document.createElement('span');
+                                        span.className = 'error-message';
+                                        span.textContent = err.message;
+                                        input.parentElement.appendChild(span);
+                                    });
+                                } else {
+                                    alert('Поле: ' + field + ' — ' + errors[0].message);
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}
