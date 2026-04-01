@@ -702,7 +702,7 @@ class PriceRingConversation extends Conversation
 
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
-        $userOrder->setTelegramUserid($this->telegramUserService->getCurrentUser());
+        $userOrder->setTelegramUserId($this->telegramUserService->getCurrentUser());
         $userOrder->setProductProperties($this->selectedProperties);
         $userOrder->setDeliveryCity($this->deliveryCity);
         $userOrder->setDeliveryCityRef($this->deliveryCityRef);
