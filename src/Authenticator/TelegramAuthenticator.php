@@ -10,12 +10,13 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Security\Http\Authenticator\AbstractAuthenticator;
+use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface;
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
 
-class TelegramAuthenticator extends AbstractAuthenticator
+class TelegramAuthenticator extends AbstractAuthenticator implements AuthenticationEntryPointInterface
 {
     use TargetPathTrait;
 
@@ -73,5 +74,10 @@ class TelegramAuthenticator extends AbstractAuthenticator
         }
 
         return null;
+    }
+
+    public function start(Request $request, ?AuthenticationException $authException = null): Response
+    {
+        return new RedirectResponse($this->urlGenerator->generate('login_public'));
     }
 }

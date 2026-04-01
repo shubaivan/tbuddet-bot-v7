@@ -55,13 +55,9 @@ security:
             provider: telegram
             custom_authenticators:
                 - App\Authenticator\TelegramAuthenticator
+            entry_point: App\Authenticator\TelegramAuthenticator
             logout:
                 path: login_app_logout
-
-                # where to redirect after logout
-                # target: app_any_route
-                    # where to redirect after logout
-                    # target: app_any_route
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
