@@ -88,11 +88,13 @@ class PriceRingConversation extends Conversation
     private function hasDeliverySelected(): bool
     {
         foreach ($this->selectedProperties as $prop) {
-            if (mb_strtolower($prop['property_name']) === 'доставка' || mb_strtolower($prop['property_name']) === 'delivery') {
+            $name = mb_strtolower($prop['property_name']);
+            if ($name === 'доставка' || $name === 'delivery') {
                 $val = mb_strtolower($prop['property_value']);
                 return $val === 'так' || $val === 'yes';
             }
         }
+        // No delivery property on this product — skip Nova Poshta
         return false;
     }
 
