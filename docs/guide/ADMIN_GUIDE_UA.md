@@ -13,12 +13,21 @@
 
 ## 1. Вхід в адмін-панель
 
-**URL:** `https://artbeton.market/admin`
+**URL:** [https://api.artbeton.market/admin](https://api.artbeton.market/admin)
+
+**Посилання на проєкт:**
+
+| Ресурс | URL |
+|--------|-----|
+| **Адмін-панель** | [https://api.artbeton.market/admin](https://api.artbeton.market/admin) |
+| **API (backend)** | [https://api.artbeton.market](https://api.artbeton.market) |
+| **Сайт (frontend)** | [https://artbeton.market](https://artbeton.market) |
+| **Telegram-бот (прод)** | [@tbuddet_bot](https://t.me/tbuddet_bot) |
+| **Telegram-бот (тест)** | [@dev_tbuddet_bot](https://t.me/dev_tbuddet_bot) |
 
 Для доступу потрібно:
-1. Перейти на головну сторінку сайту
-2. Увійти через **Telegram-віджет** (кнопка "Увійти через Telegram")
-3. Після авторизації перейти на `/admin`
+1. Перейти на [https://api.artbeton.market/admin](https://api.artbeton.market/admin)
+2. Увійти за допомогою логіну та паролю (отримайте у розробника)
 
 > Доступ мають лише користувачі з роллю **ROLE_ADMIN**. Якщо ви бачите помилку 401 — зверніться до розробника для надання прав.
 
@@ -325,9 +334,11 @@
 
 ## 9. Інструкція для покупця (що бачить клієнт)
 
+**Сайт для покупців:** [https://artbeton.market](https://artbeton.market)
+
 ### 9.1. Як обрати товар
 
-1. Відкрийте бот у Telegram і натисніть **/start**
+1. Відкрийте сайт [artbeton.market](https://artbeton.market) або бот у Telegram і натисніть **/start**
 2. Натисніть **"Продукція"**
 3. Оберіть категорію (напр. "Вазон", "Раковини", "Плитка")
 4. Бот покаже перший товар з фото, назвою та ціною

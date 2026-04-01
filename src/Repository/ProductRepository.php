@@ -116,15 +116,15 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         if (!is_null($listRequest->getPriceFrom()) && is_null($listRequest->getPriceTo())) {
-            $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) >= :price_from', $languageEnum->value);
+            $where[] = sprintf("c.price ->> '%s' != '' AND CAST(c.price ->> '%s' as BIGINT) >= :price_from", $languageEnum->value, $languageEnum->value);
             $bind['price_from'] = $listRequest->getPriceFrom();
         } elseif (!is_null($listRequest->getPriceTo()) && is_null($listRequest->getPriceFrom())) {
-            $where[] = sprintf('CAST(c.price ->> \'%s\' as BIGINT) <= :price_to', $languageEnum->value);
+            $where[] = sprintf("c.price ->> '%s' != '' AND CAST(c.price ->> '%s' as BIGINT) <= :price_to", $languageEnum->value, $languageEnum->value);
             $bind['price_to'] = $listRequest->getPriceTo();
         } elseif (!is_null($listRequest->getPriceFrom()) && !is_null($listRequest->getPriceTo())) {
             $where[] = sprintf(
-                'CAST(c.price ->> \'%s\' as BIGINT) between :price_from and :price_to',
-                $languageEnum->value
+                "c.price ->> '%s' != '' AND CAST(c.price ->> '%s' as BIGINT) between :price_from and :price_to",
+                $languageEnum->value, $languageEnum->value
             );
             $bind['price_to'] = $listRequest->getPriceTo();
             $bind['price_from'] = $listRequest->getPriceFrom();
@@ -144,11 +144,13 @@ class ProductRepository extends ServiceEntityRepository
             $groupBy = '';
         } elseif ($minPrice) {
             $select = sprintf('select min(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
+            $where[] = sprintf("c.price ->> '%s' IS NOT NULL AND c.price ->> '%s' != ''", $languageEnum->value, $languageEnum->value);
             $limitOfSet = '';
             $orderBy = '';
             $groupBy = '';
         } elseif ($maxPrice) {
             $select = sprintf('select max(CAST(c.price ->> \'%s\' as BIGINT)) as min_price', $languageEnum->value);
+            $where[] = sprintf("c.price ->> '%s' IS NOT NULL AND c.price ->> '%s' != ''", $languageEnum->value, $languageEnum->value);
             $limitOfSet = '';
             $orderBy = '';
             $groupBy = '';
@@ -183,18 +185,24 @@ class ProductRepository extends ServiceEntityRepository
 
     public function getMinPrice(UserLanguageEnum $languageEnum)
     {
-        return $this->createQueryBuilder('p')
-            ->select(sprintf('MIN(JSON_GET_FIELD_AS_INTEGER(p.price, \'%s\'))', $languageEnum->value))
-            ->getQuery()
-            ->getSingleScalarResult();
+        $conn = $this->getEntityManager()->getConnection();
+        return $conn->executeQuery(
+            sprintf(
+                "SELECT MIN(CAST(price ->> '%s' AS BIGINT)) FROM product WHERE price ->> '%s' IS NOT NULL AND price ->> '%s' != ''",
+                $languageEnum->value, $languageEnum->value, $languageEnum->value
+            )
+        )->fetchOne();
     }
 
     public function getMaxPrice(UserLanguageEnum $languageEnum)
     {
-        return $this->createQueryBuilder('p')
-            ->select(sprintf('MAX(JSON_GET_FIELD_AS_INTEGER(p.price, \'%s\'))', $languageEnum->value))
-            ->getQuery()
-            ->getSingleScalarResult();
+        $conn = $this->getEntityManager()->getConnection();
+        return $conn->executeQuery(
+            sprintf(
+                "SELECT MAX(CAST(price ->> '%s' AS BIGINT)) FROM product WHERE price ->> '%s' IS NOT NULL AND price ->> '%s' != ''",
+                $languageEnum->value, $languageEnum->value, $languageEnum->value
+            )
+        )->fetchOne();
     }
 
     public function filterProducts(ProductListRequest $listRequest): QueryBuilder
