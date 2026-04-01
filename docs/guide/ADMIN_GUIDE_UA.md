@@ -26,10 +26,15 @@
 | **Telegram-бот (тест)** | [@dev_tbuddet_bot](https://t.me/dev_tbuddet_bot) |
 
 Для доступу потрібно:
-1. Перейти на [https://api.artbeton.market/admin](https://api.artbeton.market/admin)
-2. Увійти за допомогою логіну та паролю (отримайте у розробника)
+1. Запустити Telegram-бот ([@tbuddet_bot](https://t.me/tbuddet_bot)) та натиснути **/start**
+2. Перейти на [https://api.artbeton.market/admin](https://api.artbeton.market/admin)
+3. Увійти через **Telegram-віджет** (кнопка "Увійти через Telegram")
 
-> Доступ мають лише користувачі з роллю **ROLE_ADMIN**. Якщо ви бачите помилку 401 — зверніться до розробника для надання прав.
+> Доступ мають лише користувачі з роллю **ROLE_ADMIN**. Для надання прав розробник виконує команду на сервері:
+> ```bash
+> php bin/console app:assign-role --phone=380XXXXXXXXX --role=ROLE_ADMIN
+> ```
+> Якщо ви бачите помилку 403 — зверніться до розробника для надання прав.
 
 ---
 
