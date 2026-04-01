@@ -63,19 +63,24 @@ class LiqPayController extends AbstractController
             return $this->json(['sign' => false], Response::HTTP_BAD_REQUEST);
         }
 
-        $userOrder->setLiqPaystatus($json_decode['status']);
+        $previousStatus = $userOrder->getLiqPaystatus();
+        $newStatus = $json_decode['status'];
+        $userOrder->setLiqPaystatus($newStatus);
         $em->flush();
 
-        if ($userOrder->getTelegramUserid()
+        // Only notify user if status actually changed to success (prevent duplicate messages)
+        $alreadyNotified = $previousStatus === 'success';
+
+        if (!$alreadyNotified
+            && $userOrder->getTelegramUserid()
             && $userOrder->getTelegramUserid()->getChatId()
         ) {
-            if ($json_decode['status'] === 'success') {
+            if ($newStatus === 'success') {
                 $msg = 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами зв\'яжеться наш менеджер';
             } else {
-                $msg = 'Статус оплати <b>'.$json_decode['status'].'</b>.';
+                $msg = 'Статус оплати: <b>'.$newStatus.'</b>';
             }
-            /** @var Message $message */
-            $message = $bot->sendMessage(
+            $bot->sendMessage(
                 text: $msg,
                 chat_id: $userOrder->getTelegramUserid()->getChatId(),
                 parse_mode: ParseMode::HTML

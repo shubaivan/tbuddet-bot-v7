@@ -702,11 +702,12 @@ class PriceRingConversation extends Conversation
         $userOrder->setDeliveryDepartment($this->deliveryDepartment);
         $userOrder->setDeliveryDepartmentRef($this->deliveryDepartmentRef);
 
-        $basePrice = $product->getPrice($language);
+        // Always use UA price for payment (currency is UAH)
+        $basePrice = $product->getPrice(UserLanguageEnum::UA);
         $impacts = array_sum(array_column($this->selectedProperties, 'property_price_impact'));
         $totalAmount = ($basePrice + $impacts) * $this->quantity;
 
-        $userOrder->setQuantityProduct($language, $this->quantity);
+        $userOrder->setQuantityProduct(UserLanguageEnum::UA, $this->quantity);
         $userOrder->setTotalAmount($totalAmount);
 
         $description = sprintf('Замовлення: %s × %s', $product->getProductName($language), $this->quantity);
@@ -729,7 +730,7 @@ class PriceRingConversation extends Conversation
             'version' => '3',
             'phone' => $userOrder->getTelegramUserid()->getPhoneNumber(),
             'amount' => $totalAmount,
-            'currency' => $language === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => 'UAH',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description,
