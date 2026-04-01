@@ -14,13 +14,10 @@ class StartCommand extends Command
     protected string $command = 'start';
     protected ?string $description = 'Початок спілкування';
 
-    public function __construct(
-        private TelegramUserService $telegramUserService,
-    ) {}
-
     public function handle(Nutgram $bot): void
     {
-        $lang = $this->telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
+        $telegramUserService = $bot->get(TelegramUserService::class);
+        $lang = $telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
         $langFlag = $lang === 'ua' ? '🇺🇦 UA' : '🇬🇧 EN';
 
         $bot->sendMessage(
