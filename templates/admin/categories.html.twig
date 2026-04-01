@@ -4,7 +4,6 @@
 
 {% block stylesheets %}
     {{ parent() }}
-    <link rel="stylesheet" type="text/css" href="{{ asset('simditor-2.3.28/styles/simditor.css') }}" />
 {% endblock %}
 
 {% block body %}
@@ -31,50 +30,6 @@
 
         </table>
     {% endif %}
-    <!-- Modal -->
-    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Створити новий продукт</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="createCategory">
-                        <div class="form-group">
-                            <div class="row">
-                                <div class="col">
-                                    <div class="form-group">
-                                        <label for="category_name_ua" class="col-form-label">Назва категорії(Українська)</label>
-                                        <input type="text" id="category_name_ua" class="form-control" name="category_name[ua]" placeholder="Українська"/>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="form-group">
-                                        <label for="category_name_en" class="col-form-label">Назва категорії(English)</label>
-                                        <input type="text" id="category_name_en" class="form-control" name="category_name[en]" placeholder="English"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="order_category" class="col-form-label">Порядок в списку</label>
-                            <input type="number" id="order_category" class="form-control" name="order_category"/>
-                        </div>
-
-                        <div id="attachment_files_template">
-
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Назад</button>
-                </div>
-            </div>
-        </div>
-    </div>
 {% endblock %}
 
 {% block javascripts %}
@@ -90,13 +45,6 @@
         let th_keys = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
         let for_prepare_defs = getJSonObject("{{ dataTableKeys ? dataTableKeys|json_encode() : "{}" }}");
     </script >
-
-    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/module.js') }}" defer></script>
-    <script src="{{ asset('simditor-2.3.28/site/assets/scripts/hotkeys.js') }}" defer></script>
-
-
-    <script src="{{ asset('simditor-2.3.28/lib/simditor.js') }}" defer></script>
-
 
 {% endblock %}
 
