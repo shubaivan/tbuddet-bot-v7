@@ -4,20 +4,19 @@ namespace App\Telegram\Start\Command;
 
 use App\Service\TelegramUserService;
 use App\Telegram\BotTranslations as T;
-use SergiX44\Nutgram\Handlers\Type\Command;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
-class StartCommand extends Command
+class StartCommand
 {
-    protected string $command = 'start';
-    protected ?string $description = 'Початок спілкування';
+    public function __construct(
+        private TelegramUserService $telegramUserService,
+    ) {}
 
-    public function handle(Nutgram $bot): void
+    public function __invoke(Nutgram $bot): void
     {
-        $telegramUserService = $bot->get(TelegramUserService::class);
-        $lang = $telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
+        $lang = $this->telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
         $langFlag = $lang === 'ua' ? '🇺🇦 UA' : '🇬🇧 EN';
 
         $bot->sendMessage(

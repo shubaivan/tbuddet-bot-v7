@@ -22,11 +22,11 @@
 | **Адмін-панель** | [https://api.artbeton.market/admin](https://api.artbeton.market/admin) |
 | **API (backend)** | [https://api.artbeton.market](https://api.artbeton.market) |
 | **Сайт (frontend)** | [https://artbeton.market](https://artbeton.market) |
-| **Telegram-бот (прод)** | [@tbuddet_bot](https://t.me/tbuddet_bot) |
-| **Telegram-бот (тест)** | [@dev_tbuddet_bot](https://t.me/dev_tbuddet_bot) |
+| **Telegram-бот (прод)** | [@prod_beton_decor_bot](https://t.me/tbuddet_bot) |
+| **Telegram-бот (тест)** | [@BetonDecorBot](https://t.me/dev_tbuddet_bot) |
 
 Для доступу потрібно:
-1. Запустити Telegram-бот ([@tbuddet_bot](https://t.me/tbuddet_bot)) та натиснути **/start**
+1. Запустити Telegram-бот ([@prod_beton_decor_bot](https://t.me/tbuddet_bot)) та натиснути **/start**
 2. Перейти на [https://api.artbeton.market/admin](https://api.artbeton.market/admin)
 3. Увійти через **Telegram-віджет** (кнопка "Увійти через Telegram")
 
@@ -268,7 +268,7 @@
 
 ### 8.1. Як працює бот
 
-Бот доступний у Telegram: **@tbuddet_bot** (прод) / **@dev_tbuddet_bot** (тест)
+Бот доступний у Telegram: **@prod_beton_decor_bot** (прод) / **@BetonDecorBot** (тест)
 
 Щоб почати, натисніть **/start**. Бот покаже головне меню:
 

@@ -16,7 +16,7 @@ Conversation::refreshOnDeserialize();
 
 $bot->setRunningMode(Webhook::class);
 
-$bot->registerCommand(StartCommand::class);
+$bot->onCommand('start', StartCommand::class);
 $bot->registerCommand(ProductCommand::class);
 $bot->registerCommand(OrderCommand::class);
 
