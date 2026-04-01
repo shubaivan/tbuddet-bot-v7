@@ -72,9 +72,9 @@ class PriceRingConversation extends Conversation
 
     private function lang(): UserLanguageEnum
     {
-        return $this->localizationService->getLanguage(
-            $this->telegramUserService->getCurrentUser()->getLanguageCode()
-        );
+        // For Telegram bot: always use UA (Ukrainian business, UAH payments, local delivery)
+        // EN content is used only for the website with explicit language selection
+        return UserLanguageEnum::UA;
     }
 
     // ─── Helper: get photo URL (skip avif) ───
@@ -702,12 +702,11 @@ class PriceRingConversation extends Conversation
         $userOrder->setDeliveryDepartment($this->deliveryDepartment);
         $userOrder->setDeliveryDepartmentRef($this->deliveryDepartmentRef);
 
-        // Always use UA price for payment (currency is UAH)
-        $basePrice = $product->getPrice(UserLanguageEnum::UA);
+        $basePrice = $product->getPrice($language);
         $impacts = array_sum(array_column($this->selectedProperties, 'property_price_impact'));
         $totalAmount = ($basePrice + $impacts) * $this->quantity;
 
-        $userOrder->setQuantityProduct(UserLanguageEnum::UA, $this->quantity);
+        $userOrder->setQuantityProduct($language, $this->quantity);
         $userOrder->setTotalAmount($totalAmount);
 
         $description = sprintf('Замовлення: %s × %s', $product->getProductName($language), $this->quantity);
@@ -730,7 +729,7 @@ class PriceRingConversation extends Conversation
             'version' => '3',
             'phone' => $userOrder->getTelegramUserid()->getPhoneNumber(),
             'amount' => $totalAmount,
-            'currency' => 'UAH',
+            'currency' => $language === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description,
