@@ -6,8 +6,8 @@ class CategoryThreeResponse
 {
     private string $category_name;
     private int $category_id;
-    private CategoryThreeResponse $parent;
-    private array $child;
+    private ?CategoryThreeResponse $parent = null;
+    private array $child = [];
     private array $filePath = [];
     private int $order_category = 0;
 
@@ -54,7 +54,7 @@ class CategoryThreeResponse
         return $this;
     }
 
-    public function getParent(): CategoryThreeResponse
+    public function getParent(): ?CategoryThreeResponse
     {
         return $this->parent;
     }
