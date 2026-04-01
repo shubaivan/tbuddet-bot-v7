@@ -460,7 +460,7 @@ class PriceRingConversation extends Conversation
 
     private function askCityText(Nutgram $bot): void
     {
-        $text = $this->buildInfoText(stepPrompt: '📍 <b>Введіть назву міста</b> (Нова Пошта):');
+        $text = $this->buildInfoText(stepPrompt: "📍 <b>Введіть назву вашого міста</b>\n<i>Напишіть назву міста (наприклад: Київ, Черкаси, Одеса) — ми знайдемо найближче відділення Нової Пошти</i>");
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, null, $photoUrl);
         $this->next('handleCityInput');
@@ -486,7 +486,7 @@ class PriceRingConversation extends Conversation
         $cities = $this->novaPoshtaService->searchCities($cityQuery, 8);
 
         if (empty($cities)) {
-            $text = $this->buildInfoText(stepPrompt: '❌ Місто не знайдено. Введіть назву міста:');
+            $text = $this->buildInfoText(stepPrompt: "❌ Місто не знайдено.\n<i>Спробуйте ввести інше місто (наприклад: Київ, Черкаси, Одеса)</i>");
             $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $text, null, $photoUrl);
             $this->next('handleCityInput');
