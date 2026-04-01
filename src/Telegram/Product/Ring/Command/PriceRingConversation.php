@@ -83,6 +83,19 @@ class PriceRingConversation extends Conversation
         return T::t($key, $this->lang()->value);
     }
 
+    // ─── Helper: check if delivery was selected ───
+
+    private function hasDeliverySelected(): bool
+    {
+        foreach ($this->selectedProperties as $prop) {
+            if (mb_strtolower($prop['property_name']) === 'доставка' || mb_strtolower($prop['property_name']) === 'delivery') {
+                $val = mb_strtolower($prop['property_value']);
+                return $val === 'так' || $val === 'yes';
+            }
+        }
+        return false;
+    }
+
     // ─── Helper: get photo URL (skip avif) ───
 
     private function getProductPhotoUrl($product): ?string
@@ -408,7 +421,12 @@ class PriceRingConversation extends Conversation
             $this->showPropertyStep($bot);
             $this->next('handlePropertySelection');
         } else {
-            $this->askCityText($bot);
+            // Check if delivery property was selected as "Так" / "Yes"
+            if ($this->hasDeliverySelected()) {
+                $this->askCityText($bot);
+            } else {
+                $this->askQuantity($bot);
+            }
         }
     }
 
@@ -468,21 +486,14 @@ class PriceRingConversation extends Conversation
     private function askCityText(Nutgram $bot): void
     {
         $text = $this->buildInfoText(stepPrompt: $this->t('city.ask'));
-        $keyboard = InlineKeyboardMarkup::make()->addRow(
-            InlineKeyboardButton::make($this->t('city.skip_delivery'), callback_data: 'skip_delivery'),
-        );
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
-        $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
+        $this->sendOrEdit($bot, $text, null, $photoUrl);
         $this->next('handleCityInput');
     }
 
     public function handleCityInput(Nutgram $bot)
     {
         if ($bot->isCallbackQuery()) {
-            if ($bot->callbackQuery()->data === 'skip_delivery') {
-                $this->askQuantity($bot);
-                return;
-            }
             $this->askCityText($bot);
             return;
         }
