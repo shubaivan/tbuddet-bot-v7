@@ -204,40 +204,65 @@ class AdminController extends AbstractController
         $order->setNovaPoshtaTrackingNumber($trackingNumber ?: null);
         $em->flush();
 
-        // Notify client via Telegram when shipped with tracking number
-        if ($newStatus === OrderStatusEnum::SHIPPED->value
-            && $trackingNumber
-            && ($oldStatus !== OrderStatusEnum::SHIPPED->value || $oldTracking !== $trackingNumber)
-        ) {
-            $chatId = null;
-            if ($order->getTelegramUserId()?->getChatId()) {
-                $chatId = $order->getTelegramUserId()->getChatId();
-            }
+        // Notify client via Telegram on status change
+        $chatId = $order->getTelegramUserId()?->getChatId();
+        if ($chatId && $oldStatus !== $newStatus) {
+            $statusLabel = OrderStatusEnum::tryFrom($newStatus)?->label() ?? $newStatus;
+            $text = match ($newStatus) {
+                OrderStatusEnum::PROCESSING->value => sprintf(
+                    "Ваше замовлення #%d <b>прийнято в обробку</b> ✅",
+                    $order->getId()
+                ),
+                OrderStatusEnum::SHIPPED->value => $trackingNumber
+                    ? sprintf(
+                        "Ваше замовлення #%d <b>відправлено</b>! 📦\nТТН: <code>%s</code>\nВідстежити: https://novaposhta.ua/tracking/?cargo_number=%s",
+                        $order->getId(), $trackingNumber, $trackingNumber
+                    )
+                    : sprintf("Ваше замовлення #%d <b>відправлено</b>! 📦", $order->getId()),
+                OrderStatusEnum::DELIVERED->value => sprintf(
+                    "Ваше замовлення #%d <b>доставлено</b>! 🎉",
+                    $order->getId()
+                ),
+                OrderStatusEnum::CANCELLED->value => sprintf(
+                    "Ваше замовлення #%d <b>скасовано</b> ❌\nЗверніться до менеджера для деталей.",
+                    $order->getId()
+                ),
+                default => null,
+            };
 
-            if ($chatId) {
+            if ($text) {
                 try {
-                    $bot->sendMessage(
-                        text: sprintf(
-                            "Ваше замовлення #%d <b>відправлено</b>!\nНомер ТТН: <code>%s</code>\nВідстежити: https://novaposhta.ua/tracking/?cargo_number=%s",
-                            $order->getId(),
-                            $trackingNumber,
-                            $trackingNumber
-                        ),
-                        chat_id: $chatId,
-                        parse_mode: ParseMode::HTML
-                    );
+                    $bot->sendMessage(text: $text, chat_id: $chatId, parse_mode: ParseMode::HTML);
                 } catch (\Throwable) {}
             }
+        }
 
-            // Notify managers
+        // Notify client when tracking number is added/changed (even without status change)
+        if ($chatId && $trackingNumber && $oldTracking !== $trackingNumber && $newStatus !== OrderStatusEnum::SHIPPED->value) {
+            try {
+                $bot->sendMessage(
+                    text: sprintf(
+                        "Оновлено ТТН для замовлення #%d: <code>%s</code>\nВідстежити: https://novaposhta.ua/tracking/?cargo_number=%s",
+                        $order->getId(), $trackingNumber, $trackingNumber
+                    ),
+                    chat_id: $chatId,
+                    parse_mode: ParseMode::HTML
+                );
+            } catch (\Throwable) {}
+        }
+
+        // Notify managers on status change
+        if ($oldStatus !== $newStatus) {
             $managers = $telegramUserRepository->findByRole(RoleEnum::MANAGER);
             foreach ($managers as $manager) {
                 try {
+                    $statusLabel = OrderStatusEnum::tryFrom($newStatus)?->label() ?? $newStatus;
                     $bot->sendMessage(
                         text: sprintf(
-                            "Замовлення #%d <b>відправлено</b>\nТТН: <code>%s</code>",
+                            "Замовлення #%d → <b>%s</b>%s",
                             $order->getId(),
-                            $trackingNumber
+                            $statusLabel,
+                            $trackingNumber ? "\nТТН: <code>$trackingNumber</code>" : ''
                         ),
                         chat_id: $manager->getChatId(),
                         parse_mode: ParseMode::HTML
