@@ -5,6 +5,8 @@ namespace App\Telegram\Product\Ring\Command;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
+use App\Entity\Enum\RoleEnum;
+use App\Repository\TelegramUserRepository;
 use App\Service\LocalizationService;
 use App\Telegram\BotTranslations as T;
 use App\Service\NovaPoshtaService;
@@ -63,6 +65,7 @@ class PriceRingConversation extends Conversation
         private NovaPoshtaService $novaPoshtaService,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
+        private TelegramUserRepository $telegramUserRepository,
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
         private string $liqpayServerUrl,
@@ -785,6 +788,28 @@ class PriceRingConversation extends Conversation
 
         $photoUrl = $this->getProductPhotoUrl($product);
         $this->sendOrEdit($bot, $finalText, null, $photoUrl);
+
+        // Notify managers about new order
+        $managers = $this->telegramUserRepository->findByRole(RoleEnum::MANAGER);
+        $customer = $this->telegramUserService->getCurrentUser();
+        $customerName = trim(($customer->getFirstName() ?? '') . ' ' . ($customer->getLastName() ?? ''));
+        $customerPhone = $customer->getPhoneNumber() ?? 'не вказано';
+        foreach ($managers as $manager) {
+            try {
+                $bot->sendMessage(
+                    text: sprintf(
+                        "🛒 <b>Нове замовлення #%d</b>\nКлієнт: %s\nТелефон: %s\nСума: %s\n%s",
+                        $userOrder->getId(),
+                        $customerName,
+                        $customerPhone,
+                        $totalAmount . ($language === UserLanguageEnum::UA ? ' грн' : ' USD'),
+                        $description
+                    ),
+                    chat_id: $manager->getChatId(),
+                    parse_mode: ParseMode::HTML
+                );
+            } catch (\Throwable) {}
+        }
 
         $this->end();
     }
