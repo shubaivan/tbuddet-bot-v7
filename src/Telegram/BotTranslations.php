@@ -37,6 +37,7 @@ class BotTranslations
         ],
         'city.choose' => ['ua' => '🏙 <b>Оберіть місто:</b>', 'en' => '🏙 <b>Choose city:</b>'],
         'city.search_another' => ['ua' => '🔍 Шукати інше місто', 'en' => '🔍 Search another city'],
+        'city.skip_delivery' => ['ua' => '⏭ Без доставки', 'en' => '⏭ Skip delivery'],
 
         // Warehouse
         'warehouse.choose' => ['ua' => '📬 <b>Оберіть відділення:</b>', 'en' => '📬 <b>Choose branch:</b>'],

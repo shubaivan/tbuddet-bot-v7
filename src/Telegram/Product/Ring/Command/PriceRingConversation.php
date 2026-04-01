@@ -468,14 +468,21 @@ class PriceRingConversation extends Conversation
     private function askCityText(Nutgram $bot): void
     {
         $text = $this->buildInfoText(stepPrompt: $this->t('city.ask'));
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make($this->t('city.skip_delivery'), callback_data: 'skip_delivery'),
+        );
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
-        $this->sendOrEdit($bot, $text, null, $photoUrl);
+        $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
         $this->next('handleCityInput');
     }
 
     public function handleCityInput(Nutgram $bot)
     {
         if ($bot->isCallbackQuery()) {
+            if ($bot->callbackQuery()->data === 'skip_delivery') {
+                $this->askQuantity($bot);
+                return;
+            }
             $this->askCityText($bot);
             return;
         }
@@ -594,7 +601,11 @@ class PriceRingConversation extends Conversation
         $this->deliveryDepartment = $warehouse['description'];
         $this->deliveryDepartmentRef = $warehouse['ref'];
 
-        // Ask quantity
+        $this->askQuantity($bot);
+    }
+
+    private function askQuantity(Nutgram $bot): void
+    {
         $text = $this->buildInfoText(stepPrompt: $this->t('quantity.ask'));
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, null, $photoUrl);
