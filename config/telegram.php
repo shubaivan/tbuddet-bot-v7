@@ -3,6 +3,7 @@
 
 use App\Telegram\Location\Command\LocationCommand;
 use App\Telegram\Location\Command\RouteCommand;
+use App\Telegram\Start\Command\LanguageToggleCommand;
 use \App\Telegram\Product\Ring\Command\ProductCommand;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\RunningMode\Webhook;
@@ -22,6 +23,7 @@ $bot->registerCommand(OrderCommand::class);
 $bot->onCommand('route', RouteCommand::class);
 $bot->onCommand('checkout-ring', PriceRingConversation::class);
 
+$bot->onCallbackQueryData('type:lang:toggle', LanguageToggleCommand::class);
 $bot->onCallbackQueryData('type:order', OwnOrderCommand::class);
 $bot->onCallbackQueryData('type:route', RouteCommand::class);
 $bot->onCallbackQueryData('type:product', ProductCommand::class);

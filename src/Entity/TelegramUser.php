@@ -48,6 +48,8 @@ class TelegramUser implements UserInterface
     private ?string $username;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $language_code;
+    #[ORM\Column(type: 'string', length: 10, nullable: false, options: ['default' => 'ua'])]
+    private string $preferred_language = 'ua';
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $auth_date;
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
@@ -157,6 +159,18 @@ class TelegramUser implements UserInterface
     public function setLanguageCode(string $language_code): TelegramUser
     {
         $this->language_code = $language_code;
+
+        return $this;
+    }
+
+    public function getPreferredLanguage(): string
+    {
+        return $this->preferred_language;
+    }
+
+    public function setPreferredLanguage(string $preferred_language): TelegramUser
+    {
+        $this->preferred_language = $preferred_language;
 
         return $this;
     }

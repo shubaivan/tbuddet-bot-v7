@@ -6,6 +6,7 @@ use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Service\LocalizationService;
+use App\Telegram\BotTranslations as T;
 use App\Service\NovaPoshtaService;
 use App\Service\ProductService;
 use App\Service\TelegramUserService;
@@ -72,9 +73,14 @@ class PriceRingConversation extends Conversation
 
     private function lang(): UserLanguageEnum
     {
-        // For Telegram bot: always use UA (Ukrainian business, UAH payments, local delivery)
-        // EN content is used only for the website with explicit language selection
-        return UserLanguageEnum::UA;
+        $pref = $this->telegramUserService->getCurrentUser()->getPreferredLanguage();
+
+        return UserLanguageEnum::tryFrom($pref) ?? UserLanguageEnum::UA;
+    }
+
+    private function t(string $key): string
+    {
+        return T::t($key, $this->lang()->value);
     }
 
     // ─── Helper: get photo URL (skip avif) ───
@@ -177,7 +183,7 @@ class PriceRingConversation extends Conversation
         $lines = [];
 
         if ($product) {
-            $lines[] = sprintf("📦 <b>%s</b> — %s грн",
+            $lines[] = sprintf("📦 <b>%s</b> — %s " . $this->t('product.currency'),
                 $product->getProductName($this->lang()),
                 $product->getPrice($this->lang())
             );
@@ -186,7 +192,7 @@ class PriceRingConversation extends Conversation
         foreach ($this->selectedProperties as $prop) {
             $line = sprintf("✅ %s: %s", $prop['property_name'], $prop['property_value']);
             if ($prop['property_price_impact'] != 0) {
-                $line .= sprintf(' (%+d грн)', $prop['property_price_impact']);
+                $line .= sprintf(' (%+d ' . $this->t('product.currency') . ')', $prop['property_price_impact']);
             }
             $lines[] = $line;
         }
@@ -198,13 +204,13 @@ class PriceRingConversation extends Conversation
             $lines[] = sprintf("📬 %s", $this->deliveryDepartment);
         }
         if ($this->quantity) {
-            $lines[] = sprintf("🔢 Кількість: %d", $this->quantity);
+            $lines[] = sprintf("🔢 %s: %d", $this->t('product.quantity'), $this->quantity);
 
             if ($product) {
                 $basePrice = $product->getPrice($this->lang());
                 $impacts = array_sum(array_column($this->selectedProperties, 'property_price_impact'));
                 $total = ($basePrice + $impacts) * $this->quantity;
-                $lines[] = sprintf("\n💰 <b>Сума: %s грн</b>", $total);
+                $lines[] = sprintf("\n💰 <b>%s: %s %s</b>", $this->t('product.sum'), $total, $this->t('product.currency'));
             }
         }
 
@@ -273,7 +279,7 @@ class PriceRingConversation extends Conversation
         $total = count($this->productIds);
 
         $text = sprintf(
-            "📦 <b>%s</b>\n💰 %s грн\n\n%d / %d",
+            "📦 <b>%s</b>\n💰 %s " . $this->t('product.currency') . "\n\n%d / %d",
             $product->getProductName($this->lang()),
             $product->getPrice($this->lang()),
             $this->productPage + 1,
@@ -282,14 +288,14 @@ class PriceRingConversation extends Conversation
 
         $keyboard = InlineKeyboardMarkup::make();
         $keyboard->addRow(
-            InlineKeyboardButton::make('🛒 Обрати', callback_data: 'product_' . $product->getId())
+            InlineKeyboardButton::make('🛒 ' . $this->t('product.select'), callback_data: 'product_' . $product->getId())
         );
 
         $navRow = [];
         if ($this->productPage > 0) {
             $navRow[] = InlineKeyboardButton::make('◀️', callback_data: 'page_prev');
         }
-        $navRow[] = InlineKeyboardButton::make('🔙 Категорії', callback_data: 'back_categories');
+        $navRow[] = InlineKeyboardButton::make('🔙 ' . $this->t('product.categories'), callback_data: 'back_categories');
         if ($this->productPage < $total - 1) {
             $navRow[] = InlineKeyboardButton::make('▶️', callback_data: 'page_next');
         }
@@ -414,10 +420,11 @@ class PriceRingConversation extends Conversation
         $keyboard = InlineKeyboardMarkup::make();
         foreach ($group['values'] as $index => $value) {
             $label = $value['property_value'];
+            $cur = $this->t('product.currency');
             if ($value['property_price_impact'] > 0) {
-                $label .= sprintf(' (+%s грн)', $value['property_price_impact']);
+                $label .= sprintf(' (+%s %s)', $value['property_price_impact'], $cur);
             } elseif ($value['property_price_impact'] < 0) {
-                $label .= sprintf(' (%s грн)', $value['property_price_impact']);
+                $label .= sprintf(' (%s %s)', $value['property_price_impact'], $cur);
             }
             $keyboard->addRow(
                 InlineKeyboardButton::make($label, callback_data: 'prop_' . $this->currentPropertyGroupIndex . '_' . $index)
@@ -460,7 +467,7 @@ class PriceRingConversation extends Conversation
 
     private function askCityText(Nutgram $bot): void
     {
-        $text = $this->buildInfoText(stepPrompt: "📍 <b>Введіть назву вашого міста</b>\n<i>Напишіть назву міста (наприклад: Київ, Черкаси, Одеса) — ми знайдемо найближче відділення Нової Пошти</i>");
+        $text = $this->buildInfoText(stepPrompt: $this->t('city.ask'));
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, null, $photoUrl);
         $this->next('handleCityInput');
@@ -486,7 +493,7 @@ class PriceRingConversation extends Conversation
         $cities = $this->novaPoshtaService->searchCities($cityQuery, 8);
 
         if (empty($cities)) {
-            $text = $this->buildInfoText(stepPrompt: "❌ Місто не знайдено.\n<i>Спробуйте ввести інше місто (наприклад: Київ, Черкаси, Одеса)</i>");
+            $text = $this->buildInfoText(stepPrompt: $this->t('city.not_found'));
             $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $text, null, $photoUrl);
             $this->next('handleCityInput');
@@ -503,9 +510,9 @@ class PriceRingConversation extends Conversation
             $this->cityResults[$index] = ['ref' => $city['Ref'] ?? '', 'description' => $desc];
             $keyboard->addRow(InlineKeyboardButton::make($label, callback_data: 'city_' . $index));
         }
-        $keyboard->addRow(InlineKeyboardButton::make('🔄 Шукати інше місто', callback_data: 'retry_city'));
+        $keyboard->addRow(InlineKeyboardButton::make('🔍 ' . $this->t('city.search_another'), callback_data: 'retry_city'));
 
-        $text = $this->buildInfoText(stepPrompt: '🏙 <b>Оберіть місто:</b>');
+        $text = $this->buildInfoText(stepPrompt: $this->t('city.choose'));
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
         $this->next('handleCitySelection');
@@ -545,7 +552,7 @@ class PriceRingConversation extends Conversation
         if (empty($warehouses)) {
             $this->deliveryCity = null;
             $this->deliveryCityRef = null;
-            $text = $this->buildInfoText(stepPrompt: '❌ Відділення не знайдено. Введіть інше місто:');
+            $text = $this->buildInfoText(stepPrompt: $this->t('warehouse.not_found'));
             $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $text, null, $photoUrl);
             $this->next('handleCityInput');
@@ -564,7 +571,7 @@ class PriceRingConversation extends Conversation
             $keyboard->addRow(InlineKeyboardButton::make($label, callback_data: 'wh_' . $index));
         }
 
-        $text = $this->buildInfoText(stepPrompt: '📬 <b>Оберіть відділення:</b>');
+        $text = $this->buildInfoText(stepPrompt: $this->t('warehouse.choose'));
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
         $this->next('handleWarehouseSelection');
@@ -588,7 +595,7 @@ class PriceRingConversation extends Conversation
         $this->deliveryDepartmentRef = $warehouse['ref'];
 
         // Ask quantity
-        $text = $this->buildInfoText(stepPrompt: '🔢 <b>Введіть кількість:</b>');
+        $text = $this->buildInfoText(stepPrompt: $this->t('quantity.ask'));
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, null, $photoUrl);
         $this->next('handleQuantity');
@@ -608,7 +615,7 @@ class PriceRingConversation extends Conversation
         try { $bot->deleteMessage($bot->chatId(), $bot->message()->message_id); } catch (\Throwable $e) {}
 
         if (!preg_match('/^[0-9]+$/', $text) || (int)$text < 1) {
-            $infoText = $this->buildInfoText(stepPrompt: '❌ Тільки цифри. Введіть кількість:');
+            $infoText = $this->buildInfoText(stepPrompt: $this->t('quantity.invalid'));
             $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $infoText, null, $photoUrl);
             $this->next('handleQuantity');
@@ -623,7 +630,7 @@ class PriceRingConversation extends Conversation
             InlineKeyboardButton::make('❌ Скасувати', callback_data: 'cancel'),
         );
 
-        $infoText = $this->buildInfoText(stepPrompt: "\n<b>Підтвердіть замовлення:</b>");
+        $infoText = $this->buildInfoText(stepPrompt: $this->t('confirm.title'));
         $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $infoText, $keyboard, $photoUrl);
 
@@ -649,7 +656,7 @@ class PriceRingConversation extends Conversation
         if (!$this->telegramUserService->getCurrentUser()->getPhoneNumber()) {
             $this->confirmPhone = true;
             $bot->sendMessage(
-                text: '📱 Підтвердіть номер телефону:',
+                text: $this->t('phone.confirm'),
                 reply_markup: ReplyKeyboardMarkup::make(one_time_keyboard: true)->addRow(
                     KeyboardButton::make('📱 Підтвердити телефон', true),
                 )
@@ -676,7 +683,7 @@ class PriceRingConversation extends Conversation
         }
 
         $bot->sendMessage(
-            text: '📱 Натисніть кнопку нижче:',
+            text: $this->t('phone.ask'),
             reply_markup: ReplyKeyboardMarkup::make(one_time_keyboard: true)->addRow(
                 KeyboardButton::make('📱 Підтвердити телефон', true),
             )
@@ -749,8 +756,8 @@ class PriceRingConversation extends Conversation
 
         // Update main message with final info + payment link
         $finalText = $this->buildInfoText();
-        $finalText .= sprintf("\n\n🔗 <a href=\"%s\">Перейти до оплати</a>", $link);
-        $finalText .= "\n\n🎉 <b>Дякуємо!</b> Чекайте повідомлення.";
+        $finalText .= sprintf("\n\n🔗 <a href=\"%s\">%s</a>", $link, $this->t('payment.link'));
+        $finalText .= "\n\n" . $this->t('payment.thanks');
 
         $photoUrl = $this->getProductPhotoUrl($product);
         $this->sendOrEdit($bot, $finalText, null, $photoUrl);
