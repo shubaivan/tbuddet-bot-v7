@@ -108,7 +108,7 @@
             </div>
 
             {# ── Section: Properties ── #}
-            <div class="section">
+            <div class="section" id="propertiesSection">
                 <div class="section-title">Характеристики</div>
                 <div id="propertiesContainer"></div>
                 <button type="button" class="btn-add-prop" id="addProperty">+ Додати характеристику</button>
@@ -269,7 +269,18 @@
             // Validation
             function validateForm() {
                 let valid = true;
+                // Clear all previous errors and borders
                 document.querySelectorAll('.error-message').forEach(el => el.remove());
+                document.querySelectorAll('.form-input').forEach(el => el.style.borderColor = '#ced4da');
+                document.getElementById('propertiesSection').style.borderColor = '';
+
+                function addError(parentEl, message) {
+                    valid = false;
+                    const span = document.createElement('span');
+                    span.className = 'error-message';
+                    span.textContent = message;
+                    parentEl.appendChild(span);
+                }
 
                 const required = [
                     { id: 'product_name_ua', label: 'Назва продукту (UA)' },
@@ -279,30 +290,41 @@
                 required.forEach(function(field) {
                     const input = document.getElementById(field.id);
                     if (!input || !input.value.trim()) {
-                        valid = false;
-                        if (input) {
-                            input.style.borderColor = '#dc3545';
-                            const span = document.createElement('span');
-                            span.className = 'error-message';
-                            span.textContent = field.label + ' — обов\'язкове поле';
-                            input.parentElement.appendChild(span);
-                        }
-                    } else {
-                        if (input) input.style.borderColor = '#ced4da';
+                        if (input) input.style.borderColor = '#dc3545';
+                        addError(input.parentElement, field.label + ' — обов\'язкове поле');
                     }
                 });
 
-                // Check at least one category
+                // Validate price is a positive number
+                const priceUa = document.getElementById('price_ua');
+                if (priceUa && priceUa.value.trim()) {
+                    const priceVal = Number(priceUa.value.trim());
+                    if (isNaN(priceVal) || priceVal <= 0) {
+                        priceUa.style.borderColor = '#dc3545';
+                        addError(priceUa.parentElement, 'Ціна має бути додатнім числом');
+                    }
+                }
+
+                // Check at least one category (use Select2 rendered tags as source of truth)
+                const selectedTags = document.querySelectorAll('.select2-selection__choice');
                 const cats = $('#productCategory').val();
-                if (!cats || cats.length === 0) {
-                    valid = false;
+                if (selectedTags.length === 0 && (!cats || cats.length === 0)) {
                     const catContainer = document.querySelector('.category-select');
                     if (catContainer) {
-                        const span = document.createElement('span');
-                        span.className = 'error-message';
-                        span.textContent = 'Оберіть хоча б одну категорію';
-                        catContainer.parentElement.appendChild(span);
+                        addError(catContainer.parentElement, 'Оберіть хоча б одну категорію');
                     }
+                }
+
+                // Check at least one property with filled name
+                const propCards = document.querySelectorAll('.prop-card');
+                const filledProps = Array.from(propCards).filter(function(card) {
+                    const nameUa = card.querySelector('input[name*="[ua][property_name]"]');
+                    return nameUa && nameUa.value.trim();
+                });
+                if (filledProps.length === 0) {
+                    const section = document.getElementById('propertiesSection');
+                    section.style.borderColor = '#dc3545';
+                    addError(section.querySelector('.section-title'), 'Додайте хоча б одну характеристику');
                 }
 
                 return valid;
@@ -311,6 +333,15 @@
             // Save
             document.getElementById('saveProduct').addEventListener('click', function() {
                 if (!validateForm()) return;
+
+                // Remove empty property cards before submit
+                document.querySelectorAll('.prop-card').forEach(function(card) {
+                    const nameUa = card.querySelector('input[name*="[ua][property_name]"]');
+                    const valueUa = card.querySelector('input[name*="[ua][property_value]"]');
+                    if (nameUa && valueUa && !nameUa.value.trim() && !valueUa.value.trim()) {
+                        card.remove();
+                    }
+                });
 
                 const btn = this;
                 btn.disabled = true;
@@ -338,9 +369,18 @@
                         btn.disabled = false;
                         btn.textContent = 'Зберегти';
                         document.querySelectorAll('.error-message').forEach(el => el.remove());
+                        document.querySelectorAll('.section-error').forEach(el => el.style.borderColor = '');
+
+                        // Map field names to their section containers for fields without direct inputs
+                        const fieldSectionMap = {
+                            'product_properties': 'propertiesSection',
+                        };
+
                         if (result.responseJSON && result.responseJSON.errors) {
                             $.each(result.responseJSON.errors, function(field, errors) {
                                 const input = document.getElementById(field);
+                                const section = document.getElementById(fieldSectionMap[field]);
+
                                 if (input) {
                                     input.style.borderColor = '#dc3545';
                                     errors.forEach(function(err) {
@@ -349,10 +389,26 @@
                                         span.textContent = err.message;
                                         input.parentElement.appendChild(span);
                                     });
-                                } else {
-                                    alert('Поле: ' + field + ' — ' + errors[0].message);
+                                } else if (section) {
+                                    section.style.borderColor = '#dc3545';
+                                    errors.forEach(function(err) {
+                                        const span = document.createElement('span');
+                                        span.className = 'error-message';
+                                        span.style.display = 'block';
+                                        span.style.marginBottom = '12px';
+                                        span.textContent = err.message;
+                                        section.querySelector('.section-title').insertAdjacentElement('afterend', span);
+                                    });
                                 }
                             });
+                        } else if (result.responseJSON && result.responseJSON.detail) {
+                            // Fallback: show detail message near the save button
+                            const actionsBar = document.querySelector('.actions-bar:last-child');
+                            const span = document.createElement('span');
+                            span.className = 'error-message';
+                            span.style.display = 'block';
+                            span.textContent = result.responseJSON.detail;
+                            actionsBar.insertAdjacentElement('beforebegin', span);
                         }
                     }
                 });

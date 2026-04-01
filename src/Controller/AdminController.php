@@ -5,11 +5,15 @@ namespace App\Controller;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\Category;
 use App\Entity\CategoryRelation;
+use App\Entity\Enum\OrderStatusEnum;
+use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\ProductCategory;
 use App\Entity\PurchaseProduct;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
+use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
 use App\Repository\ProductCategoryRepository;
@@ -34,7 +38,7 @@ use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-#[IsGranted("ROLE_ADMIN")]
+#[IsGranted("ROLE_MANAGER")]
 class AdminController extends AbstractController
 {
     public function __construct(
@@ -168,6 +172,83 @@ class AdminController extends AbstractController
                 ['data' => $dataTable]
             )
         );
+    }
+
+    #[Route('/admin/orders/{id}', name: 'app_admin_order_detail', methods: [Request::METHOD_GET])]
+    public function orderDetail(
+        #[MapEntity(id: 'id')] UserOrder $order,
+    ): Response
+    {
+        return $this->render('admin/order-detail.html.twig', [
+            'order' => $order,
+            'statuses' => OrderStatusEnum::cases(),
+        ]);
+    }
+
+    #[Route('/admin/orders/{id}/update', name: 'app_admin_order_update', methods: [Request::METHOD_POST])]
+    public function orderUpdate(
+        #[MapEntity(id: 'id')] UserOrder $order,
+        Request $request,
+        EntityManagerInterface $em,
+        Nutgram $bot,
+        TelegramUserRepository $telegramUserRepository,
+    ): Response
+    {
+        $oldStatus = $order->getOrderStatus();
+        $oldTracking = $order->getNovaPoshtaTrackingNumber();
+
+        $newStatus = $request->request->get('order_status');
+        $trackingNumber = $request->request->get('nova_poshta_tracking_number');
+
+        $order->setOrderStatus($newStatus);
+        $order->setNovaPoshtaTrackingNumber($trackingNumber ?: null);
+        $em->flush();
+
+        // Notify client via Telegram when shipped with tracking number
+        if ($newStatus === OrderStatusEnum::SHIPPED->value
+            && $trackingNumber
+            && ($oldStatus !== OrderStatusEnum::SHIPPED->value || $oldTracking !== $trackingNumber)
+        ) {
+            $chatId = null;
+            if ($order->getTelegramUserId()?->getChatId()) {
+                $chatId = $order->getTelegramUserId()->getChatId();
+            }
+
+            if ($chatId) {
+                try {
+                    $bot->sendMessage(
+                        text: sprintf(
+                            "Ваше замовлення #%d <b>відправлено</b>!\nНомер ТТН: <code>%s</code>\nВідстежити: https://novaposhta.ua/tracking/?cargo_number=%s",
+                            $order->getId(),
+                            $trackingNumber,
+                            $trackingNumber
+                        ),
+                        chat_id: $chatId,
+                        parse_mode: ParseMode::HTML
+                    );
+                } catch (\Throwable) {}
+            }
+
+            // Notify managers
+            $managers = $telegramUserRepository->findByRole(RoleEnum::MANAGER);
+            foreach ($managers as $manager) {
+                try {
+                    $bot->sendMessage(
+                        text: sprintf(
+                            "Замовлення #%d <b>відправлено</b>\nТТН: <code>%s</code>",
+                            $order->getId(),
+                            $trackingNumber
+                        ),
+                        chat_id: $manager->getChatId(),
+                        parse_mode: ParseMode::HTML
+                    );
+                } catch (\Throwable) {}
+            }
+        }
+
+        $this->addFlash('notice', 'Замовлення оновлено');
+
+        return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
     }
 
     #############
@@ -353,14 +434,7 @@ class AdminController extends AbstractController
         $em->persist($duplicateProduct);
         $em->flush();
 
-        $response = $this->serializer->serialize(
-            $duplicateProduct, 'json',
-            [AbstractNormalizer::GROUPS => [
-                Product::ADMIN_PRODUCT_VIEW_GROUP,
-            ]]
-        );
-
-        return new JsonResponse($response, Response::HTTP_OK, [], true);
+        return $this->redirectToRoute('admin-product-form', ['id' => $duplicateProduct->getId()]);
     }
 
     #[Route('/admin/product/form/{id}', name: 'admin-product-form', defaults: ['id' => null], methods: [Request::METHOD_GET])]
@@ -411,6 +485,19 @@ class AdminController extends AbstractController
     #############
     # Categories
     #############
+
+    #[Route('/admin/category/form/{id}', name: 'admin-category-form', defaults: ['id' => null], methods: [Request::METHOD_GET])]
+    public function categoryForm(
+        ?int $id,
+        CategoryRepository $categoryRepository,
+    ): Response
+    {
+        $category = $id ? $categoryRepository->find($id) : null;
+
+        return $this->render('admin/category-form.html.twig', [
+            'category' => $category,
+        ]);
+    }
 
     #[Route('/admin/categories', name: 'app_admin_categories')]
     public function categories(EntityManagerInterface $em): Response

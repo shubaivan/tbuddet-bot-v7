@@ -76,12 +76,8 @@ document.addEventListener("DOMContentLoaded", function () {
         "targets": 7,
         data: 'action',
         render: function (data, type, row, meta) {
-            return '    <!-- Button trigger modal -->\n' +
-                '    <button type="button" class="btn btn-primary" data-model-id="' + row.id + '" data-toggle="modal" data-target="#exampleModal">\n' +
-                '        Редагувати\n' +
-                '    </button>' +
-                '    <button class="btn btn-danger delete-model" data-model-id="' + row.id + '">Видалити</button>   '
-                ;
+            return '<a href="/admin/category/form/' + row.id + '" target="_blank" class="btn btn-primary btn-sm">Редагувати</a> ' +
+                '<button class="btn btn-danger btn-sm delete-model" data-model-id="' + row.id + '">Видалити</button>';
         }
     });
 

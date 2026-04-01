@@ -34,10 +34,29 @@ document.addEventListener("DOMContentLoaded", function () {
         'ajax': {
             'url': collectionData,
             "data": function ( d ) {
-                console.log('ajax data', d);
+                d.filter_orders = $('#filterOrders').val();
+                d.filter_reg_from = $('#filterRegFrom').val();
+                d.filter_reg_to = $('#filterRegTo').val();
             }
         },
         columns: th_keys,
-        "columnDefs": common_defs
+        "columnDefs": common_defs,
+        "language": {
+            "search": "Пошук:",
+            "lengthMenu": "Показати _MENU_ записів",
+            "info": "Записи _START_ - _END_ з _TOTAL_",
+            "infoEmpty": "Немає записів",
+            "zeroRecords": "Нічого не знайдено",
+            "paginate": { "previous": "&larr;", "next": "&rarr;" }
+        }
+    });
+
+    // Filter buttons
+    $('#applyFilters').on('click', function() { table.ajax.reload(); });
+    $('#resetFilters').on('click', function() {
+        $('#filterOrders').val('');
+        $('#filterRegFrom').val('');
+        $('#filterRegTo').val('');
+        table.ajax.reload();
     });
 });

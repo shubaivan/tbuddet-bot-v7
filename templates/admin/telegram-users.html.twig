@@ -10,6 +10,29 @@
 {% block body %}
     {{ parent() }}
 
+    <div class="filters-bar" style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;align-items:end;">
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Замовлення</label>
+            <select id="filterOrders" class="form-control form-control-sm" style="width:180px;">
+                <option value="">Всі користувачі</option>
+                <option value="with_orders">З замовленнями</option>
+                <option value="without_orders">Без замовлень</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Зареєстровані від</label>
+            <input type="date" id="filterRegFrom" class="form-control form-control-sm" style="width:150px;">
+        </div>
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Зареєстровані до</label>
+            <input type="date" id="filterRegTo" class="form-control form-control-sm" style="width:150px;">
+        </div>
+        <div>
+            <button id="applyFilters" class="btn btn-primary btn-sm">Фільтрувати</button>
+            <button id="resetFilters" class="btn btn-secondary btn-sm">Скинути</button>
+        </div>
+    </div>
+
     {% if th_keys|length %}
         <!-- Table -->
         <table id='telegramUserTable' class='display dataTable'>

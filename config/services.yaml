@@ -21,6 +21,7 @@ services:
             $liqpayPrivateKey: '%liqpay_private_key%'
             $liqpayServerUrl: '%liqpay_server_url%'
             $novaPoshtaApiKey: '%env(NOVA_POSHTA_API_KEY)%'
+            $frontendUrl: '%env(FRONTEND_URL)%'
             $defaultTargetRoute: 'app_admin'  # redirect after login success
             $guardRoute: 'login_guard'        # guard route
             $loginRoute: 'login_public'       # optional, if login fails user will be redirected there

@@ -201,4 +201,15 @@ class Category implements AttachmentFilesInterface
 
         return $this;
     }
+
+    public function getParentsSelect2Info(): array
+    {
+        $result = [];
+        foreach ($this->getChild() as $key => $categoryRelation) {
+            $result[$key]['id'] = $categoryRelation->getParent()->getId();
+            $result[$key]['name'] = $categoryRelation->getParent()->getCategoryName();
+        }
+
+        return $result;
+    }
 }

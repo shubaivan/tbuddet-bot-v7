@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
+use App\Entity\Enum\OrderStatusEnum;
 use App\Repository\UserOrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -22,15 +23,15 @@ class UserOrder
     public static array $dataTableFields = [
         'id',
         'total_amount',
-        'description',
-        'quantity_product',
+        'order_status',
+        'nova_poshta_tracking_number',
+        'delivery_city',
+        'delivery_department',
         'liq_pay_status',
-        'liq_pay_order_id',
         'product_info',
-        't_user_info',
         'c_user_info',
+        't_user_info',
         'created_at',
-        'updated_at'
     ];
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
@@ -106,6 +107,14 @@ class UserOrder
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $delivery_department_ref = null;
+
+    #[ORM\Column(type: 'string', length: 50, options: ['default' => 'new'])]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private string $order_status = 'new';
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $nova_poshta_tracking_number = null;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\OneToMany(
@@ -323,6 +332,35 @@ class UserOrder
     public function setDeliveryDepartmentRef(?string $delivery_department_ref): UserOrder
     {
         $this->delivery_department_ref = $delivery_department_ref;
+
+        return $this;
+    }
+
+    public function getOrderStatus(): string
+    {
+        return $this->order_status;
+    }
+
+    public function getOrderStatusEnum(): OrderStatusEnum
+    {
+        return OrderStatusEnum::from($this->order_status);
+    }
+
+    public function setOrderStatus(string $order_status): UserOrder
+    {
+        $this->order_status = $order_status;
+
+        return $this;
+    }
+
+    public function getNovaPoshtaTrackingNumber(): ?string
+    {
+        return $this->nova_poshta_tracking_number;
+    }
+
+    public function setNovaPoshtaTrackingNumber(?string $nova_poshta_tracking_number): UserOrder
+    {
+        $this->nova_poshta_tracking_number = $nova_poshta_tracking_number;
 
         return $this;
     }

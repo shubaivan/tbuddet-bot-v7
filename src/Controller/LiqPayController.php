@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Entity\Enum\RoleEnum;
+use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -22,6 +24,7 @@ class LiqPayController extends AbstractController
         LoggerInterface $logger,
         Request $request,
         UserOrderRepository $orderRepository,
+        TelegramUserRepository $telegramUserRepository,
         EntityManagerInterface $em,
         string $liqpayPrivateKey,
     ): JsonResponse
@@ -77,6 +80,46 @@ class LiqPayController extends AbstractController
                 chat_id: $userOrder->getTelegramUserid()->getChatId(),
                 parse_mode: ParseMode::HTML
             );
+        }
+
+        // Notify managers about new paid order
+        if ($json_decode['status'] === 'success') {
+            $clientInfo = '';
+            if ($userOrder->getClientUserId()) {
+                $cu = $userOrder->getClientUserId();
+                $clientInfo = trim($cu->getFirstName() . ' ' . $cu->getLastName()) . ', ' . $cu->getPhone();
+            } elseif ($userOrder->getTelegramUserid()) {
+                $tu = $userOrder->getTelegramUserid();
+                $clientInfo = trim($tu->getFirstName() . ' ' . ($tu->getLastName() ?? ''));
+                if ($tu->getPhoneNumber()) {
+                    $clientInfo .= ', ' . $tu->getPhoneNumber();
+                }
+            }
+
+            $managerMsg = sprintf(
+                "<b>Нове замовлення #%d</b>\nСума: %s\n%s%sКлієнт: %s",
+                $userOrder->getId(),
+                $userOrder->getTotalAmount(),
+                $userOrder->getDeliveryCity() ? 'Місто: ' . $userOrder->getDeliveryCity() . "\n" : '',
+                $userOrder->getDeliveryDepartment() ? 'Відділення: ' . $userOrder->getDeliveryDepartment() . "\n" : '',
+                $clientInfo ?: 'Невідомий'
+            );
+
+            $managers = $telegramUserRepository->findByRole(RoleEnum::MANAGER);
+            foreach ($managers as $manager) {
+                try {
+                    $bot->sendMessage(
+                        text: $managerMsg,
+                        chat_id: $manager->getChatId(),
+                        parse_mode: ParseMode::HTML
+                    );
+                } catch (\Throwable $e) {
+                    $logger->error('Failed to notify manager', [
+                        'manager_id' => $manager->getId(),
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         }
 
         return $this->json(['status' => true]);

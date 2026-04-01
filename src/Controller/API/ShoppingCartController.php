@@ -38,6 +38,7 @@ class ShoppingCartController extends AbstractController
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
         private string $liqpayServerUrl,
+        private string $frontendUrl,
     ) {}
 
     #[isGranted(RoleEnum::USER->value)]
@@ -303,6 +304,9 @@ class ShoppingCartController extends AbstractController
         $userOrder->setLiqPayorderid($liqPayOrderID);
         $em->flush();
 
+        $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'ua' : 'en';
+        $resultUrl = sprintf('%s/%s/profile', $this->frontendUrl, $lang);
+
         $params = array(
             'action' => 'pay',
             'version' => '3',
@@ -310,6 +314,7 @@ class ShoppingCartController extends AbstractController
             'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
+            'result_url' => $resultUrl,
             'description' => $description
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);

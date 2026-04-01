@@ -24,10 +24,26 @@ class NovaPoshtaService
         ]);
     }
 
+    /**
+     * Get tracking status for a document number (TTN).
+     * Returns StatusCode: 1=created, 2=deleted, 3=not found, 4=in transit,
+     * 5=at destination city, 6=at department, 7=picked up, 9=delivered, 10=returned, 11=returning
+     */
+    public function getTrackingStatus(string $trackingNumber): array
+    {
+        $result = $this->callApi('TrackingDocument', 'getStatusDocuments', [
+            'Documents' => [
+                ['DocumentNumber' => $trackingNumber],
+            ],
+        ]);
+
+        return $result[0] ?? [];
+    }
+
     public function getWarehouses(string $cityRef, int $limit = 50, int $page = 1): array
     {
         return $this->callApi('AddressGeneral', 'getWarehouses', [
-            'CityRef' => $cityRef,
+            'SettlementRef' => $cityRef,
             'Limit' => (string)$limit,
             'Page' => (string)$page,
             'Language' => 'UA',

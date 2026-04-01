@@ -1,0 +1,212 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Замовлення #{{ order.id }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .order-detail { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .section { background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #007bff; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; }
+        .info-item label { font-weight: 500; font-size: 13px; color: #777; display: block; margin-bottom: 2px; }
+        .info-item .value { font-size: 15px; color: #333; }
+        .form-label { font-weight: 500; margin-bottom: 4px; display: block; font-size: 14px; color: #555; }
+        .form-input, .form-select { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; }
+        .form-input:focus, .form-select:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,.15); }
+        .form-group { margin-bottom: 16px; }
+        .actions-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+        .btn-save { background: #007bff; color: #fff; border: none; border-radius: 6px; padding: 12px 40px; cursor: pointer; font-size: 16px; font-weight: 600; }
+        .btn-save:hover { background: #0069d9; }
+        .btn-back { background: #6c757d; color: #fff; border: none; border-radius: 6px; padding: 12px 24px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .btn-back:hover { background: #5a6268; color: #fff; text-decoration: none; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+        .status-new { background: #e3f2fd; color: #1565c0; }
+        .status-processing { background: #fff3e0; color: #e65100; }
+        .status-shipped { background: #e8f5e9; color: #2e7d32; }
+        .status-delivered { background: #e0f2f1; color: #00695c; }
+        .status-cancelled { background: #fce4ec; color: #c62828; }
+        .product-list { list-style: none; padding: 0; margin: 0; }
+        .product-list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .product-list li:last-child { border-bottom: none; }
+        .tracking-link { color: #007bff; text-decoration: none; }
+        .tracking-link:hover { text-decoration: underline; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+
+    <div class="order-detail">
+        <div class="actions-bar" style="margin-bottom: 20px;">
+            <h2>Замовлення #{{ order.id }}</h2>
+            <a href="{{ path('app_admin_orders') }}" class="btn-back">&larr; Назад до списку</a>
+        </div>
+
+        {# Order Info #}
+        <div class="section">
+            <div class="section-title">Інформація</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Сума</label>
+                    <div class="value"><strong>{{ order.totalAmount }} грн</strong></div>
+                </div>
+                <div class="info-item">
+                    <label>Оплата LiqPay</label>
+                    <div class="value">
+                        {% if order.liqPayStatus == 'success' %}
+                            <span style="color: #2e7d32;">Оплачено</span>
+                        {% elseif order.liqPayStatus %}
+                            {{ order.liqPayStatus }}
+                        {% else %}
+                            <span style="color: #999;">Очікує</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <label>Дата</label>
+                    <div class="value">{{ order.createdAt|date('d.m.Y H:i') }}</div>
+                </div>
+                <div class="info-item">
+                    <label>LiqPay ID</label>
+                    <div class="value">{{ order.liqPayOrderId ?? '---' }}</div>
+                </div>
+            </div>
+        </div>
+
+        {# Client Info #}
+        <div class="section">
+            <div class="section-title">Клієнт</div>
+            <div class="info-grid">
+                {% if order.clientUserId %}
+                    <div class="info-item">
+                        <label>Ім'я</label>
+                        <div class="value">{{ order.clientUserId.firstName }} {{ order.clientUserId.lastName }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Телефон</label>
+                        <div class="value">{{ order.clientUserId.phone ?? '---' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Email</label>
+                        <div class="value">{{ order.clientUserId.email ?? '---' }}</div>
+                    </div>
+                {% endif %}
+                {% if order.telegramUserId %}
+                    <div class="info-item">
+                        <label>Telegram</label>
+                        <div class="value">
+                            {{ order.telegramUserId.firstName }} {{ order.telegramUserId.lastName ?? '' }}
+                            {% if order.telegramUserId.username %}
+                                (@{{ order.telegramUserId.username }})
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if order.telegramUserId.phoneNumber %}
+                        <div class="info-item">
+                            <label>Телефон (Telegram)</label>
+                            <div class="value">{{ order.telegramUserId.phoneNumber }}</div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+                {% if order.phone %}
+                    <div class="info-item">
+                        <label>Телефон (замовлення)</label>
+                        <div class="value">{{ order.phone }}</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Delivery #}
+        {% if order.deliveryCity %}
+        <div class="section">
+            <div class="section-title">Доставка (Нова Пошта)</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Місто</label>
+                    <div class="value">{{ order.deliveryCity }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Відділення</label>
+                    <div class="value">{{ order.deliveryDepartment ?? '---' }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Products #}
+        <div class="section">
+            <div class="section-title">Товари</div>
+            {% if order.purchaseProduct|length > 0 %}
+                <ul class="product-list">
+                    {% for pp in order.purchaseProduct %}
+                        <li>
+                            <strong>{{ pp.product.productName.ua ?? pp.product.productName.en ?? '' }}</strong>
+                            &times; {{ pp.quantity }}
+                            {% if pp.productProperties|length > 0 %}
+                                <br><small style="color: #666;">
+                                    {% for prop in pp.productProperties %}
+                                        {{ prop.property_name }}: {{ prop.property_value }}
+                                        {% if prop.property_price_impact > 0 %}(+{{ prop.property_price_impact }}){% endif %}
+                                        {% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% elseif order.productId %}
+                <p>{{ order.productId.productName({'ua': 'ua', 'en': 'en'}.ua) }}</p>
+            {% endif %}
+            {% if order.description %}
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+                    <label style="font-weight: 500; font-size: 13px; color: #777;">Опис</label>
+                    <pre style="white-space: pre-wrap; font-size: 13px; color: #555; margin: 4px 0 0;">{{ order.description }}</pre>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Status & Tracking Management #}
+        <div class="section">
+            <div class="section-title">Управління замовленням</div>
+            <form method="post" action="{{ path('app_admin_order_update', {id: order.id}) }}">
+                <div class="info-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="order_status">Статус замовлення</label>
+                        <select id="order_status" name="order_status" class="form-select">
+                            {% for status in statuses %}
+                                <option value="{{ status.value }}" {% if order.orderStatus == status.value %}selected{% endif %}>
+                                    {{ status.label() }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="nova_poshta_tracking_number">Номер ТТН (Нова Пошта)</label>
+                        <input type="text" id="nova_poshta_tracking_number" name="nova_poshta_tracking_number"
+                               class="form-input" value="{{ order.novaPoshtaTrackingNumber ?? '' }}"
+                               placeholder="Наприклад: 20450000000000">
+                    </div>
+                </div>
+
+                {% if order.novaPoshtaTrackingNumber %}
+                    <div style="margin-bottom: 16px;">
+                        <a href="https://novaposhta.ua/tracking/?cargo_number={{ order.novaPoshtaTrackingNumber }}"
+                           target="_blank" class="tracking-link">
+                            Відстежити посилку &rarr;
+                        </a>
+                    </div>
+                {% endif %}
+
+                <div class="actions-bar">
+                    <button type="submit" class="btn-save">Зберегти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+{% endblock %}

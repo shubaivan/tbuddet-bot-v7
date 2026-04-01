@@ -1,0 +1,242 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ category ? 'Редагувати' : 'Нова' }} категорія{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .category-form { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .section { background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #007bff; }
+        .lang-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-label { font-weight: 500; margin-bottom: 4px; display: block; font-size: 14px; color: #555; }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,.15); }
+        .form-group { margin-bottom: 16px; }
+        .lang-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+        .lang-ua { background: #fff3cd; color: #856404; }
+        .lang-en { background: #d1ecf1; color: #0c5460; }
+        .btn-save { background: #007bff; color: #fff; border: none; border-radius: 6px; padding: 12px 40px; cursor: pointer; font-size: 16px; font-weight: 600; }
+        .btn-save:hover { background: #0069d9; }
+        .btn-save:disabled { background: #6c757d; cursor: not-allowed; }
+        .btn-back { background: #6c757d; color: #fff; border: none; border-radius: 6px; padding: 12px 24px; cursor: pointer; font-size: 14px; text-decoration: none; }
+        .btn-back:hover { background: #5a6268; color: #fff; text-decoration: none; }
+        .actions-bar { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+        .error-message { color: #dc3545; font-size: 13px; margin-top: 4px; }
+        .success-banner { background: #d4edda; color: #155724; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; display: none; }
+        .parent-select { width: 100%; }
+        #upload-area { min-height: 200px; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+
+    <div class="category-form">
+        <div class="actions-bar" style="margin-bottom: 20px;">
+            <h2>{{ category ? 'Редагувати категорію #' ~ category.id : 'Нова категорія' }}</h2>
+            <a href="{{ path('app_admin_categories') }}" class="btn-back">← Назад до списку</a>
+        </div>
+
+        <div class="success-banner" id="successBanner">Категорію збережено!</div>
+
+        <form id="categoryForm">
+            {% if category %}
+                <input type="hidden" name="category_id" value="{{ category.id }}">
+            {% endif %}
+
+            {# ── Section: Basic Info ── #}
+            <div class="section">
+                <div class="section-title">Основна інформація</div>
+
+                <div class="lang-row">
+                    <div class="form-group">
+                        <label class="form-label">Назва категорії <span class="lang-badge lang-ua">UA</span></label>
+                        <input type="text" class="form-input" name="category_name[ua]" id="category_name_ua"
+                               value="{{ category ? category.categoryName.ua|default('') : '' }}" placeholder="Назва українською">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category name <span class="lang-badge lang-en">EN</span></label>
+                        <input type="text" class="form-input" name="category_name[en]" id="category_name_en"
+                               value="{{ category ? category.categoryName.en|default('') : '' }}" placeholder="Name in English">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Порядок в списку</label>
+                    <input type="number" class="form-input" name="order_category" id="order_category"
+                           value="{{ category ? category.orderCategory : '0' }}" placeholder="0" style="max-width: 200px;">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Батьківські категорії</label>
+                    <select name="category_ids[]" id="parentCategories" class="parent-select" multiple></select>
+                </div>
+            </div>
+
+            {# ── Section: Photos ── #}
+            <div class="section">
+                <div class="section-title">Фотографії</div>
+                <div id="attachment_files_template"></div>
+            </div>
+
+            {# ── Save ── #}
+            <div class="actions-bar" style="margin-top: 24px; margin-bottom: 40px;">
+                <a href="{{ path('app_admin_categories') }}" class="btn-back">← Скасувати</a>
+                <button type="button" class="btn-save" id="saveCategory">Зберегти</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+
+    <script>
+        window._categoryData = {{ category ? category.id : 'null' }};
+        window._categoryParents = {{ category ? category.parentsSelect2Info|json_encode|raw : '[]' }};
+    </script>
+
+    {{ encore_entry_script_tags('index/js/products.min') }}
+
+    <script defer>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Parent Categories Select2
+            const parentSelect = $('#parentCategories');
+            parentSelect.select2({
+                placeholder: 'Оберіть батьківську категорію',
+                multiple: true,
+                allowClear: true,
+                ajax: {
+                    type: 'post',
+                    url: window.Routing.generate('admin-category-select2'),
+                    data: function(params) {
+                        return { search: params.term, page: params.page || 1, type: 'public' };
+                    },
+                }
+            });
+
+            // Pre-select parent categories
+            if (window._categoryParents && window._categoryParents.length) {
+                window._categoryParents.forEach(function(cat) {
+                    var option = new Option(cat.name.ua || cat.name, cat.id, true, true);
+                    parentSelect.append(option).trigger('change');
+                });
+            }
+
+            // File upload
+            if (window._categoryData) {
+                $.ajax({
+                    type: "POST",
+                    url: window.Routing.generate('app_attachmentfile_getattachmentfileslist'),
+                    data: { id: window._categoryData, entity: 'App\\Entity\\Category' },
+                    success: function(data) {
+                        if (typeof renderAttachmentFilesBlock === 'function') {
+                            renderAttachmentFilesBlock(window._categoryData, $('#categoryForm'), null, null, data, function(uppy, data) {
+                                (async function(arr) {
+                                    for (let item of arr) {
+                                        try {
+                                            let blob = await getBlobFromImageUri(item.path);
+                                            await delay(1000);
+                                            addInitPhotoToUppy(uppy, blob, false, item);
+                                        } catch(e) {
+                                            let blob = await createErrorImgPlaceHolder();
+                                            await delay(1000);
+                                            addInitPhotoToUppy(uppy, blob, true, item);
+                                        } finally {
+                                            uppy.getFiles().forEach(function(file) {
+                                                uppy.setFileState(file.id, { progress: { uploadComplete: true, uploadStarted: true } });
+                                            });
+                                        }
+                                    }
+                                })(data);
+                            }, 'App\\Entity\\Category');
+                        }
+                    }
+                });
+            } else {
+                if (typeof renderAttachmentFilesBlock === 'function') {
+                    renderAttachmentFilesBlock(null, $('#categoryForm'), null, null, [], null, 'App\\Entity\\Category');
+                }
+            }
+
+            // Validation
+            function validateForm() {
+                let valid = true;
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+                document.querySelectorAll('.form-input').forEach(el => el.style.borderColor = '#ced4da');
+
+                function addError(parentEl, message) {
+                    valid = false;
+                    const span = document.createElement('span');
+                    span.className = 'error-message';
+                    span.textContent = message;
+                    parentEl.appendChild(span);
+                }
+
+                const nameUa = document.getElementById('category_name_ua');
+                if (!nameUa || !nameUa.value.trim()) {
+                    if (nameUa) nameUa.style.borderColor = '#dc3545';
+                    addError(nameUa.parentElement, 'Назва категорії (UA) — обов\'язкове поле');
+                }
+
+                return valid;
+            }
+
+            // Save
+            document.getElementById('saveCategory').addEventListener('click', function() {
+                if (!validateForm()) return;
+
+                const btn = this;
+                btn.disabled = true;
+                btn.textContent = 'Збереження...';
+
+                const formData = $('#categoryForm').serialize();
+
+                $.ajax({
+                    type: "POST",
+                    url: window.Routing.generate('admin-categories-create'),
+                    data: formData,
+                    success: function(data) {
+                        btn.disabled = false;
+                        btn.textContent = 'Зберегти';
+
+                        if (data.id) {
+                            window.location.href = '/admin/category/form/' + data.id;
+                        } else {
+                            document.getElementById('successBanner').style.display = 'block';
+                            setTimeout(() => { document.getElementById('successBanner').style.display = 'none'; }, 3000);
+                        }
+                    },
+                    error: function(result) {
+                        btn.disabled = false;
+                        btn.textContent = 'Зберегти';
+                        document.querySelectorAll('.error-message').forEach(el => el.remove());
+
+                        if (result.responseJSON && result.responseJSON.errors) {
+                            $.each(result.responseJSON.errors, function(field, errors) {
+                                const input = document.getElementById(field);
+                                if (input) {
+                                    input.style.borderColor = '#dc3545';
+                                    errors.forEach(function(err) {
+                                        const span = document.createElement('span');
+                                        span.className = 'error-message';
+                                        span.textContent = err.message;
+                                        input.parentElement.appendChild(span);
+                                    });
+                                }
+                            });
+                        } else if (result.responseJSON && result.responseJSON.detail) {
+                            const actionsBar = document.querySelector('.actions-bar:last-child');
+                            const span = document.createElement('span');
+                            span.className = 'error-message';
+                            span.style.display = 'block';
+                            span.textContent = result.responseJSON.detail;
+                            actionsBar.insertAdjacentElement('beforebegin', span);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

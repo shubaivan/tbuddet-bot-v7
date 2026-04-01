@@ -10,6 +10,41 @@
 {% block body %}
     {{ parent() }}
 
+    <div class="filters-bar" style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;align-items:end;">
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Статус замовлення</label>
+            <select id="filterStatus" class="form-control form-control-sm" style="width:160px;">
+                <option value="">Всі</option>
+                <option value="new">Нове</option>
+                <option value="processing">В обробці</option>
+                <option value="shipped">Відправлено</option>
+                <option value="delivered">Доставлено</option>
+                <option value="cancelled">Скасовано</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Оплата</label>
+            <select id="filterPayment" class="form-control form-control-sm" style="width:160px;">
+                <option value="">Всі</option>
+                <option value="success">Оплачено</option>
+                <option value="failed">Не оплачено</option>
+                <option value="pending">Очікує</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Дата від</label>
+            <input type="date" id="filterDateFrom" class="form-control form-control-sm" style="width:150px;">
+        </div>
+        <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Дата до</label>
+            <input type="date" id="filterDateTo" class="form-control form-control-sm" style="width:150px;">
+        </div>
+        <div>
+            <button id="applyFilters" class="btn btn-primary btn-sm">Фільтрувати</button>
+            <button id="resetFilters" class="btn btn-secondary btn-sm">Скинути</button>
+        </div>
+    </div>
+
     {% if th_keys|length %}
         <!-- Table -->
         <table id='telegramUserTable' class='display dataTable'>

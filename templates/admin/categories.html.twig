@@ -9,10 +9,9 @@
 
 {% block body %}
     {{ parent() }}
-    <!-- Button trigger modal -->
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
-        Створити Категрію
-    </button>
+    <a href="{{ path('admin-category-form') }}" target="_blank" class="btn btn-primary" style="margin-bottom: 15px;">
+        + Створити категорію
+    </a>
     {% if th_keys|length %}
         <!-- Table -->
         <table id='telegramUserTable' class='display dataTable'>
