@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 560px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; }
+        .btn { display: inline-block; background: #4CAF50; color: #fff; text-decoration: none; padding: 12px 32px; border-radius: 6px; font-size: 16px; margin: 24px 0; }
+        .footer { margin-top: 32px; font-size: 13px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Buddet</h2>
+        <p>{{ user.firstName }}, {{ user.lastName }}, </p>
+        <p>{{ user.email }}</p>
+        <p>Для завершення реєстрації та встановлення пароля натисніть кнопку нижче:</p>
+
+        <a href="{{ confirmUrl }}" class="btn">Підтвердити email</a>
+
+        <p>Або скопіюйте посилання:</p>
+        <p style="word-break: break-all; font-size: 14px; color: #555;">{{ confirmUrl }}</p>
+
+        <p class="footer">
+            Посилання дійсне протягом 24 годин.<br>
+            Якщо ви не реєструвалися на Buddet, просто проігноруйте цей лист.
+        </p>
+    </div>
+</body>
+</html>

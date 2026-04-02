@@ -80,8 +80,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private Collection|PersistentCollection|ArrayCollection $userRoles;
 
     #[Ignore]
-    #[ORM\Column(name: 'password', type: 'string', length: 255, nullable: false)]
-    private string $password;
+    #[ORM\Column(name: 'password', type: 'string', length: 255, nullable: true)]
+    private ?string $password = null;
+
+    #[ORM\Column(name: 'confirmation_token', type: 'string', length: 64, nullable: true)]
+    private ?string $confirmationToken = null;
+
+    #[ORM\Column(name: 'confirmation_token_expires_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $confirmationTokenExpiresAt = null;
+
+    #[ORM\Column(name: 'is_email_confirmed', type: 'boolean', options: ['default' => false])]
+    private bool $isEmailConfirmed = false;
 
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
@@ -166,14 +175,50 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @see PasswordAuthenticatedUserInterface
      */
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }
 
-    public function setPassword(string $password): self
+    public function setPassword(?string $password): self
     {
         $this->password = $password;
+
+        return $this;
+    }
+
+    public function getConfirmationToken(): ?string
+    {
+        return $this->confirmationToken;
+    }
+
+    public function setConfirmationToken(?string $confirmationToken): self
+    {
+        $this->confirmationToken = $confirmationToken;
+
+        return $this;
+    }
+
+    public function getConfirmationTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->confirmationTokenExpiresAt;
+    }
+
+    public function setConfirmationTokenExpiresAt(?\DateTimeImmutable $confirmationTokenExpiresAt): self
+    {
+        $this->confirmationTokenExpiresAt = $confirmationTokenExpiresAt;
+
+        return $this;
+    }
+
+    public function isEmailConfirmed(): bool
+    {
+        return $this->isEmailConfirmed;
+    }
+
+    public function setIsEmailConfirmed(bool $isEmailConfirmed): self
+    {
+        $this->isEmailConfirmed = $isEmailConfirmed;
 
         return $this;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Controller\Request\User\Create\ConfirmEmailDto;
 use App\Controller\Request\User\Create\RegistrationUserDto;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Role;
@@ -10,12 +11,13 @@ use App\Entity\UserRole;
 use App\Exception\Enum\AuthExceptionEnum;
 use App\Exception\RegistrationException;
 use App\Repository\RoleRepository;
+use App\Repository\UserRepository;
+use App\Service\EmailService;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
@@ -30,10 +32,10 @@ class SecurityController extends AbstractController
     public function registration(
         ObjectHandler $objectHandler,
         Request $request,
-        UserPasswordHasherInterface $passwordHasher,
         ValidatorInterface $validator,
         RoleRepository $roleRepository,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        EmailService $emailService
     ): Response {
         /** @var RegistrationUserDto $registrationUserDto */
         $registrationUserDto = $objectHandler->handleRequestByObject(
@@ -57,18 +59,12 @@ class SecurityController extends AbstractController
 
         $entityManager->persist($user);
 
-        $password = $passwordHasher->hashPassword(
-            $user,
-            $registrationUserDto->getPassword()
-        );
-
-        $user->setPassword($password);
-
         $user
             ->setEmail($registrationUserDto->getEmail())
             ->setFirstName($registrationUserDto->getFirstName())
             ->setLastName($registrationUserDto->getLastName())
             ->setPhone($registrationUserDto->getPhone())
+            ->setIsEmailConfirmed(false)
         ;
 
         $errors = $validator->validate($user, null, [Constraint::DEFAULT_GROUP]);
@@ -83,11 +79,13 @@ class SecurityController extends AbstractController
             );
         }
 
+        $emailService->sendConfirmationEmail($user);
+
         $entityManager->flush();
 
         return $this->json([
             'message' => [
-                'message' => 'User registered'
+                'message' => 'Registration successful. Please check your email to confirm your account.'
             ],
             'entity' => $user
         ], Response::HTTP_OK, [], [
@@ -95,5 +93,51 @@ class SecurityController extends AbstractController
                 User::USER_OWN_REGISTRATION
             ]
         ]);
+    }
+
+    #[Route(path: '/confirm-email', name: 'user_confirm_email', methods: [Request::METHOD_POST])]
+    public function confirmEmail(
+        ObjectHandler $objectHandler,
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        UserRepository $userRepository,
+        EntityManagerInterface $entityManager
+    ): Response {
+        /** @var ConfirmEmailDto $confirmEmailDto */
+        $confirmEmailDto = $objectHandler->handleRequestByObject(
+            AuthExceptionEnum::REGISTRATION_EXCEPTION,
+            ConfirmEmailDto::class,
+            $request
+        );
+
+        $user = $userRepository->findOneBy(['confirmationToken' => $confirmEmailDto->getToken()]);
+
+        if (!$user) {
+            throw new RegistrationException(
+                Response::HTTP_BAD_REQUEST,
+                'Invalid or expired confirmation token'
+            );
+        }
+
+        if ($user->getConfirmationTokenExpiresAt() < new \DateTimeImmutable()) {
+            throw new RegistrationException(
+                Response::HTTP_BAD_REQUEST,
+                'Confirmation token has expired. Please register again.'
+            );
+        }
+
+        $password = $passwordHasher->hashPassword($user, $confirmEmailDto->getPassword());
+        $user->setPassword($password);
+        $user->setIsEmailConfirmed(true);
+        $user->setConfirmationToken(null);
+        $user->setConfirmationTokenExpiresAt(null);
+
+        $entityManager->flush();
+
+        return $this->json([
+            'message' => [
+                'message' => 'Email confirmed and password set successfully. You can now log in.'
+            ]
+        ], Response::HTTP_OK);
     }
 }

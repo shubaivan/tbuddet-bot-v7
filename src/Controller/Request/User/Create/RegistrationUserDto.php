@@ -2,9 +2,7 @@
 
 namespace App\Controller\Request\User\Create;
 
-use App\Error\ErrorCodeEnum;
 use Symfony\Component\Validator\Constraints as Assert;
-use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 class RegistrationUserDto
 {
@@ -20,14 +18,6 @@ class RegistrationUserDto
     #[Assert\Type('string')]
     #[Assert\NotBlank]
     private $last_name;
-
-    #[Assert\Type('string')]
-    #[Assert\NotBlank(message: 'Password is required')]
-    private $password;
-
-    #[Assert\Type('string')]
-    #[Assert\NotBlank]
-    private $password_repeat;
 
     #[Assert\NotBlank]
     #[Assert\Type('string')]
@@ -93,44 +83,6 @@ class RegistrationUserDto
         return $this;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getPassword()
-    {
-        return $this->password;
-    }
-
-    /**
-     * @param mixed $password
-     * @return RegistrationUserDto
-     */
-    public function setPassword($password)
-    {
-        $this->password = $password;
-
-        return $this;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getPasswordRepeat()
-    {
-        return $this->password_repeat;
-    }
-
-    /**
-     * @param mixed $password_repeat
-     * @return RegistrationUserDto
-     */
-    public function setPasswordRepeat($password_repeat)
-    {
-        $this->password_repeat = $password_repeat;
-
-        return $this;
-    }
-
     public function getPhone(): string
     {
         return $this->phone;
@@ -141,16 +93,5 @@ class RegistrationUserDto
         $this->phone = $phone;
 
         return $this;
-    }
-
-    #[Assert\Callback]
-    public function validate(ExecutionContextInterface $context, mixed $payload): void
-    {
-        if ($this->password_repeat !== $this->password) {
-            $context->buildViolation('password_repeat not confirmed')
-                ->atPath('password_repeat')
-                ->setCode(ErrorCodeEnum::PASSWORD_MISMATCH->value)
-                ->addViolation();
-        }
     }
 }
