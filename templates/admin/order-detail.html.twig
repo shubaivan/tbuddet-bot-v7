@@ -52,10 +52,10 @@
                     <div class="value"><strong>{{ order.totalAmount }} грн</strong></div>
                 </div>
                 <div class="info-item">
-                    <label>Оплата LiqPay</label>
+                    <label>Статус оплати</label>
                     <div class="value">
                         {% if order.liqPayStatus == 'success' %}
-                            <span style="color: #2e7d32;">Оплачено</span>
+                            <span style="color: #2e7d32; font-weight: 600;">Оплачено</span>
                         {% elseif order.liqPayStatus %}
                             {{ order.liqPayStatus }}
                         {% else %}
@@ -64,13 +64,15 @@
                     </div>
                 </div>
                 <div class="info-item">
-                    <label>Дата</label>
+                    <label>Дата створення</label>
                     <div class="value">{{ order.createdAt|date('d.m.Y H:i') }}</div>
                 </div>
+                {% if order.updatedAt and order.updatedAt != order.createdAt %}
                 <div class="info-item">
-                    <label>LiqPay ID</label>
-                    <div class="value">{{ order.liqPayOrderId ?? '---' }}</div>
+                    <label>Останнє оновлення</label>
+                    <div class="value">{{ order.updatedAt|date('d.m.Y H:i') }}</div>
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -166,6 +168,37 @@
                 </div>
             {% endif %}
         </div>
+
+        {# LiqPay Details #}
+        {% if order.liqPayResponse or order.liqPayOrderId %}
+        <div class="section">
+            <div class="section-title">LiqPay</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>LiqPay Order ID</label>
+                    <div class="value">{{ order.liqPayOrderId ?? '---' }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Статус оплати</label>
+                    <div class="value">
+                        {% if order.liqPayStatus == 'success' %}
+                            <span class="status-badge status-shipped">Оплачено</span>
+                        {% elseif order.liqPayStatus %}
+                            <span class="status-badge status-processing">{{ order.liqPayStatus }}</span>
+                        {% else %}
+                            <span class="status-badge status-new">Очікує</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if order.liqPayResponse %}
+                <div style="margin-top: 16px;">
+                    <label style="font-weight: 500; font-size: 13px; color: #777;">Відповідь LiqPay</label>
+                    <pre style="white-space: pre-wrap; font-size: 12px; color: #555; margin: 4px 0 0; background: #f8f9fa; padding: 12px; border-radius: 6px; max-height: 300px; overflow-y: auto;">{{ order.liqPayResponse }}</pre>
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         {# Status & Tracking Management #}
         <div class="section">

@@ -111,13 +111,15 @@ class LiqPayController extends AbstractController
                 }
             }
 
+            $orderUrl = $request->getSchemeAndHttpHost() . '/admin/orders/' . $userOrder->getId();
             $managerMsg = sprintf(
-                "<b>Нове замовлення #%d</b>\nСума: %s\n%s%sКлієнт: %s",
+                "<b>Нове замовлення #%d</b>\nСума: %s грн\n%s%sКлієнт: %s\n\n<a href=\"%s\">Відкрити замовлення</a>",
                 $userOrder->getId(),
                 $userOrder->getTotalAmount(),
                 $userOrder->getDeliveryCity() ? 'Місто: ' . $userOrder->getDeliveryCity() . "\n" : '',
                 $userOrder->getDeliveryDepartment() ? 'Відділення: ' . $userOrder->getDeliveryDepartment() . "\n" : '',
-                $clientInfo ?: 'Невідомий'
+                $clientInfo ?: 'Невідомий',
+                $orderUrl
             );
 
             $managers = $telegramUserRepository->findByRole(RoleEnum::MANAGER);
