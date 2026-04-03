@@ -15,6 +15,8 @@ use App\Repository\UserRepository;
 use App\Service\EmailService;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -101,7 +103,11 @@ class SecurityController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         UserRepository $userRepository,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        JWTTokenManagerInterface $jwtManager,
+        RefreshTokenManagerInterface $refreshTokenManager,
+        int $jwtTtl,
+        int $jwtRefreshTtl,
     ): Response {
         /** @var ConfirmEmailDto $confirmEmailDto */
         $confirmEmailDto = $objectHandler->handleRequestByObject(
@@ -134,10 +140,20 @@ class SecurityController extends AbstractController
 
         $entityManager->flush();
 
+        // Auto-login: generate JWT tokens
+        $token = $jwtManager->create($user);
+
+        $refreshToken = $refreshTokenManager->create();
+        $refreshToken->setUsername($user->getUserIdentifier());
+        $refreshToken->setRefreshToken();
+        $refreshToken->setValid((new \DateTime())->modify('+' . $jwtRefreshTtl . ' seconds'));
+        $refreshTokenManager->save($refreshToken);
+
         return $this->json([
-            'message' => [
-                'message' => 'Email confirmed and password set successfully. You can now log in.'
-            ]
+            'token' => $token,
+            'refresh_token' => $refreshToken->getRefreshToken(),
+            'token_expiration' => time() + $jwtTtl,
+            'refresh_token_expiration' => time() + $jwtRefreshTtl,
         ], Response::HTTP_OK);
     }
 }

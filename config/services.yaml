@@ -23,6 +23,8 @@ services:
             $novaPoshtaApiKey: '%env(NOVA_POSHTA_API_KEY)%'
             $frontendUrl: '%env(FRONTEND_URL)%'
             $mailerFrom: '%env(MAILER_FROM)%'
+            $jwtTtl: '%env(int:JWT_TTL)%'
+            $jwtRefreshTtl: '%env(int:JWT_REFRESH_TTL)%'
             $defaultTargetRoute: 'app_admin'  # redirect after login success
             $guardRoute: 'login_guard'        # guard route
             $loginRoute: 'login_public'       # optional, if login fails user will be redirected there
