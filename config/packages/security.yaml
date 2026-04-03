@@ -80,6 +80,7 @@ security:
         - { route: 'public_product_purchase_by_id', roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/novaposhta, roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/guide, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_MANAGER }
         # - { path: ^/profile, roles: ROLE_USER }
 
