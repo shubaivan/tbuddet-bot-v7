@@ -67,7 +67,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $lastName = null;
 
     #[Assert\NotBlank]
-    #[Assert\Length(min: 12, max: 12, minMessage: 'Phone cannot be less than {{ limit }} characters',
+    #[Assert\Length(min: 10, max: 15, minMessage: 'Phone cannot be less than {{ limit }} characters',
         maxMessage: 'Phone cannot be longer than {{ limit }} characters')]
     #[Assert\Regex(pattern: "/^[0-9]*$/", message: "Please use number only")]
     #[Groups([User::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, self::USER_OWN_REGISTRATION])]
