@@ -179,9 +179,20 @@ class AdminController extends AbstractController
         #[MapEntity(id: 'id')] UserOrder $order,
     ): Response
     {
+        $liqPayResponseFormatted = null;
+        if ($order->getLiqPayResponse()) {
+            $decoded = json_decode($order->getLiqPayResponse(), true);
+            if ($decoded) {
+                $liqPayResponseFormatted = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            } else {
+                $liqPayResponseFormatted = $order->getLiqPayResponse();
+            }
+        }
+
         return $this->render('admin/order-detail.html.twig', [
             'order' => $order,
             'statuses' => OrderStatusEnum::cases(),
+            'liqPayResponseFormatted' => $liqPayResponseFormatted,
         ]);
     }
 
