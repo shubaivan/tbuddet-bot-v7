@@ -24,7 +24,7 @@ class EmailService
         $user->setConfirmationToken($token);
         $user->setConfirmationTokenExpiresAt($expiresAt);
 
-        $confirmUrl = rtrim($this->frontendUrl, '/') . '/confirm-email?token=' . $token;
+        $confirmUrl = rtrim($this->frontendUrl, '/') . '/uk/confirm-email?token=' . $token;
 
         $email = (new TemplatedEmail())
             ->from(new Address($this->mailerFrom, 'Buddet'))

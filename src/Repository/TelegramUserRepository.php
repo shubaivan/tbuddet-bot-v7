@@ -41,7 +41,7 @@ class TelegramUserRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('tu')
             ->innerJoin('tu.userRoles', 'r')
             ->where('r.name = :role')
-            ->andWhere('tu.chat_id IS NOT NULL')
+            ->andWhere('tu.chatId IS NOT NULL')
             ->setParameter('role', $role->value)
             ->getQuery()
             ->getResult();
