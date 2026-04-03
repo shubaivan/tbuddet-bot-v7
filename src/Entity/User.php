@@ -60,13 +60,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'first_name', type: 'string', length: 255, nullable: false)]
     private string $firstName;
 
-    #[Assert\NotNull(message: 'Last name is required')]
-    #[Assert\NotBlank(message: 'Last name should not be blank')]
     #[Assert\Length(min: 2, max: 255, minMessage: 'Last name cannot be less than {{ limit }} characters',
         maxMessage: 'Last name cannot be longer than {{ limit }} characters')]
     #[Groups([self::USER_OWN_REGISTRATION, User::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP])]
-    #[ORM\Column(name: 'last_name', type: 'string', length: 255, nullable: false)]
-    private string $lastName;
+    #[ORM\Column(name: 'last_name', type: 'string', length: 255, nullable: true)]
+    private ?string $lastName = null;
 
     #[Assert\NotBlank]
     #[Assert\Length(min: 12, max: 12, minMessage: 'Phone cannot be less than {{ limit }} characters',
@@ -296,12 +294,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getLastName(): string
+    public function getLastName(): ?string
     {
         return $this->lastName;
     }
 
-    public function setLastName(string $lastName): self
+    public function setLastName(?string $lastName): self
     {
         $this->lastName = $lastName;
 

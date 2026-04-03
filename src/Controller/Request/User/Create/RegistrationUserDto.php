@@ -16,8 +16,7 @@ class RegistrationUserDto
     private $first_name;
 
     #[Assert\Type('string')]
-    #[Assert\NotBlank]
-    private $last_name;
+    private $last_name = null;
 
     #[Assert\NotBlank]
     #[Assert\Type('string')]
