@@ -68,6 +68,16 @@ class LiqPayController extends AbstractController
         $userOrder->setLiqPaystatus($newStatus);
         $em->flush();
 
+        $logger->info('liqpay_callback_processed', [
+            'order_id' => $order_id,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus,
+            'liqpay_order_id' => $json_decode['order_id'] ?? null,
+            'amount' => $json_decode['amount'] ?? null,
+            'payment_id' => $json_decode['payment_id'] ?? null,
+            'action' => $json_decode['action'] ?? null,
+        ]);
+
         // Only notify user if status actually changed to success (prevent duplicate messages)
         $alreadyNotified = $previousStatus === 'success';
 
@@ -87,8 +97,8 @@ class LiqPayController extends AbstractController
             );
         }
 
-        // Notify managers about new paid order
-        if ($json_decode['status'] === 'success') {
+        // Notify managers about new paid order (only once, not on duplicate callbacks)
+        if (!$alreadyNotified && $newStatus === 'success') {
             $clientInfo = '';
             if ($userOrder->getClientUserId()) {
                 $cu = $userOrder->getClientUserId();
