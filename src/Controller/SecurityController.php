@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Controller\Request\User\Create\ConfirmEmailDto;
+use App\Controller\Request\User\Create\ForgotPasswordDto;
 use App\Controller\Request\User\Create\RegistrationUserDto;
+use App\Controller\Request\User\Create\ResetPasswordDto;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Role;
 use App\Entity\User;
@@ -141,6 +143,93 @@ class SecurityController extends AbstractController
         $entityManager->flush();
 
         // Auto-login: generate JWT tokens
+        $token = $jwtManager->create($user);
+
+        $refreshToken = $refreshTokenManager->create();
+        $refreshToken->setUsername($user->getUserIdentifier());
+        $refreshToken->setRefreshToken();
+        $refreshToken->setValid((new \DateTime())->modify('+' . $jwtRefreshTtl . ' seconds'));
+        $refreshTokenManager->save($refreshToken);
+
+        return $this->json([
+            'token' => $token,
+            'refresh_token' => $refreshToken->getRefreshToken(),
+            'token_expiration' => time() + $jwtTtl,
+            'refresh_token_expiration' => time() + $jwtRefreshTtl,
+        ], Response::HTTP_OK);
+    }
+
+    #[Route(path: '/forgot-password', name: 'user_forgot_password', methods: [Request::METHOD_POST])]
+    public function forgotPassword(
+        ObjectHandler $objectHandler,
+        Request $request,
+        UserRepository $userRepository,
+        EntityManagerInterface $entityManager,
+        EmailService $emailService
+    ): Response {
+        /** @var ForgotPasswordDto $dto */
+        $dto = $objectHandler->handleRequestByObject(
+            AuthExceptionEnum::REGISTRATION_EXCEPTION,
+            ForgotPasswordDto::class,
+            $request
+        );
+
+        $user = $userRepository->findOneBy(['email' => $dto->getEmail()]);
+
+        // Always return success to prevent email enumeration
+        if ($user && $user->isEmailConfirmed()) {
+            $emailService->sendPasswordResetEmail($user);
+            $entityManager->flush();
+        }
+
+        return $this->json([
+            'message' => 'If an account with this email exists, a password reset link has been sent.'
+        ], Response::HTTP_OK);
+    }
+
+    #[Route(path: '/reset-password', name: 'user_reset_password', methods: [Request::METHOD_POST])]
+    public function resetPassword(
+        ObjectHandler $objectHandler,
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        UserRepository $userRepository,
+        EntityManagerInterface $entityManager,
+        JWTTokenManagerInterface $jwtManager,
+        RefreshTokenManagerInterface $refreshTokenManager,
+        int $jwtTtl,
+        int $jwtRefreshTtl,
+    ): Response {
+        /** @var ResetPasswordDto $dto */
+        $dto = $objectHandler->handleRequestByObject(
+            AuthExceptionEnum::REGISTRATION_EXCEPTION,
+            ResetPasswordDto::class,
+            $request
+        );
+
+        $user = $userRepository->findOneBy(['resetPasswordToken' => $dto->getToken()]);
+
+        if (!$user) {
+            throw new RegistrationException(
+                Response::HTTP_BAD_REQUEST,
+                'Invalid or expired reset token'
+            );
+        }
+
+        if ($user->getResetPasswordTokenExpiresAt() < new \DateTimeImmutable()) {
+            throw new RegistrationException(
+                Response::HTTP_BAD_REQUEST,
+                'Reset token has expired. Please request a new one.'
+            );
+        }
+
+        $password = $passwordHasher->hashPassword($user, $dto->getPassword());
+        $user->setPassword($password);
+        $user->setResetPasswordToken(null);
+        $user->setResetPasswordTokenExpiresAt(null);
+
+        $entityManager->flush();
+
+        // Auto-login after password reset
         $token = $jwtManager->create($user);
 
         $refreshToken = $refreshTokenManager->create();

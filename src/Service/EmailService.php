@@ -39,4 +39,28 @@ class EmailService
 
         $this->mailer->send($email);
     }
+
+    public function sendPasswordResetEmail(User $user): void
+    {
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = new \DateTimeImmutable('+1 hour');
+
+        $user->setResetPasswordToken($token);
+        $user->setResetPasswordTokenExpiresAt($expiresAt);
+
+        $resetUrl = rtrim($this->frontendUrl, '/') . '/uk/reset-password?token=' . $token;
+
+        $email = (new TemplatedEmail())
+            ->from(new Address($this->mailerFrom, 'Арт Бетон Маркет'))
+            ->to($user->getEmail())
+            ->subject('Скидання пароля — Арт Бетон Маркет')
+            ->htmlTemplate('email/password-reset.html.twig')
+            ->context([
+                'user' => $user,
+                'resetUrl' => $resetUrl,
+                'expiresAt' => $expiresAt,
+            ]);
+
+        $this->mailer->send($email);
+    }
 }

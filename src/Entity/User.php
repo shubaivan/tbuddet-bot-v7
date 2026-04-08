@@ -90,6 +90,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'is_email_confirmed', type: 'boolean', options: ['default' => false])]
     private bool $isEmailConfirmed = false;
 
+    #[ORM\Column(name: 'reset_password_token', type: 'string', length: 64, nullable: true)]
+    private ?string $resetPasswordToken = null;
+
+    #[ORM\Column(name: 'reset_password_token_expires_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $resetPasswordTokenExpiresAt = null;
+
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
 
@@ -217,6 +223,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setIsEmailConfirmed(bool $isEmailConfirmed): self
     {
         $this->isEmailConfirmed = $isEmailConfirmed;
+
+        return $this;
+    }
+
+    public function getResetPasswordToken(): ?string
+    {
+        return $this->resetPasswordToken;
+    }
+
+    public function setResetPasswordToken(?string $resetPasswordToken): self
+    {
+        $this->resetPasswordToken = $resetPasswordToken;
+
+        return $this;
+    }
+
+    public function getResetPasswordTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->resetPasswordTokenExpiresAt;
+    }
+
+    public function setResetPasswordTokenExpiresAt(?\DateTimeImmutable $resetPasswordTokenExpiresAt): self
+    {
+        $this->resetPasswordTokenExpiresAt = $resetPasswordTokenExpiresAt;
 
         return $this;
     }
