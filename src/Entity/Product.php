@@ -138,10 +138,12 @@ class Product implements AttachmentFilesInterface
         return $this->id;
     }
 
-    public function getProductName(?UserLanguageEnum $language = null): mixed
+    public function getProductName(UserLanguageEnum|string|null $language = null): mixed
     {
-        return ($language !== null && isset($this->product_name[$language->value]))
-            ? $this->product_name[$language->value]
+        $key = $language instanceof UserLanguageEnum ? $language->value : $language;
+
+        return ($key !== null && isset($this->product_name[$key]))
+            ? $this->product_name[$key]
             : $this->product_name;
     }
 
