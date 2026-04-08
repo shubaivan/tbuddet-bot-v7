@@ -101,25 +101,52 @@ class PriceRingConversation extends Conversation
         return false;
     }
 
-    // ─── Helper: get photo URL (skip avif) ───
+    // ─── Helper: get photo URL (convert avif → jpg for Telegram) ───
 
-    private function getProductPhotoUrl($product): ?string
+    private function getProductPhotoUrl($product): string|InputFile|null
     {
         $files = $product->getFiles();
         if ($files->count() === 0) return null;
 
+        // Prefer Telegram-compatible formats
+        $avifFile = null;
         foreach ($files as $file) {
             $ext = strtolower($file->getExtension());
             if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
                 return $this->defaultStorage->publicUrl($file->getPath());
             }
+            if ($ext === 'avif' && $avifFile === null) {
+                $avifFile = $file;
+            }
         }
+
+        // Convert first avif to jpg for Telegram
+        if ($avifFile !== null) {
+            try {
+                $url = $this->defaultStorage->publicUrl($avifFile->getPath());
+                $avifData = file_get_contents($url);
+                if ($avifData === false) return null;
+
+                $img = imagecreatefromstring($avifData);
+                if ($img === false) return null;
+
+                $tmpPath = sys_get_temp_dir() . '/tg_avif_' . md5($avifFile->getPath()) . '.jpg';
+                imagejpeg($img, $tmpPath, 85);
+                imagedestroy($img);
+
+                return InputFile::make($tmpPath);
+            } catch (\Throwable $e) {
+                $this->logger->warning('AVIF conversion failed', ['error' => $e->getMessage()]);
+                return null;
+            }
+        }
+
         return null;
     }
 
     // ─── Helper: send or edit the single main message ───
 
-    private function sendOrEdit(Nutgram $bot, string $text, ?InlineKeyboardMarkup $keyboard = null, ?string $photoUrl = null): void
+    private function sendOrEdit(Nutgram $bot, string $text, ?InlineKeyboardMarkup $keyboard = null, string|InputFile|null $photoUrl = null): void
     {
         $chatId = $bot->chatId();
 
