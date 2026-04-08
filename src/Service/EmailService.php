@@ -27,9 +27,9 @@ class EmailService
         $confirmUrl = rtrim($this->frontendUrl, '/') . '/uk/confirm-email?token=' . $token;
 
         $email = (new TemplatedEmail())
-            ->from(new Address($this->mailerFrom, 'Buddet'))
+            ->from(new Address($this->mailerFrom, 'Арт Бетон Маркет'))
             ->to($user->getEmail())
-            ->subject('Підтвердження реєстрації на Buddet')
+            ->subject('Підтвердження реєстрації на Арт Бетон Маркет')
             ->htmlTemplate('email/confirmation.html.twig')
             ->context([
                 'user' => $user,
