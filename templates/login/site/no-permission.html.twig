@@ -1,0 +1,162 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Немає доступу — Арт Бетон Маркет{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        body { background: #f5f6f8; }
+        .nopermission-card {
+            max-width: 560px;
+            margin: 8vh auto 4rem;
+            padding: 2.5rem 2rem;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+        .nopermission-card .icon-lock {
+            width: 56px; height: 56px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            background: #fff3cd;
+            color: #856404;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.75rem;
+        }
+        .nopermission-card .brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 0.25rem;
+        }
+        .nopermission-card .subtitle {
+            color: #6c757d;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .nopermission-card .message {
+            color: #343a40;
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
+        }
+        .nopermission-card .info-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.95rem;
+        }
+        .nopermission-card .info-block dt {
+            color: #6c757d;
+            font-weight: 500;
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.15rem;
+        }
+        .nopermission-card .info-block dd {
+            color: #1a1a1a;
+            font-weight: 500;
+            margin-bottom: 0.85rem;
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            word-break: break-all;
+        }
+        .nopermission-card .info-block dd:last-child { margin-bottom: 0; }
+        .nopermission-card .info-block dd .empty { color: #adb5bd; font-style: italic; font-family: inherit; }
+        .nopermission-card .actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .nopermission-card .footnote {
+            margin-top: 1.25rem;
+            color: #adb5bd;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        .copy-btn { font-size: 0.8125rem; padding: 0.15rem 0.5rem; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="nopermission-card">
+        <div class="icon-lock">⚠</div>
+
+        <div class="brand">Арт Бетон Маркет</div>
+        <div class="subtitle">Немає доступу до адмін-панелі</div>
+
+        <div class="message">
+            Ви успішно авторизовані через Telegram, але у вашого облікового запису ще немає
+            прав менеджера. Зверніться до адміністратора та передайте йому ваші дані нижче,
+            щоб він надав доступ.
+            <br><br>
+            <span class="text-muted">
+                You are logged in via Telegram, but your account does not yet have manager
+                permissions. Please contact an administrator and share the details below to
+                request access.
+            </span>
+        </div>
+
+        <dl class="info-block" id="userInfo">
+            <dt>Ім'я / Name</dt>
+            <dd>
+                {% set fullName = (user.firstName ?? '') ~ ' ' ~ (user.lastName ?? '') %}
+                {% if fullName|trim %}{{ fullName|trim }}{% else %}<span class="empty">—</span>{% endif %}
+            </dd>
+
+            <dt>Telegram username</dt>
+            <dd>
+                {% if user.username %}
+                    @{{ user.username }}
+                {% else %}
+                    <span class="empty">не встановлено / not set</span>
+                {% endif %}
+            </dd>
+
+            <dt>Telegram ID</dt>
+            <dd>
+                <span data-copy="{{ user.telegramId }}">{{ user.telegramId ?? '—' }}</span>
+                {% if user.telegramId %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="{{ user.telegramId }}">Копіювати</button>
+                {% endif %}
+            </dd>
+
+            <dt>Телефон / Phone</dt>
+            <dd>
+                {% if user.phoneNumber %}
+                    <span data-copy="{{ user.phoneNumber }}">{{ user.phoneNumber }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="{{ user.phoneNumber }}">Копіювати</button>
+                {% else %}
+                    <span class="empty">не вказано / not provided</span>
+                {% endif %}
+            </dd>
+        </dl>
+
+        <div class="actions">
+            <a href="{{ path('login_app_logout') }}" class="btn btn-outline-secondary">
+                Вийти / Log out
+            </a>
+        </div>
+
+        <div class="footnote">
+            Авторизація проходить через офіційний бот / Authentication via official bot
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.copy-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var value = btn.getAttribute('data-copy-target');
+                if (!value) return;
+                navigator.clipboard.writeText(value).then(function () {
+                    var original = btn.textContent;
+                    btn.textContent = 'Скопійовано ✓';
+                    setTimeout(function () { btn.textContent = original; }, 1500);
+                });
+            });
+        });
+    </script>
+{% endblock %}
