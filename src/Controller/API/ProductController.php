@@ -321,8 +321,8 @@ class ProductController extends AbstractController
             $userOrder->setDeliveryDepartmentRef($purchaseProduct->getDeliveryDepartmentRef());
         }
 
-        if ($purchaseProduct->getPhone()) {
-            $userOrder->setPhone($purchaseProduct->getPhone());
+        if ($purchaseProduct->getContactPhone()) {
+            $userOrder->setPhone($purchaseProduct->getContactPhone());
         }
 
         $price = $product->getPrice($localizationService->getLanguage());
@@ -359,8 +359,8 @@ class ProductController extends AbstractController
 
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
 
-        // Prefer phone provided in the quick-buy payload, fall back to authenticated user's phone.
-        $phoneNumber = $userOrder->getPhone() ?: ($userOrder->getClientUserId()?->getPhone());
+        // Prefer phone provided in the quick-buy payload (already on the order), fall back to user.
+        $phoneNumber = $userOrder->getPhone() ?: $userOrder->getClientUserId()?->getPhone();
 
         $params = array(
             'action' => 'invoice_send',

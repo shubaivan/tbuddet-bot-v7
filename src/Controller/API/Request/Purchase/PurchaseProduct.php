@@ -39,7 +39,7 @@ class PurchaseProduct
     protected ?string $delivery_department_ref = null;
 
     #[Type('string')]
-    protected ?string $phone = null;
+    protected ?string $contact_phone = null;
 
     public function getQuantity()
     {
@@ -78,9 +78,9 @@ class PurchaseProduct
         return $this->delivery_department_ref;
     }
 
-    public function getPhone(): ?string
+    public function getContactPhone(): ?string
     {
-        return $this->phone;
+        return $this->contact_phone;
     }
 
     public function getProductProperties(): array
