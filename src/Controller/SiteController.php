@@ -16,6 +16,10 @@ class SiteController extends AbstractController
     #[Route(path: '/', name: 'public')]
     public function publicAction(): Response
     {
+        if ($this->isGranted('ROLE_USER')) {
+            return $this->redirectToRoute('app_admin');
+        }
+
         return $this->render('login/site/public.html.twig');
     }
 

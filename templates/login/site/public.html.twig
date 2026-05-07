@@ -1,10 +1,66 @@
-{% extends 'user_base.html.twig' %}
+{% extends 'base.html.twig' %}
+
+{% block title %}Вхід в адмін-панель — Арт Бетон Маркет{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        body { background: #f5f6f8; }
+        .login-card {
+            max-width: 480px;
+            margin: 10vh auto 4rem;
+            padding: 2.5rem 2rem;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .login-card .brand {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+        }
+        .login-card .subtitle {
+            color: #6c757d;
+            font-size: 1rem;
+            margin-bottom: 1.75rem;
+        }
+        .login-card .instruction {
+            color: #343a40;
+            line-height: 1.5;
+            margin-bottom: 1.75rem;
+        }
+        .login-card .telegram-wrap {
+            display: flex;
+            justify-content: center;
+            min-height: 48px;
+        }
+        .login-card .footnote {
+            margin-top: 1.5rem;
+            color: #adb5bd;
+            font-size: 0.875rem;
+        }
+    </style>
+{% endblock %}
 
 {% block body %}
-    <h1>Public area</h1>
-    {% if is_granted('ROLE_USER') %}
-        <a href="{{ path('app_admin') }}">Go to admin panel</a>
-    {% else %}
-        {{ render(controller('App\\Controller\\SiteController::widgetAction')) }}
-    {% endif %}
+    <div class="login-card">
+        <div class="brand">Арт Бетон Маркет</div>
+        <div class="subtitle">Адмін-панель / Admin panel</div>
+
+        <div class="instruction">
+            Підтвердіть вхід через Telegram, щоб керувати замовленнями та товарами.
+            <br>
+            <span class="text-muted">Confirm Telegram login to manage orders and products.</span>
+        </div>
+
+        <div class="telegram-wrap">
+            {{ render(controller('App\\Controller\\SiteController::widgetAction')) }}
+        </div>
+
+        <div class="footnote">
+            Авторизація проходить через офіційний бот / Authentication via official bot
+        </div>
+    </div>
 {% endblock %}
