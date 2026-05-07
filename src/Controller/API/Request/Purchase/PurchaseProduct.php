@@ -23,6 +23,24 @@ class PurchaseProduct
     #[Valid]
     protected $product_properties = [];
 
+    #[Type('string')]
+    protected ?string $delivery_method = null;
+
+    #[Type('string')]
+    protected ?string $delivery_city = null;
+
+    #[Type('string')]
+    protected ?string $delivery_city_ref = null;
+
+    #[Type('string')]
+    protected ?string $delivery_department = null;
+
+    #[Type('string')]
+    protected ?string $delivery_department_ref = null;
+
+    #[Type('string')]
+    protected ?string $phone = null;
+
     public function getQuantity()
     {
         return $this->quantity;
@@ -33,6 +51,36 @@ class PurchaseProduct
         $this->quantity = $quantity;
 
         return $this;
+    }
+
+    public function getDeliveryMethod(): ?string
+    {
+        return $this->delivery_method;
+    }
+
+    public function getDeliveryCity(): ?string
+    {
+        return $this->delivery_city;
+    }
+
+    public function getDeliveryCityRef(): ?string
+    {
+        return $this->delivery_city_ref;
+    }
+
+    public function getDeliveryDepartment(): ?string
+    {
+        return $this->delivery_department;
+    }
+
+    public function getDeliveryDepartmentRef(): ?string
+    {
+        return $this->delivery_department_ref;
+    }
+
+    public function getPhone(): ?string
+    {
+        return $this->phone;
     }
 
     public function getProductProperties(): array

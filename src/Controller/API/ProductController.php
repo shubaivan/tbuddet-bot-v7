@@ -312,6 +312,19 @@ class ProductController extends AbstractController
         $userOrder->setClientUserId($user);
         $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
 
+        // Quick-buy delivery info: only persist NP fields when method is nova_poshta.
+        // Pickup orders leave city/department null which the FE renders as "Самовивіз".
+        if ($purchaseProduct->getDeliveryMethod() === 'nova_poshta') {
+            $userOrder->setDeliveryCity($purchaseProduct->getDeliveryCity());
+            $userOrder->setDeliveryCityRef($purchaseProduct->getDeliveryCityRef());
+            $userOrder->setDeliveryDepartment($purchaseProduct->getDeliveryDepartment());
+            $userOrder->setDeliveryDepartmentRef($purchaseProduct->getDeliveryDepartmentRef());
+        }
+
+        if ($purchaseProduct->getPhone()) {
+            $userOrder->setPhone($purchaseProduct->getPhone());
+        }
+
         $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
@@ -346,11 +359,8 @@ class ProductController extends AbstractController
 
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
 
-        if ($userOrder->getClientUserId()) {
-            $phoneNumber = $userOrder->getClientUserId()->getPhone();
-        } elseif ($userOrder->getPhone()) {
-            $phoneNumber = $userOrder->getPhone();
-        }
+        // Prefer phone provided in the quick-buy payload, fall back to authenticated user's phone.
+        $phoneNumber = $userOrder->getPhone() ?: ($userOrder->getClientUserId()?->getPhone());
 
         $params = array(
             'action' => 'invoice_send',
