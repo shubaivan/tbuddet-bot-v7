@@ -23,6 +23,14 @@ class StartCommand
     {
         $messageText = $bot->message()?->text;
         $chatId = $bot->message()?->chat?->id ?? $bot->chatId();
+        // Direct-file diagnostic for the link flow: monolog uses fingers_crossed in prod, so info()
+        // logs only flush on error. Drop a line every invocation so we can see exactly what payload
+        // Telegram sent. Cleanup once link flow is confirmed working.
+        @file_put_contents(
+            '/tmp/startcmd-debug.log',
+            sprintf("[%s] text=%s chat=%s\n", date('c'), var_export($messageText, true), var_export($chatId, true)),
+            FILE_APPEND
+        );
         $this->logger->info('StartCommand invoked', [
             'message_text' => $messageText,
             'chat_id'      => $chatId,
@@ -33,6 +41,7 @@ class StartCommand
 
             // Account-link deep link: t.me/<bot>?start=link_<token>
             $payload = $this->extractStartPayload($bot);
+            @file_put_contents('/tmp/startcmd-debug.log', sprintf("  payload=%s\n", var_export($payload, true)), FILE_APPEND);
             $this->logger->info('StartCommand payload', ['payload' => $payload]);
 
             if ($payload !== null && str_starts_with($payload, TelegramLinkService::PAYLOAD_PREFIX)) {
