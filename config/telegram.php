@@ -16,7 +16,10 @@ Conversation::refreshOnDeserialize();
 
 $bot->setRunningMode(Webhook::class);
 
+// Plain `/start` (menu) and `/start <payload>` (deep-link) need separate registrations:
+// Nutgram anchors the regex with ^...$ so the no-arg form does NOT match the param form.
 $bot->onCommand('start', StartCommand::class);
+$bot->onCommand('start {payload}', StartCommand::class);
 $bot->registerCommand(ProductCommand::class);
 $bot->registerCommand(OrderCommand::class);
 

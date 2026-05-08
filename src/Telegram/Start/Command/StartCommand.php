@@ -19,48 +19,28 @@ class StartCommand
         private LoggerInterface $logger,
     ) {}
 
-    public function __invoke(Nutgram $bot): void
+    public function __invoke(Nutgram $bot, ?string $payload = null): void
     {
-        $messageText = $bot->message()?->text;
         $chatId = $bot->message()?->chat?->id ?? $bot->chatId();
-        // Direct-file diagnostic for the link flow: monolog uses fingers_crossed in prod, so info()
-        // logs only flush on error. Drop a line every invocation so we can see exactly what payload
-        // Telegram sent. Cleanup once link flow is confirmed working.
-        @file_put_contents(
-            '/tmp/startcmd-debug.log',
-            sprintf("[%s] text=%s chat=%s\n", date('c'), var_export($messageText, true), var_export($chatId, true)),
-            FILE_APPEND
-        );
-        $this->logger->info('StartCommand invoked', [
-            'message_text' => $messageText,
-            'chat_id'      => $chatId,
-        ]);
 
         try {
             $lang = $this->telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
 
             // Account-link deep link: t.me/<bot>?start=link_<token>
-            $payload = $this->extractStartPayload($bot);
-            @file_put_contents('/tmp/startcmd-debug.log', sprintf("  payload=%s\n", var_export($payload, true)), FILE_APPEND);
-            $this->logger->info('StartCommand payload', ['payload' => $payload]);
-
-            if ($payload !== null && str_starts_with($payload, TelegramLinkService::PAYLOAD_PREFIX)) {
-                if ($chatId !== null) {
-                    $linkedUser = $this->telegramLinkService->consumeLinkToken($payload, (int) $chatId);
-                    $this->logger->info('StartCommand consume result', [
-                        'linked'  => $linkedUser !== null,
-                        'user_id' => $linkedUser?->getId(),
-                    ]);
-                    $text = $linkedUser !== null
-                        ? ($lang === 'ua'
-                            ? sprintf("✅ Готово! Цей чат прив'язано до акаунту <b>%s</b>.\nВи будете отримувати оновлення замовлень тут.", htmlspecialchars($linkedUser->getEmail()))
-                            : sprintf("✅ Linked! This chat is now connected to <b>%s</b>.\nYou'll receive order updates here.", htmlspecialchars($linkedUser->getEmail())))
-                        : ($lang === 'ua'
-                            ? "❌ Посилання застаріло або недійсне. Запитайте нове в особистому кабінеті."
-                            : '❌ Link expired or invalid. Generate a new one from your account page.');
-                    $bot->sendMessage(text: $text, chat_id: $chatId, parse_mode: ParseMode::HTML);
-                    return;
-                }
+            // Note: Nutgram's onCommand pattern only injects $payload when the command is registered
+            // as `start {payload}`. Plain `onCommand('start', ...)` matches `/start` only and will
+            // call __invoke with $payload = null.
+            if ($payload !== null && str_starts_with($payload, TelegramLinkService::PAYLOAD_PREFIX) && $chatId !== null) {
+                $linkedUser = $this->telegramLinkService->consumeLinkToken($payload, (int) $chatId);
+                $text = $linkedUser !== null
+                    ? ($lang === 'ua'
+                        ? sprintf("✅ Готово! Цей чат прив'язано до акаунту <b>%s</b>.\nВи будете отримувати оновлення замовлень тут.", htmlspecialchars($linkedUser->getEmail()))
+                        : sprintf("✅ Linked! This chat is now connected to <b>%s</b>.\nYou'll receive order updates here.", htmlspecialchars($linkedUser->getEmail())))
+                    : ($lang === 'ua'
+                        ? "❌ Посилання застаріло або недійсне. Запитайте нове в особистому кабінеті."
+                        : '❌ Link expired or invalid. Generate a new one from your account page.');
+                $bot->sendMessage(text: $text, chat_id: $chatId, parse_mode: ParseMode::HTML);
+                return;
             }
 
             $langFlag = $lang === 'ua' ? '🇺🇦 UA' : '🇬🇧 EN';
@@ -83,22 +63,11 @@ class StartCommand
                 'error' => $e->getMessage(),
                 'file'  => $e->getFile() . ':' . $e->getLine(),
             ]);
-            // Best-effort fallback so user is not left with silent failure
             try {
                 if ($chatId !== null) {
                     $bot->sendMessage(text: '⚠️ Помилка обробки команди. Спробуйте ще раз або напишіть менеджеру.', chat_id: $chatId);
                 }
             } catch (\Throwable) {}
         }
-    }
-
-    private function extractStartPayload(Nutgram $bot): ?string
-    {
-        $text = $bot->message()?->text;
-        if ($text === null || !str_starts_with($text, '/start')) {
-            return null;
-        }
-        $parts = preg_split('/\s+/', trim($text), 2);
-        return $parts[1] ?? null;
     }
 }
