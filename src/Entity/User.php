@@ -96,6 +96,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'reset_password_token_expires_at', type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $resetPasswordTokenExpiresAt = null;
 
+    #[ORM\Column(name: 'telegram_chat_id', type: 'bigint', nullable: true)]
+    private ?int $telegramChatId = null;
+
+    #[Ignore]
+    #[ORM\Column(name: 'telegram_link_token', type: 'string', length: 64, nullable: true, unique: true)]
+    private ?string $telegramLinkToken = null;
+
+    #[Ignore]
+    #[ORM\Column(name: 'telegram_link_token_expires_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $telegramLinkTokenExpiresAt = null;
+
     #[ORM\OneToMany(targetEntity: UserOrder::class, mappedBy: 'telegram_user_id', cascade: ["persist"])]
     private Collection $orders;
 
@@ -247,6 +258,42 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setResetPasswordTokenExpiresAt(?\DateTimeImmutable $resetPasswordTokenExpiresAt): self
     {
         $this->resetPasswordTokenExpiresAt = $resetPasswordTokenExpiresAt;
+
+        return $this;
+    }
+
+    public function getTelegramChatId(): ?int
+    {
+        return $this->telegramChatId;
+    }
+
+    public function setTelegramChatId(?int $telegramChatId): self
+    {
+        $this->telegramChatId = $telegramChatId;
+
+        return $this;
+    }
+
+    public function getTelegramLinkToken(): ?string
+    {
+        return $this->telegramLinkToken;
+    }
+
+    public function setTelegramLinkToken(?string $telegramLinkToken): self
+    {
+        $this->telegramLinkToken = $telegramLinkToken;
+
+        return $this;
+    }
+
+    public function getTelegramLinkTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->telegramLinkTokenExpiresAt;
+    }
+
+    public function setTelegramLinkTokenExpiresAt(?\DateTimeImmutable $telegramLinkTokenExpiresAt): self
+    {
+        $this->telegramLinkTokenExpiresAt = $telegramLinkTokenExpiresAt;
 
         return $this;
     }
