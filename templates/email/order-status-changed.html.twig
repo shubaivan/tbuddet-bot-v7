@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 560px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 32px; }
+        h2 { margin: 0 0 8px; }
+        .status-line { font-size: 18px; margin: 16px 0 24px; }
+        .status-pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+        .status-processing { background: #DBEAFE; color: #1D4ED8; }
+        .status-shipped    { background: #FFEDD5; color: #C2410C; }
+        .status-delivered  { background: #DCFCE7; color: #15803D; }
+        .status-cancelled  { background: #FEE2E2; color: #B91C1C; }
+        .details { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 16px; margin: 16px 0; }
+        .details p { margin: 4px 0; font-size: 14px; }
+        .details .label { color: #6B7280; }
+        .btn { display: inline-block; background: #4CAF50; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 15px; margin: 16px 0; }
+        .footer { margin-top: 32px; font-size: 13px; color: #888; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Арт Бетон Маркет</h2>
+
+        {% if user.firstName is defined and user.firstName %}
+            <p>Доброго дня, {{ user.firstName }}!</p>
+        {% else %}
+            <p>Доброго дня!</p>
+        {% endif %}
+
+        <p class="status-line">
+            Статус замовлення <strong>#{{ order.id }}</strong> змінено на:
+            <span class="status-pill status-{{ newStatus }}">{{ statusLabel }}</span>
+        </p>
+
+        {% if newStatus == 'processing' %}
+            <p>Дякуємо за ваше замовлення! Ми вже почали його обробку — найближчим часом менеджер зв'яжеться з вами для уточнення деталей.</p>
+        {% elseif newStatus == 'shipped' %}
+            <p>Чудові новини — ваше замовлення вирушило в дорогу! 📦</p>
+            {% if trackingNumber %}
+                <div class="details">
+                    <p><span class="label">Номер ТТН:</span> <strong>{{ trackingNumber }}</strong></p>
+                    {% if deliveryAddress %}
+                        <p><span class="label">Доставка:</span> {{ deliveryAddress }}</p>
+                    {% endif %}
+                </div>
+                <a href="https://novaposhta.ua/tracking/?cargo_number={{ trackingNumber|url_encode }}" class="btn">Відстежити посилку</a>
+            {% endif %}
+        {% elseif newStatus == 'delivered' %}
+            <p>Ваше замовлення успішно доставлено. 🎉</p>
+            <p>Дякуємо, що обрали Арт Бетон Маркет! Якщо все сподобалося — будемо вдячні за відгук, а якщо є питання — напишіть нам.</p>
+        {% elseif newStatus == 'cancelled' %}
+            <p>На жаль, ваше замовлення було скасовано. Якщо це сталося помилково або у вас є питання — будь ласка, зв'яжіться з нашим менеджером, ми все вирішимо.</p>
+        {% endif %}
+
+        {% if profileUrl %}
+            <p style="margin-top: 24px;">
+                Деталі замовлення завжди доступні в <a href="{{ profileUrl }}">особистому кабінеті</a>.
+            </p>
+        {% endif %}
+
+        <p class="footer">
+            Це автоматичне повідомлення — будь ласка, не відповідайте на нього.<br>
+            Якщо у вас виникли питання, напишіть на art.beton.ck@gmail.com
+        </p>
+    </div>
+</body>
+</html>

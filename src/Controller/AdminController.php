@@ -20,6 +20,7 @@ use App\Repository\ProductCategoryRepository;
 use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
+use App\Service\EmailService;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -203,6 +204,7 @@ class AdminController extends AbstractController
         EntityManagerInterface $em,
         Nutgram $bot,
         TelegramUserRepository $telegramUserRepository,
+        EmailService $emailService,
     ): Response
     {
         $oldStatus = $order->getOrderStatus();
@@ -214,6 +216,11 @@ class AdminController extends AbstractController
         $order->setOrderStatus($newStatus);
         $order->setNovaPoshtaTrackingNumber($trackingNumber ?: null);
         $em->flush();
+
+        // Notify client via email on status change (skip if status didn't change)
+        if ($oldStatus !== $newStatus) {
+            $emailService->sendOrderStatusChangeEmail($order, $newStatus);
+        }
 
         // Notify client via Telegram on status change
         $chatId = $order->getTelegramUserId()?->getChatId();
