@@ -97,18 +97,17 @@ document.addEventListener("DOMContentLoaded", function () {
         "targets": 5,
         "orderable": false,
         "render": function (data, type, row, meta) {
-            var divTag = $('<div/>');
-            if (Object.keys(data).length) {
-                $.each(data, function (language, valueOfLanguage) {
-                    var pOrder = $('<p/>')
-                        .append('<b>Мова: ' + language + '</b>; ')
-                        .append('<i>' + valueOfLanguage + '</i>; ')
-                    ;
-                    divTag.append(pOrder);
-                });
-            }
-
-            return divTag.html();
+            if (!data || !Object.keys(data).length) return '';
+            // Show only Ukrainian text clamped to 2 lines.
+            // Tooltip surfaces both languages on hover.
+            const uk = data.ua || data.uk || '';
+            const en = data.en || '';
+            const titleParts = [];
+            if (uk) titleParts.push('UA: ' + uk);
+            if (en) titleParts.push('EN: ' + en);
+            const tooltip = titleParts.join('\n\n').replace(/"/g, '&quot;');
+            const escape = (s) => $('<div/>').text(s).html();
+            return '<div class="desc-clamp" title="' + tooltip + '">' + escape(uk || en) + '</div>';
         }
     });
 
@@ -139,15 +138,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     common_defs.push({
         "targets": 2,
+        "orderable": false,
         "render": function (data, type, row, meta) {
-            // row.filePath
-            let imgs = '';
-            $.each(row.filePath, function (index, filePath) {
-                imgs = imgs + '<img src="' + filePath + '" class="img-thumbnail"><br>';
-            })
-            return imgs;
+            if (!row.filePath || !row.filePath.length) {
+                return '<div class="product-img-cell empty"><span class="img-empty">—</span></div>';
+            }
+            const first = row.filePath[0];
+            const more = row.filePath.length - 1;
+            const badge = more > 0 ? '<span class="img-more-badge" title="' + row.filePath.length + ' photos">+' + more + '</span>' : '';
+            // Click opens full-size in a new tab so admin can inspect; tooltip lists all paths
+            return '<div class="product-img-cell">' +
+                '<a href="' + first + '" target="_blank" rel="noopener">' +
+                '<img src="' + first + '" class="img-thumbnail product-img-primary" loading="lazy" alt="">' +
+                '</a>' + badge +
+                '</div>';
         }
-    })
+    });
 
     common_defs.push({
         "targets": 1,
@@ -161,14 +167,35 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     })
 
+    // Hide created_at — surfaced as a tooltip on updated_at instead
+    common_defs.push({ "targets": 6, "visible": false });
+
+    common_defs.push({
+        "targets": 7,
+        "render": function (data, type, row, meta) {
+            if (!data) return '';
+            const dateOnly = String(data).split(' ')[0];
+            const created = row.created_at || '';
+            const tooltip = ('Оновлено: ' + data + (created ? '\nСтворено: ' + created : '')).replace(/"/g, '&quot;');
+            return '<span class="ts-cell" title="' + tooltip + '">' + dateOnly + '</span>';
+        }
+    });
+
     common_defs.push({
         "targets": 9,
         data: 'action',
         render: function (data, type, row, meta) {
-            return '    <a href="/admin/product/form/' + row.id + '" target="_blank" class="btn btn-primary btn-sm">Редагувати</a> ' +
-                '    <button class="btn btn-danger btn-sm delete-product" data-product-id="' + row.id + '">Видалити</button> ' +
-                '    <button class="btn btn-secondary btn-sm duplicate-product" data-product-id="' + row.id + '">Копія</button>'
-                ;
+            return '<div class="action-icons">' +
+                '<a href="/admin/product/form/' + row.id + '" target="_blank" class="action-btn action-edit" title="Редагувати">' +
+                    '<i class="fas fa-pen"></i>' +
+                '</a>' +
+                '<button class="action-btn action-dup duplicate-product" data-product-id="' + row.id + '" title="Зробити копію" type="button">' +
+                    '<i class="fas fa-copy"></i>' +
+                '</button>' +
+                '<button class="action-btn action-del delete-product" data-product-id="' + row.id + '" title="Видалити" type="button">' +
+                    '<i class="fas fa-trash"></i>' +
+                '</button>' +
+                '</div>';
         }
     });
 
