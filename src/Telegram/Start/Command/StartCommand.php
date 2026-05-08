@@ -5,6 +5,7 @@ namespace App\Telegram\Start\Command;
 use App\Service\TelegramLinkService;
 use App\Service\TelegramUserService;
 use App\Telegram\BotTranslations as T;
+use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
@@ -15,44 +16,71 @@ class StartCommand
     public function __construct(
         private TelegramUserService $telegramUserService,
         private TelegramLinkService $telegramLinkService,
+        private LoggerInterface $logger,
     ) {}
 
     public function __invoke(Nutgram $bot): void
     {
-        $lang = $this->telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
+        $messageText = $bot->message()?->text;
+        $chatId = $bot->message()?->chat?->id ?? $bot->chatId();
+        $this->logger->info('StartCommand invoked', [
+            'message_text' => $messageText,
+            'chat_id'      => $chatId,
+        ]);
 
-        // Account-link deep link: t.me/<bot>?start=link_<token>
-        $payload = $this->extractStartPayload($bot);
-        if ($payload !== null && str_starts_with($payload, TelegramLinkService::PAYLOAD_PREFIX)) {
-            $chatId = $bot->message()?->chat?->id ?? $bot->chatId();
-            if ($chatId !== null) {
-                $linkedUser = $this->telegramLinkService->consumeLinkToken($payload, (int) $chatId);
-                $text = $linkedUser !== null
-                    ? ($lang === 'ua'
-                        ? sprintf("✅ Готово! Цей чат прив'язано до акаунту <b>%s</b>.\nВи будете отримувати оновлення замовлень тут.", htmlspecialchars($linkedUser->getEmail()))
-                        : sprintf("✅ Linked! This chat is now connected to <b>%s</b>.\nYou'll receive order updates here.", htmlspecialchars($linkedUser->getEmail())))
-                    : ($lang === 'ua'
-                        ? "❌ Посилання застаріло або недійсне. Запитайте нове в особистому кабінеті."
-                        : '❌ Link expired or invalid. Generate a new one from your account page.');
-                $bot->sendMessage(text: $text, parse_mode: ParseMode::HTML);
-                return;
+        try {
+            $lang = $this->telegramUserService->getCurrentUser()?->getPreferredLanguage() ?? 'ua';
+
+            // Account-link deep link: t.me/<bot>?start=link_<token>
+            $payload = $this->extractStartPayload($bot);
+            $this->logger->info('StartCommand payload', ['payload' => $payload]);
+
+            if ($payload !== null && str_starts_with($payload, TelegramLinkService::PAYLOAD_PREFIX)) {
+                if ($chatId !== null) {
+                    $linkedUser = $this->telegramLinkService->consumeLinkToken($payload, (int) $chatId);
+                    $this->logger->info('StartCommand consume result', [
+                        'linked'  => $linkedUser !== null,
+                        'user_id' => $linkedUser?->getId(),
+                    ]);
+                    $text = $linkedUser !== null
+                        ? ($lang === 'ua'
+                            ? sprintf("✅ Готово! Цей чат прив'язано до акаунту <b>%s</b>.\nВи будете отримувати оновлення замовлень тут.", htmlspecialchars($linkedUser->getEmail()))
+                            : sprintf("✅ Linked! This chat is now connected to <b>%s</b>.\nYou'll receive order updates here.", htmlspecialchars($linkedUser->getEmail())))
+                        : ($lang === 'ua'
+                            ? "❌ Посилання застаріло або недійсне. Запитайте нове в особистому кабінеті."
+                            : '❌ Link expired or invalid. Generate a new one from your account page.');
+                    $bot->sendMessage(text: $text, chat_id: $chatId, parse_mode: ParseMode::HTML);
+                    return;
+                }
             }
+
+            $langFlag = $lang === 'ua' ? '🇺🇦 UA' : '🇬🇧 EN';
+
+            $bot->sendMessage(
+                text: T::t('menu.choose', $lang),
+                chat_id: $chatId,
+                reply_markup: InlineKeyboardMarkup::make()
+                    ->addRow(
+                        InlineKeyboardButton::make(T::t('menu.products', $lang), callback_data: 'type:product'),
+                        InlineKeyboardButton::make(T::t('menu.my_orders', $lang), callback_data: 'type:order'),
+                    )
+                    ->addRow(
+                        InlineKeyboardButton::make(T::t('menu.route', $lang), callback_data: 'type:route'),
+                        InlineKeyboardButton::make($langFlag . ' ' . T::t('menu.language', $lang), callback_data: 'type:lang:toggle'),
+                    )
+            );
+        } catch (\Throwable $e) {
+            $this->logger->error('StartCommand failed', [
+                'error' => $e->getMessage(),
+                'file'  => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            // Best-effort fallback so user is not left with silent failure
+            try {
+                if ($chatId !== null) {
+                    $bot->sendMessage(text: '⚠️ Помилка обробки команди. Спробуйте ще раз або напишіть менеджеру.', chat_id: $chatId);
+                }
+            } catch (\Throwable) {}
         }
-
-        $langFlag = $lang === 'ua' ? '🇺🇦 UA' : '🇬🇧 EN';
-
-        $bot->sendMessage(
-            text: T::t('menu.choose', $lang),
-            reply_markup: InlineKeyboardMarkup::make()
-                ->addRow(
-                    InlineKeyboardButton::make(T::t('menu.products', $lang), callback_data: 'type:product'),
-                    InlineKeyboardButton::make(T::t('menu.my_orders', $lang), callback_data: 'type:order'),
-                )
-                ->addRow(
-                    InlineKeyboardButton::make(T::t('menu.route', $lang), callback_data: 'type:route'),
-                    InlineKeyboardButton::make($langFlag . ' ' . T::t('menu.language', $lang), callback_data: 'type:lang:toggle'),
-                )
-        );
     }
 
     private function extractStartPayload(Nutgram $bot): ?string
