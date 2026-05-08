@@ -96,7 +96,9 @@ class AttachmentFileController extends AbstractController
             throw new \Exception('entity not found');
         }
         /** @var Files[] $values */
-        $values = $parentEntity->getFiles()->getValues();
+        $values = $parentEntity->getFiles()
+            ->filter(fn(Files $f) => $f->getVariantOf() === null)
+            ->getValues();
         foreach ($values as $value) {
             #$value->setPath($defaultStorage->temporaryUrl($value->getPath(), (new \DateTime())->modify('+1 hour')));
             $value->setPath($defaultStorage->publicUrl($value->getPath()));

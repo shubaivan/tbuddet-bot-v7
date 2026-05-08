@@ -50,6 +50,15 @@ class Files
     #[ORM\JoinColumn(onDelete: 'cascade')]
     private Category $category;
 
+    /**
+     * Auto-generated variant of this file, e.g. a JPG fallback of an AVIF original.
+     * Variants are filtered out of admin photo lists so admins see one entry per
+     * uploaded image rather than the original + its programmatic siblings.
+     */
+    #[ORM\ManyToOne(targetEntity: Files::class)]
+    #[ORM\JoinColumn(name: 'variant_of_id', referencedColumnName: 'id', onDelete: 'CASCADE', nullable: true)]
+    private ?Files $variantOf = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -124,6 +133,18 @@ class Files
     {
         $this->product = $product;
         $product->addFile($this);
+
+        return $this;
+    }
+
+    public function getVariantOf(): ?Files
+    {
+        return $this->variantOf;
+    }
+
+    public function setVariantOf(?Files $variantOf): Files
+    {
+        $this->variantOf = $variantOf;
 
         return $this;
     }

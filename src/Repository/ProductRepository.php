@@ -288,7 +288,7 @@ class ProductRepository extends ServiceEntityRepository
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at,
                 \'edit\' as action
                 FROM App\Entity\Product o
-                LEFT JOIN o.files f 
+                LEFT JOIN o.files f WITH f.variantOf IS NULL
                 LEFT JOIN o.productCategory pc 
                 LEFT JOIN pc.category category 
             ';

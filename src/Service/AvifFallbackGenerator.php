@@ -85,7 +85,10 @@ class AvifFallbackGenerator
             ->setExtension('jpg')
             ->setOriginalName(preg_replace('/\.avif$/i', '.jpg', $avifFile->getOriginalName()))
             ->setSize((string) strlen($jpegContents))
-            ->setProduct($avifFile->getProduct());
+            ->setProduct($avifFile->getProduct())
+            // Mark as a sibling of the AVIF original so admin photo lists show
+            // one entry per uploaded image, not original + its programmatic JPG.
+            ->setVariantOf($avifFile);
 
         $this->em->persist($jpegFile);
         if ($flush) {
