@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 d.filter_payment = $('#filterPayment').val();
                 d.filter_date_from = $('#filterDateFrom').val();
                 d.filter_date_to = $('#filterDateTo').val();
+                d.filter_hide_unpaid = $('#filterHideUnpaid').is(':checked') ? '1' : '0';
             }
         },
         columns: th_keys,
@@ -94,6 +95,8 @@ document.addEventListener("DOMContentLoaded", function () {
         $('#filterPayment').val('');
         $('#filterDateFrom').val('');
         $('#filterDateTo').val('');
+        $('#filterHideUnpaid').prop('checked', true);
         table.ajax.reload();
     });
+    $('#filterHideUnpaid').on('change', function() { table.ajax.reload(); });
 });

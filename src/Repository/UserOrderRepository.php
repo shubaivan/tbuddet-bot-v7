@@ -159,6 +159,11 @@ class UserOrderRepository extends ServiceEntityRepository
                 $conditions[] = 'o.created_at <= :filter_date_to';
                 $bindParams['filter_date_to'] = $params['filter_date_to'] . ' 23:59:59';
             }
+            // Hide unpaid attempts (default-on for the admin order list).
+            // An order counts as "paid" when liq_pay_status is 'success'.
+            if (!empty($params['filter_hide_unpaid']) && $params['filter_hide_unpaid'] === '1') {
+                $conditions[] = "o.liq_pay_status = 'success'";
+            }
         }
 
         if (count($conditions)) {

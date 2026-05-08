@@ -39,6 +39,12 @@
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Дата до</label>
             <input type="date" id="filterDateTo" class="form-control form-control-sm" style="width:150px;">
         </div>
+        <div style="align-self:center;">
+            <label style="font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="filterHideUnpaid" checked>
+                Сховати неоплачені
+            </label>
+        </div>
         <div>
             <button id="applyFilters" class="btn btn-primary btn-sm">Фільтрувати</button>
             <button id="resetFilters" class="btn btn-secondary btn-sm">Скинути</button>
