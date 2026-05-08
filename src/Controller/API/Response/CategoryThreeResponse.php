@@ -10,6 +10,7 @@ class CategoryThreeResponse
     private array $child = [];
     private array $filePath = [];
     private int $order_category = 0;
+    private int $product_count = 0;
 
     public function __construct(string $category_name, int $category_id, int $order_category)
     {
@@ -86,6 +87,18 @@ class CategoryThreeResponse
     public function setOrderCategory(int $order_category): CategoryThreeResponse
     {
         $this->order_category = $order_category;
+
+        return $this;
+    }
+
+    public function getProductCount(): int
+    {
+        return $this->product_count;
+    }
+
+    public function setProductCount(int $product_count): CategoryThreeResponse
+    {
+        $this->product_count = $product_count;
 
         return $this;
     }

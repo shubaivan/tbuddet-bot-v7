@@ -57,6 +57,10 @@ class CategoryController extends AbstractController
         $three = [];
         foreach ($mainCategories as $category) {
             $categoryThreeResponse = $this->getThreeResponse($category);
+            // Prune fully empty branches: 0 direct products AND no children with products.
+            if ($categoryThreeResponse->getProductCount() === 0 && count($categoryThreeResponse->getChild()) === 0) {
+                continue;
+            }
             $three[] = $categoryThreeResponse;
         }
 
@@ -89,7 +93,13 @@ class CategoryController extends AbstractController
         foreach ($category->getParent() as $categoryRelation) {
             $child = $categoryRelation->getChild();
             if ($child) {
-                $setChild[] = $this->getThreeResponse($child);
+                $childResponse = $this->getThreeResponse($child);
+                // Prune empty leaves: only include children that actually have products
+                // (directly or via their own descendants).
+                if ($childResponse->getProductCount() === 0 && count($childResponse->getChild()) === 0) {
+                    continue;
+                }
+                $setChild[] = $childResponse;
             }
         }
 
@@ -98,6 +108,7 @@ class CategoryController extends AbstractController
         });
 
         $categoryThreeResponse->setChild($setChild);
+        $categoryThreeResponse->setProductCount($category->getProductCategory()->count());
 
         return $categoryThreeResponse;
     }
