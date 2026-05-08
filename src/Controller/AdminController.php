@@ -352,9 +352,13 @@ class AdminController extends AbstractController
                 $filePath = [];
                 $files = explode(',', $product['filePath']);
                 foreach ($files as $file) {
-                    $file = trim($file, '}');
-                    $file = trim($file, '{');
-                    if ($file == 'NULL') {
+                    // Postgres array literals wrap individual elements in double quotes when
+                    // they contain a space or other special chars (e.g. `{"foo bar.jpg",baz.jpg}`).
+                    // Strip the wrapping `{`, `}`, `"` (and any whitespace) so publicUrl gets a
+                    // clean filename and the resulting URL doesn't contain literal `"` chars
+                    // that would break the <img src="..."> attribute on the admin page.
+                    $file = trim($file, "{} \"\t\n\r");
+                    if ($file === '' || $file === 'NULL') {
                         continue;
                     }
                     if (array_key_exists($file, $filePath)) {
@@ -580,9 +584,11 @@ class AdminController extends AbstractController
                 $filePath = [];
                 $files = explode(',', $category['filePath']);
                 foreach ($files as $file) {
-                    $file = trim($file, '}');
-                    $file = trim($file, '{');
-                    if ($file == 'NULL') {
+                    // Same Postgres-array-literal trim as in admin/products data-table:
+                    // strip braces, double-quotes (added when an element has a space or special char),
+                    // and any surrounding whitespace.
+                    $file = trim($file, "{} \"\t\n\r");
+                    if ($file === '' || $file === 'NULL') {
                         continue;
                     }
                     //$filePath[] = $categoryStorage->temporaryUrl($file, (new \DateTime())->modify('+1 hour'));
