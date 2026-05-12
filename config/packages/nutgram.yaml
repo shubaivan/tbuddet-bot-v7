@@ -5,4 +5,4 @@ nutgram:
     # Photo uploads from disk regularly exceed the 5s default when the bot
     # is sending bytes for the first time. 60s gives Telegram room to ack
     # without forcing a sendMessage fallback / double-message.
-    timeout: 60
+    clientTimeout: 60
