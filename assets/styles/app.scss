@@ -161,6 +161,48 @@ input:required {
             border-radius: 999px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
+
+        .img-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.55);
+            color: #fff;
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &.prev { left: -4px; }
+            &.next { right: -4px; }
+
+            &:hover { background: rgba(0, 0, 0, 0.8); }
+        }
+
+        &:hover .img-nav { opacity: 1; }
+
+        .img-counter {
+            position: absolute;
+            left: 50%;
+            bottom: -4px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 999px;
+            pointer-events: none;
+        }
     }
 
     .action-icons {

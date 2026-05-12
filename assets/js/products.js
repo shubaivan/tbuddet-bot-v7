@@ -143,14 +143,21 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!row.filePath || !row.filePath.length) {
                 return '<div class="product-img-cell empty"><span class="img-empty">—</span></div>';
             }
-            const first = row.filePath[0];
-            const more = row.filePath.length - 1;
-            const badge = more > 0 ? '<span class="img-more-badge" title="' + row.filePath.length + ' photos">+' + more + '</span>' : '';
-            // Click opens full-size in a new tab so admin can inspect; tooltip lists all paths
-            return '<div class="product-img-cell">' +
-                '<a href="' + first + '" target="_blank" rel="noopener">' +
+            const imgs = row.filePath;
+            const first = imgs[0];
+            const total = imgs.length;
+            const payload = encodeURIComponent(JSON.stringify(imgs));
+            const counter = total > 1
+                ? '<span class="img-counter">1/' + total + '</span>'
+                : '';
+            const arrows = total > 1
+                ? '<button type="button" class="img-nav prev" aria-label="previous">‹</button>' +
+                  '<button type="button" class="img-nav next" aria-label="next">›</button>'
+                : '';
+            return '<div class="product-img-cell" data-imgs="' + payload + '" data-idx="0">' +
+                '<a class="img-link" href="' + first + '" target="_blank" rel="noopener">' +
                 '<img src="' + first + '" class="img-thumbnail product-img-primary" loading="lazy" alt="">' +
-                '</a>' + badge +
+                '</a>' + arrows + counter +
                 '</div>';
         }
     });
@@ -224,6 +231,29 @@ document.addEventListener("DOMContentLoaded", function () {
         columns: th_keys,
         "columnDefs": common_defs
     });
+
+    // Carousel arrows inside the product-img-cell — delegated to survive DataTable redraws.
+    $('#telegramUserTable').on('click', '.product-img-cell .img-nav', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const cell = $(this).closest('.product-img-cell');
+        let imgs;
+        try {
+            imgs = JSON.parse(decodeURIComponent(cell.attr('data-imgs') || '[]'));
+        } catch (_) {
+            imgs = [];
+        }
+        if (!imgs.length) return;
+        const total = imgs.length;
+        let idx = parseInt(cell.attr('data-idx') || '0', 10);
+        idx = $(this).hasClass('next') ? (idx + 1) % total : (idx - 1 + total) % total;
+        cell.attr('data-idx', idx);
+        const url = imgs[idx];
+        cell.find('img.product-img-primary').attr('src', url);
+        cell.find('a.img-link').attr('href', url);
+        cell.find('.img-counter').text((idx + 1) + '/' + total);
+    });
+
     let exampleModal = $('#exampleModal');
 
     function getDivTagOneProp(
