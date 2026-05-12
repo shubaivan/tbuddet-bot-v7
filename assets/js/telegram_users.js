@@ -88,6 +88,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const url = window.Routing.generate('admin-users-data-table');
 
+    // Synthetic columns (rendered from full row) shouldn't have a `data` key,
+    // otherwise DataTables throws "Requested unknown parameter".
+    const syntheticCols = new Set(['user', 'orders_summary', 'source', 'actions']);
+    const columns = th_keys.map(c => syntheticCols.has(c.data) ? { data: null, defaultContent: '' } : c);
+
     table = $('#telegramUserTable').DataTable({
         order: [[0, 'desc']],
         responsive: true,
@@ -104,7 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 d.filter_source = $('#filterSource').val();
             },
         },
-        columns: th_keys,
+        columns,
         columnDefs: defs,
         language: {
             search: 'Пошук:',
