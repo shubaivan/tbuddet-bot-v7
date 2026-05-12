@@ -175,6 +175,16 @@ class PriceRingConversation extends Conversation
         $photoArg = $photo['arg'] ?? null;
         $photoKey = $photo['key'] ?? null;
 
+        @file_put_contents('/tmp/bot_debug.log', sprintf(
+            "[%s] sendOrEdit chat=%s mainMsg=%s hasPhoto=%s photoKey=%s photoArg=%s\n",
+            date('H:i:s'),
+            $chatId,
+            $this->mainMessageId ?? 'null',
+            $this->mainMessageHasPhoto ? '1' : '0',
+            $photoKey ?? 'null',
+            is_string($photoArg) ? substr($photoArg, 0, 60) : (is_object($photoArg) ? get_class($photoArg) : 'null'),
+        ), FILE_APPEND);
+
         // Try to edit existing message
         if ($this->mainMessageId) {
             try {
@@ -253,10 +263,12 @@ class PriceRingConversation extends Conversation
                 }
                 return;
             } catch (\Throwable $e) {
+                @file_put_contents('/tmp/bot_debug.log', sprintf("[%s] sendPhoto FAILED: %s\n", date('H:i:s'), $e->getMessage()), FILE_APPEND);
                 $this->logger->warning('Failed to send photo', ['error' => $e->getMessage()]);
             }
         }
 
+        @file_put_contents('/tmp/bot_debug.log', sprintf("[%s] falling back to sendMessage text\n", date('H:i:s')), FILE_APPEND);
         // Fallback: text only
         $msg = $bot->sendMessage(
             text: $text,
