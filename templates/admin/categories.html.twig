@@ -11,25 +11,44 @@
     <a href="{{ path('admin-category-form') }}" target="_blank" class="btn btn-primary" style="margin-bottom: 15px;">
         + Створити категорію
     </a>
-    {% if th_keys|length %}
-        <!-- Table -->
-        <table id='telegramUserTable' class='display dataTable'>
 
+    {% set labels = {
+        'id': 'ID',
+        'filePath': 'Зображення',
+        'name': 'Назва',
+        'parents': 'Батьківські',
+        'products_count': 'Продуктів',
+        'order_category': 'Порядок',
+        'updated_at': 'Оновлено',
+        'action': ''
+    } %}
+
+    {% if th_keys|length %}
+        <table id='telegramUserTable' class='display dataTable categories-table'>
             <thead>
             <tr>
                 {% for th_key in th_keys %}
-                    <th scope="col">{{ th_key }}</th>
+                    <th scope="col">{{ labels[th_key] ?? th_key }}</th>
                 {% endfor %}
             </tr>
             </thead>
-            <tfoot>
-            {% for th_key in th_keys %}
-                <th scope="col">{{ th_key }}</th>
-            {% endfor %}
-            </tfoot>
-
         </table>
     {% endif %}
+
+    <!-- Shared image lightbox modal -->
+    <div class="modal fade product-image-lightbox" id="productImageLightbox" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <button type="button" class="lightbox-close" data-dismiss="modal" aria-label="Close">&times;</button>
+                <div class="lightbox-stage">
+                    <button type="button" class="lightbox-nav prev" aria-label="previous">‹</button>
+                    <img class="lightbox-img" src="" alt="">
+                    <button type="button" class="lightbox-nav next" aria-label="next">›</button>
+                </div>
+                <div class="lightbox-counter"></div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block javascripts %}

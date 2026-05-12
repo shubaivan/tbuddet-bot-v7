@@ -91,19 +91,21 @@ class CategoryRepository extends ServiceEntityRepository
             ';
         } else {
             $dql = '
-                SELECT 
-                o.id,                
-                array_agg(f.path) as filePath,                
-                array_to_json(array_agg(parent.category_name)) as parents,                
-                o.category_name,              
-                o.order_category,              
+                SELECT
+                o.id,
+                array_agg(DISTINCT f.path) as filePath,
+                array_to_json(array_agg(DISTINCT parent.category_name)) as parents,
+                o.category_name,
+                o.order_category,
+                COUNT(DISTINCT pc.id) as products_count,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at,
                 date_format(o.updated_at, \'%Y-%m-%d %H:%i:%s\') as updated_at,
                 \'edit\' as action
                 FROM App\Entity\Category o
                 LEFT JOIN o.files f
                 LEFT JOIN o.child child
-                LEFT JOIN child.parent parent  
+                LEFT JOIN child.parent parent
+                LEFT JOIN o.productCategory pc
             ';
         }
 

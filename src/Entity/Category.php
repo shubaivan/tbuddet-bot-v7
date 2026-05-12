@@ -22,11 +22,11 @@ class Category implements AttachmentFilesInterface
 
     public static array $dataTableFields = [
         'id',
-        'parents',
         'filePath',
-        'category_name',
+        'name',
+        'parents',
+        'products_count',
         'order_category',
-        'created_at',
         'updated_at'
     ];
 
