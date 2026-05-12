@@ -173,7 +173,8 @@ class AdminController extends AbstractController
     public function ordersDatTable(
         UserOrderRepository $repository,
         Request $request,
-        ProductRepository $productRepository
+        ProductRepository $productRepository,
+        \Doctrine\DBAL\Connection $dbalConnection,
     )
     {
         $dataTable = $repository
@@ -206,7 +207,7 @@ class AdminController extends AbstractController
                         ->getDataTablesData($request->request->all(), true, true),
                     "recordsFiltered" => $repository
                         ->getDataTablesData($request->request->all(), true),
-                    "stats" => $this->collectOrdersStats($request->request->all()),
+                    "stats" => $this->collectOrdersStats($request->request->all(), $dbalConnection),
                 ],
                 ['data' => $dataTable]
             )
@@ -218,11 +219,8 @@ class AdminController extends AbstractController
      * filters (status, payment, date range, hide-unpaid) so manager-relevant
      * totals stay in sync with the visible table.
      */
-    private function collectOrdersStats(array $params): array
+    private function collectOrdersStats(array $params, \Doctrine\DBAL\Connection $conn): array
     {
-        /** @var \Doctrine\DBAL\Connection $conn */
-        $conn = $this->container->get('doctrine.dbal.default_connection');
-
         $where = [];
         $binds = [];
         if (!empty($params['filter_status'])) {
