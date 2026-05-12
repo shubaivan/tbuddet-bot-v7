@@ -382,14 +382,14 @@ class PriceRingConversation extends Conversation
 
         $keyboard = InlineKeyboardMarkup::make();
         $keyboard->addRow(
-            InlineKeyboardButton::make('🛒 ' . $this->t('product.select'), callback_data: 'product_' . $product->getId())
+            InlineKeyboardButton::make($this->t('product.select'), callback_data: 'product_' . $product->getId())
         );
 
         // Arrows always visible; wrap around at the ends so the carousel
         // is a loop rather than a dead-end at item 1 or N.
         $navRow = [
             InlineKeyboardButton::make('◀️', callback_data: 'page_prev'),
-            InlineKeyboardButton::make('🔙 ' . $this->t('product.categories'), callback_data: 'back_categories'),
+            InlineKeyboardButton::make($this->t('product.categories'), callback_data: 'back_categories'),
             InlineKeyboardButton::make('▶️', callback_data: 'page_next'),
         ];
         $keyboard->addRow(...$navRow);
