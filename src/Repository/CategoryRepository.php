@@ -93,8 +93,8 @@ class CategoryRepository extends ServiceEntityRepository
             $dql = '
                 SELECT
                 o.id,
-                array_agg(DISTINCT f.path) as filePath,
-                array_to_json(array_agg(DISTINCT parent.category_name)) as parents,
+                array_agg(f.path) as filePath,
+                array_to_json(array_agg(parent.category_name)) as parents,
                 o.category_name,
                 o.order_category,
                 COUNT(DISTINCT pc.id) as products_count,
