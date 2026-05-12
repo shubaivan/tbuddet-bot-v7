@@ -33,25 +33,41 @@
         </div>
     </div>
 
-    {% if th_keys|length %}
-        <!-- Table -->
-        <table id='telegramUserTable' class='display dataTable'>
+    {% set labels = {
+        'id': 'ID',
+        'user': 'Користувач',
+        'phone_number': 'Телефон',
+        'orders_summary': 'Замовлення',
+        'start': 'Реєстрація',
+        'last_visit': 'Остання активність',
+        'actions': ''
+    } %}
 
+    {% if th_keys|length %}
+        <table id='telegramUserTable' class='display dataTable users-table'>
             <thead>
             <tr>
                 {% for th_key in th_keys %}
-                    <th scope="col">{{ th_key }}</th>
+                    <th scope="col">{{ labels[th_key] ?? th_key }}</th>
                 {% endfor %}
             </tr>
             </thead>
-            <tfoot>
-            {% for th_key in th_keys %}
-                <th scope="col">{{ th_key }}</th>
-            {% endfor %}
-            </tfoot>
-
         </table>
     {% endif %}
+
+    <!-- User orders modal -->
+    <div class="modal fade user-orders-modal" id="userOrdersModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Замовлення користувача</h5>
+                    <div class="uo-user"></div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body uo-body"></div>
+            </div>
+        </div>
+    </div>
 
 {% endblock %}
 

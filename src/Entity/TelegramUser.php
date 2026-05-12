@@ -19,13 +19,12 @@ class TelegramUser implements UserInterface
 
     public static array $dataTableFields = [
         'id',
+        'user',
         'phone_number',
-        'first_name',
-        'last_name',
-        'username',
+        'orders_summary',
         'start',
         'last_visit',
-        'order_info'
+        'actions'
     ];
 
 

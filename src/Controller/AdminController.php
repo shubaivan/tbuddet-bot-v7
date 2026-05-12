@@ -93,6 +93,34 @@ class AdminController extends AbstractController
         ]);
     }
 
+    #[Route('/admin/users/{id}/orders.json', name: 'admin-user-orders-json', options: ['expose' => true], methods: ['GET'])]
+    public function userOrdersJson(#[MapEntity(id: 'id')] TelegramUser $user): Response
+    {
+        $rows = [];
+        foreach ($user->getOrders() as $order) {
+            $rows[] = [
+                'id'           => $order->getId(),
+                'total_amount' => $order->getTotalAmount(),
+                'status'       => $order->getOrderStatus()?->value,
+                'liq_pay'      => $order->getLiqPayStatus(),
+                'is_paid'      => $order->getLiqPayStatus() === 'success',
+                'created_at'   => $order->getCreatedAt()?->format('Y-m-d H:i'),
+                'detail_url'   => $this->generateUrl('app_admin_order_detail', ['id' => $order->getId()]),
+            ];
+        }
+        // Most recent first
+        usort($rows, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+
+        return $this->json([
+            'user' => [
+                'id'    => $user->getId(),
+                'name'  => trim(($user->getFirstName() ?? '') . ' ' . ($user->getLastName() ?? '')) ?: ($user->getUsername() ?? '—'),
+                'phone' => $user->getPhoneNumber(),
+            ],
+            'orders' => $rows,
+        ]);
+    }
+
     #[Route('/admin/users/data-table', name: 'admin-users-data-table', options: ['expose' => true])]
     public function getUsersDataTable(TelegramUserRepository $repository, Request $request)
     {

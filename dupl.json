@@ -1,0 +1,843 @@
+{
+  "data": [
+    {
+      "id": 86,
+      "product_name": "Planter \u0022Long\u0022 1200*400*700mm",
+      "price": 220,
+      "created_at": "2025-02-13 08:28:58",
+      "updated_at": "2025-04-21 11:16:30",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "66"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "1200*400*700h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "205 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "30mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Rectangular",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250421_11:16:25_blur_concrete_planter_1200x400x700_restaurant_terrace (1).jpeg"
+      ]
+    },
+    {
+      "id": 74,
+      "product_name": "Planter \u0022Cube\u0022 1000*1000*1000mm",
+      "price": 370,
+      "created_at": "2025-02-13 08:05:15",
+      "updated_at": "2025-04-17 10:54:54",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "38"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "112"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "1000*1000*1000h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "650 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "60mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Cube",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250415_10:02:50_rooftop_square_planters.jpg"
+      ]
+    },
+    {
+      "id": 84,
+      "product_name": "Planter \u0022Long\u0022 1000*500*500mm",
+      "price": 180,
+      "created_at": "2025-02-13 08:24:35",
+      "updated_at": "2025-04-21 11:17:39",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "26"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "53"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "1000*500*500h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "178 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "30mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Rectangular",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250421_11:17:35_blur_concrete_planter_1000x500x500_gray_wall.jpeg"
+      ]
+    },
+    {
+      "id": 85,
+      "product_name": "Planter \u0022Long\u0022 800*400*600mm",
+      "price": 168,
+      "created_at": "2025-02-13 08:27:02",
+      "updated_at": "2025-04-21 11:16:46",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "25"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "60"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "800*400*600h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "150 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "30mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Rectangular",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250421_11:16:42_blur_concrete_planter_800x400x600_terrace.jpeg"
+      ]
+    },
+    {
+      "id": 72,
+      "product_name": "Planter \u0022Cube\u0022 800*800*800mm",
+      "price": 235,
+      "created_at": "2025-02-13 08:01:32",
+      "updated_at": "2025-04-15 11:26:11",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "70"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "800*800*800h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "340 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "40 mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Cube",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250415_11:24:56_square_planters_with_grasses_bbq_area.jpg"
+      ]
+    },
+    {
+      "id": 95,
+      "product_name": "Planter \u0022Hills\u0022 450*450*1000mm",
+      "price": 177,
+      "created_at": "2025-02-13 08:54:46",
+      "updated_at": "2025-04-21 12:23:12",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "19"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "54"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "450*450*1000h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "185kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "35mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "40mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Rectangular",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250421_12:23:07_blur_planters_450x450x1000.jpeg",
+        "https://beton.shuba.dev/assets/default/20250415_09:18:49_450x450x1000.jpg"
+      ]
+    },
+    {
+      "id": 73,
+      "product_name": "Planter \u0022Cube\u0022 900*900*900mm",
+      "price": 306,
+      "created_at": "2025-02-13 08:03:22",
+      "updated_at": "2025-04-15 10:05:59",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "61"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "92"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "900*900*900h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "530 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "60mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Cube",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250415_10:05:55_front_door_planters_with_grass.jpg"
+      ]
+    },
+    {
+      "id": 71,
+      "product_name": "Planter \u0022Cube\u0022 700*700*700mm",
+      "price": 202,
+      "created_at": "2025-02-13 07:58:45",
+      "updated_at": "2025-04-21 11:25:53",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "20"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "60"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "700*700*700h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "190 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "30 mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "40 mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Cube",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250421_11:25:49_concrete_planter_visualization.jpg"
+      ]
+    },
+    {
+      "id": 72,
+      "product_name": "Planter \u0022Cube\u0022 800*800*800mm",
+      "price": 235,
+      "created_at": "2025-02-13 08:01:32",
+      "updated_at": "2025-04-15 11:26:11",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "white",
+          "property_price_impact": "70"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "800*800*800h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "340 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Coating",
+          "property_value": "Transparent varnish",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Wall thickness of the product",
+          "property_value": "40 mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Bottom thickness of the product",
+          "property_value": "50mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Product shape",
+          "property_value": "Cube",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Thermal insulation",
+          "property_value": "Yes",
+          "property_price_impact": "24"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        }
+      ],
+      "description": "We offer products of our own production, made in compliance with all modern concrete preparation technologies. A sleek and stylish concrete planter will become the perfect accent for your home, office, or restaurant. Made from architectural concrete, they are resistant to any weather conditions, do not fade under sunlight, and do not crack from frost.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250415_11:24:56_square_planters_with_grasses_bbq_area.jpg"
+      ]
+    },
+    {
+      "id": 64,
+      "product_name": "Bench  \u00abModern\u00bb",
+      "price": 254,
+      "created_at": "2025-02-12 13:35:29",
+      "updated_at": "2025-04-29 11:34:32",
+      "product_properties": [
+        {
+          "property_name": "Color",
+          "property_value": "Natural",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "Individual",
+          "property_price_impact": "25"
+        },
+        {
+          "property_name": "Color",
+          "property_value": "White",
+          "property_price_impact": "62"
+        },
+        {
+          "property_name": "Material",
+          "property_value": "Architectural concrete",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Size",
+          "property_value": "1920*675*880h mm",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Weight",
+          "property_value": "205 kg",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "Decking material",
+          "property_value": "Sanded and treated hardwood timber",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "LED lighting",
+          "property_value": "Yes",
+          "property_price_impact": "54"
+        },
+        {
+          "property_name": "LED lighting",
+          "property_value": "No",
+          "property_price_impact": "0"
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "",
+          "property_value": "",
+          "property_price_impact": ""
+        },
+        {
+          "property_name": "Production time",
+          "property_value": "14-28 days",
+          "property_price_impact": "0"
+        }
+      ],
+      "description": "Park benches are an integral part of the urban landscape, providing comfortable seating in public spaces. They feature a sturdy, vandal-resistant design, are weather-resistant, and require minimal maintenance. With a variety of designs and materials, benches can easily blend into any environment. Custom designs can be created to achieve a unique style. Their ergonomic shape ensures comfort in all seasons.",
+      "file_path": [
+        "https://beton.shuba.dev/assets/default/20250429_11:34:27_\u041c\u043e\u0434\u0435\u0440\u043d.jpg",
+        "https://beton.shuba.dev/assets/default/20250212_13:40:07_6.jpg",
+        "https://beton.shuba.dev/assets/default/20250212_13:40:14_7.jpg",
+        "https://beton.shuba.dev/assets/default/20250212_13:40:20_8.jpg",
+        "https://beton.shuba.dev/assets/default/20250212_13:40:26_9.jpg"
+      ]
+    }
+  ],
+  "meta": {
+    "current_page": 0,
+    "from": 0,
+    "to": 10,
+    "per_page": 10,
+    "total": 20,
+    "min_price": 168,
+    "max_price": 500,
+    "total_min_price": 4,
+    "total_max_price": 500
+  },
+  "links": {
+    "first": "https://beton.shuba.dev/api/v1/product?limit=10\u0026price_from=165\u0026price_to=20460"
+  }
+}
