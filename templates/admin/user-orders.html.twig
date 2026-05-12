@@ -10,6 +10,40 @@
 {% block body %}
     {{ parent() }}
 
+    <div id="ordersStatsBar" class="users-stats-bar orders-stats-bar" hidden>
+        <div class="stat stat-revenue">
+            <span class="stat-value" data-stat="paid_amount">₴0</span>
+            <span class="stat-label">оплачено</span>
+            <span class="stat-sub" data-stat="paid_count">0 замовлень</span>
+        </div>
+        <div class="stat stat-divider"></div>
+        <div class="stat stat-pipeline new">
+            <span class="stat-value" data-stat="status_new">0</span>
+            <span class="stat-label">нові</span>
+        </div>
+        <div class="stat stat-pipeline processing">
+            <span class="stat-value" data-stat="status_processing">0</span>
+            <span class="stat-label">в обробці</span>
+        </div>
+        <div class="stat stat-pipeline shipped">
+            <span class="stat-value" data-stat="status_shipped">0</span>
+            <span class="stat-label">відправлено</span>
+        </div>
+        <div class="stat stat-pipeline delivered">
+            <span class="stat-value" data-stat="status_delivered">0</span>
+            <span class="stat-label">доставлено</span>
+        </div>
+        <div class="stat stat-pipeline cancelled">
+            <span class="stat-value" data-stat="status_cancelled">0</span>
+            <span class="stat-label">скасовано</span>
+        </div>
+        <div class="stat stat-divider"></div>
+        <div class="stat stat-unpaid">
+            <span class="stat-value" data-stat="unpaid_count">0</span>
+            <span class="stat-label">неоплачені</span>
+        </div>
+    </div>
+
     <div class="filters-bar" style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;align-items:end;">
         <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Статус замовлення</label>
@@ -32,6 +66,14 @@
             </select>
         </div>
         <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Джерело</label>
+            <select id="filterSource" class="form-control form-control-sm" style="width:140px;">
+                <option value="">Всі</option>
+                <option value="tg">Telegram</option>
+                <option value="web">Web</option>
+            </select>
+        </div>
+        <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Дата від</label>
             <input type="date" id="filterDateFrom" class="form-control form-control-sm" style="width:150px;">
         </div>
@@ -51,23 +93,32 @@
         </div>
     </div>
 
+    {% set labels = {
+        'id': 'ID',
+        'total_amount': 'Сума',
+        'order_status': 'Статус',
+        'purchase_source': 'Джерело',
+        'nova_poshta_tracking_number': 'ТТН',
+        'delivery_city': 'Місто',
+        'delivery_department': 'Відділення',
+        'liq_pay_status': 'Оплата',
+        'product_info': 'Продукт',
+        'c_user_info': 'Веб-користувач',
+        't_user_info': 'TG-користувач',
+        'created_at': 'Створено'
+    } %}
+
     {% if th_keys|length %}
         <!-- Table -->
-        <table id='telegramUserTable' class='display dataTable'>
+        <table id='telegramUserTable' class='display dataTable orders-table'>
 
             <thead>
             <tr>
                 {% for th_key in th_keys %}
-                    <th scope="col">{{ th_key }}</th>
+                    <th scope="col">{{ labels[th_key] ?? th_key }}</th>
                 {% endfor %}
             </tr>
             </thead>
-            <tfoot>
-            {% for th_key in th_keys %}
-                <th scope="col">{{ th_key }}</th>
-            {% endfor %}
-            </tfoot>
-
         </table>
     {% endif %}
 

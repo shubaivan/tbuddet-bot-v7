@@ -24,6 +24,7 @@ class UserOrder
         'id',
         'total_amount',
         'order_status',
+        'purchase_source',
         'nova_poshta_tracking_number',
         'delivery_city',
         'delivery_department',

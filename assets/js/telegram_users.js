@@ -189,11 +189,10 @@ document.addEventListener("DOMContentLoaded", function () {
     function renderStats(stats) {
         const $bar = $('#usersStatsBar');
         $bar.find('[data-stat="users_count"]').text(stats.users_count || 0);
+        $bar.find('[data-stat="tg_count"]').text(stats.tg_count || 0);
+        $bar.find('[data-stat="web_count"]').text(stats.web_count || 0);
         $bar.find('[data-stat="paid_orders_count"]').text(stats.paid_orders_count || 0);
         $bar.find('[data-stat="paid_orders_amount"]').text('₴' + formatMoney(stats.paid_orders_amount || 0));
-        $bar.find('[data-stat="sub_split"]').text(
-            (stats.tg_count || 0) + ' Telegram • ' + (stats.web_count || 0) + ' Web'
-        );
         $bar.prop('hidden', false);
     }
 

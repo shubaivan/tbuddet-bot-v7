@@ -361,6 +361,70 @@ input:required {
     .stat-revenue .stat-value {
         color: #166534;
     }
+    .stat-source-tg  .stat-value { color: #1d4ed8; }
+    .stat-source-web .stat-value { color: #6d28d9; }
+}
+
+.orders-stats-bar {
+    align-items: stretch;
+
+    .stat-divider {
+        min-width: 1px;
+        background: #e2e8f0;
+        margin: 0 6px;
+    }
+    .stat-pipeline .stat-value {
+        font-size: 18px;
+    }
+    .stat-pipeline.new        .stat-value { color: #1d4ed8; }
+    .stat-pipeline.processing .stat-value { color: #c2410c; }
+    .stat-pipeline.shipped    .stat-value { color: #166534; }
+    .stat-pipeline.delivered  .stat-value { color: #0f766e; }
+    .stat-pipeline.cancelled  .stat-value { color: #b91c1c; }
+    .stat-unpaid .stat-value  { color: #92400e; }
+}
+
+.orders-table {
+    td { vertical-align: middle !important; }
+
+    .order-id-link {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-weight: 600;
+        color: #1d4ed8;
+        text-decoration: none;
+        &:hover { text-decoration: underline; }
+    }
+    .order-amount {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: #0f172a;
+    }
+    .order-status-pill {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 999px;
+
+        &.status-new        { background: #dbeafe; color: #1d4ed8; }
+        &.status-processing { background: #ffedd5; color: #c2410c; }
+        &.status-shipped    { background: #dcfce7; color: #166534; }
+        &.status-delivered  { background: #ccfbf1; color: #0f766e; }
+        &.status-cancelled  { background: #fee2e2; color: #b91c1c; }
+    }
+    .src-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 999px;
+
+        &.tg  { background: #dbeafe; color: #1d4ed8; }
+        &.web { background: #ede9fe; color: #6d28d9; }
+    }
+    .muted { color: #94a3b8; font-size: 12px; }
 }
 
 .user-orders-modal .uo-summary {

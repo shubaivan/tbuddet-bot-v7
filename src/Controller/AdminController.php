@@ -205,11 +205,89 @@ class AdminController extends AbstractController
                     "recordsTotal" => $repository
                         ->getDataTablesData($request->request->all(), true, true),
                     "recordsFiltered" => $repository
-                        ->getDataTablesData($request->request->all(), true)
+                        ->getDataTablesData($request->request->all(), true),
+                    "stats" => $this->collectOrdersStats($request->request->all()),
                 ],
                 ['data' => $dataTable]
             )
         );
+    }
+
+    /**
+     * Aggregate stats for the /admin/orders header bar. Respects the same
+     * filters (status, payment, date range, hide-unpaid) so manager-relevant
+     * totals stay in sync with the visible table.
+     */
+    private function collectOrdersStats(array $params): array
+    {
+        /** @var \Doctrine\DBAL\Connection $conn */
+        $conn = $this->container->get('doctrine.dbal.default_connection');
+
+        $where = [];
+        $binds = [];
+        if (!empty($params['filter_status'])) {
+            $where[] = 'o.order_status = :status';
+            $binds['status'] = $params['filter_status'];
+        }
+        if (!empty($params['filter_payment'])) {
+            if ($params['filter_payment'] === 'pending') {
+                $where[] = 'o.liq_pay_status IS NULL';
+            } else {
+                $where[] = 'o.liq_pay_status = :payment';
+                $binds['payment'] = $params['filter_payment'];
+            }
+        }
+        if (!empty($params['filter_date_from'])) {
+            $where[] = "o.created_at >= :dfrom";
+            $binds['dfrom'] = $params['filter_date_from'] . ' 00:00:00';
+        }
+        if (!empty($params['filter_date_to'])) {
+            $where[] = "o.created_at <= :dto";
+            $binds['dto'] = $params['filter_date_to'] . ' 23:59:59';
+        }
+        if (!empty($params['filter_hide_unpaid']) && $params['filter_hide_unpaid'] === '1') {
+            $where[] = "o.liq_pay_status = 'success'";
+        }
+        if (!empty($params['filter_source'])) {
+            if ($params['filter_source'] === 'tg') {
+                $where[] = 'o.telegram_user_id IS NOT NULL';
+            } elseif ($params['filter_source'] === 'web') {
+                $where[] = 'o.client_user_id IS NOT NULL';
+            }
+        }
+        $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+
+        $sql = "
+            SELECT
+                COUNT(*)                                                                                AS total_count,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success')                                    AS paid_count,
+                COUNT(*) FILTER (WHERE o.liq_pay_status IS NULL OR o.liq_pay_status <> 'success')       AS unpaid_count,
+                COALESCE(SUM(NULLIF(o.total_amount,'')::numeric) FILTER (WHERE o.liq_pay_status = 'success'), 0) AS paid_amount,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'new')         AS status_new,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'processing')  AS status_processing,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'shipped')     AS status_shipped,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'delivered')   AS status_delivered,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'cancelled')   AS status_cancelled,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.telegram_user_id IS NOT NULL) AS source_tg,
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.client_user_id IS NOT NULL)   AS source_web
+            FROM user_order o
+        " . $whereSql;
+
+        $row = $conn->fetchAssociative($sql, $binds) ?: [];
+
+        return [
+            'total_count'       => (int)   ($row['total_count']       ?? 0),
+            'paid_count'        => (int)   ($row['paid_count']        ?? 0),
+            'unpaid_count'      => (int)   ($row['unpaid_count']      ?? 0),
+            'paid_amount'       => (float) ($row['paid_amount']       ?? 0),
+            'status_new'        => (int)   ($row['status_new']        ?? 0),
+            'status_processing' => (int)   ($row['status_processing'] ?? 0),
+            'status_shipped'    => (int)   ($row['status_shipped']    ?? 0),
+            'status_delivered'  => (int)   ($row['status_delivered']  ?? 0),
+            'status_cancelled'  => (int)   ($row['status_cancelled']  ?? 0),
+            'source_tg'         => (int)   ($row['source_tg']         ?? 0),
+            'source_web'        => (int)   ($row['source_web']        ?? 0),
+        ];
     }
 
     #[Route('/admin/orders/{id}', name: 'app_admin_order_detail', methods: [Request::METHOD_GET])]
