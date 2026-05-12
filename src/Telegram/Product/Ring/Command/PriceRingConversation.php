@@ -104,55 +104,63 @@ class PriceRingConversation extends Conversation
         return false;
     }
 
-    // ─── Helper: get photo for Telegram (convert avif → jpg if needed) ───
-    // Returns ['key' => stable string per source file, 'arg' => url|InputFile] or null.
+    // ─── Helper: get photo for Telegram ───
+    // Returns ['key' => stable string, 'arg' => fileId|url, 'filesId' => int] or null.
+    // After first send we cache Telegram's file_id on the Files row so subsequent
+    // renders skip the URL refetch entirely (Telegram serves from its own storage).
 
     private function getProductPhoto($product): ?array
     {
-        $files = $product->getFiles();
-        if ($files->count() === 0) return null;
-
-        // Prefer Telegram-compatible formats
-        $avifFile = null;
-        foreach ($files as $file) {
+        // Pick the first Telegram-compatible file. If a product only has AVIF
+        // originals (no JPG fallback yet), we return null and the bot renders
+        // without a photo rather than hanging on conversion — the offline
+        // backfill command app:images:generate-avif-fallbacks regenerates them.
+        $chosen = null;
+        foreach ($product->getFiles() as $file) {
             $ext = strtolower($file->getExtension());
             if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                $path = $file->getPath();
-                return [
-                    'key' => 'url:' . $path,
-                    'arg' => $this->defaultStorage->publicUrl($path),
-                ];
-            }
-            if ($ext === 'avif' && $avifFile === null) {
-                $avifFile = $file;
+                $chosen = $file;
+                break;
             }
         }
+        if ($chosen === null) return null;
 
-        // Convert first avif to jpg for Telegram
-        if ($avifFile !== null) {
-            try {
-                $url = $this->defaultStorage->publicUrl($avifFile->getPath());
-                $avifData = file_get_contents($url);
-                if ($avifData === false) return null;
-
-                $img = imagecreatefromstring($avifData);
-                if ($img === false) return null;
-
-                $tmpPath = sys_get_temp_dir() . '/tg_avif_' . md5($avifFile->getPath()) . '.jpg';
-                imagejpeg($img, $tmpPath, 85);
-                imagedestroy($img);
-
-                return [
-                    'key' => 'avif:' . $avifFile->getPath(),
-                    'arg' => InputFile::make($tmpPath),
-                ];
-            } catch (\Throwable $e) {
-                $this->logger->warning('AVIF conversion failed', ['error' => $e->getMessage()]);
-                return null;
-            }
+        $tgFileId = $chosen->getTelegramFileId();
+        if ($tgFileId !== null) {
+            return [
+                'key' => 'tg:' . $tgFileId,
+                'arg' => $tgFileId,
+                'filesId' => $chosen->getId(),
+            ];
         }
 
-        return null;
+        return [
+            'key' => 'url:' . $chosen->getPath(),
+            'arg' => $this->defaultStorage->publicUrl($chosen->getPath()),
+            'filesId' => $chosen->getId(),
+        ];
+    }
+
+    // Persist Telegram's file_id back to the Files row so future sends skip URL fetch.
+    private function cacheTelegramFileId(int $filesId, $sentMessage): void
+    {
+        if (!$sentMessage || empty($sentMessage->photo)) return;
+
+        // photo is an array of PhotoSize, biggest last
+        $sizes = $sentMessage->photo;
+        $largest = end($sizes);
+        $tgFileId = $largest->file_id ?? null;
+        if (!$tgFileId) return;
+
+        try {
+            $fileRow = $this->em->find(\App\Entity\Files::class, $filesId);
+            if ($fileRow && $fileRow->getTelegramFileId() !== $tgFileId) {
+                $fileRow->setTelegramFileId($tgFileId);
+                $this->em->flush();
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to cache Telegram file_id', ['error' => $e->getMessage()]);
+        }
     }
 
     // ─── Helper: send or edit the single main message ───
@@ -180,7 +188,7 @@ class PriceRingConversation extends Conversation
                     }
 
                     // Different photo → replace media
-                    $bot->editMessageMedia(
+                    $editedMsg = $bot->editMessageMedia(
                         media: new InputMediaPhoto(
                             media: $photoArg,
                             caption: $text,
@@ -191,6 +199,9 @@ class PriceRingConversation extends Conversation
                         reply_markup: $keyboard,
                     );
                     $this->lastPhotoKey = $photoKey;
+                    if (isset($photo['filesId'])) {
+                        $this->cacheTelegramFileId($photo['filesId'], $editedMsg);
+                    }
                     return;
                 } elseif (!$photoArg && !$this->mainMessageHasPhoto) {
                     // Edit text message
@@ -233,6 +244,9 @@ class PriceRingConversation extends Conversation
                 $this->mainMessageId = $msg->message_id;
                 $this->mainMessageHasPhoto = true;
                 $this->lastPhotoKey = $photoKey;
+                if (isset($photo['filesId'])) {
+                    $this->cacheTelegramFileId($photo['filesId'], $msg);
+                }
                 return;
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to send photo', ['error' => $e->getMessage()]);

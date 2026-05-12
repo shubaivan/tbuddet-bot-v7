@@ -59,6 +59,11 @@ class Files
     #[ORM\JoinColumn(name: 'variant_of_id', referencedColumnName: 'id', onDelete: 'CASCADE', nullable: true)]
     private ?Files $variantOf = null;
 
+    // Telegram file_id captured after the first successful sendPhoto.
+    // Lets the bot reuse the cached photo without forcing Telegram to refetch the URL.
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $telegramFileId = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -145,6 +150,18 @@ class Files
     public function setVariantOf(?Files $variantOf): Files
     {
         $this->variantOf = $variantOf;
+
+        return $this;
+    }
+
+    public function getTelegramFileId(): ?string
+    {
+        return $this->telegramFileId;
+    }
+
+    public function setTelegramFileId(?string $telegramFileId): Files
+    {
+        $this->telegramFileId = $telegramFileId;
 
         return $this;
     }
