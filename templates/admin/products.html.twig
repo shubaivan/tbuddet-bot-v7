@@ -31,6 +31,21 @@
 
         </table>
     {% endif %}
+    <!-- Image lightbox modal (re-used for every row) -->
+    <div class="modal fade product-image-lightbox" id="productImageLightbox" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <button type="button" class="lightbox-close" data-dismiss="modal" aria-label="Close">&times;</button>
+                <div class="lightbox-stage">
+                    <button type="button" class="lightbox-nav prev" aria-label="previous">‹</button>
+                    <img class="lightbox-img" src="" alt="">
+                    <button type="button" class="lightbox-nav next" aria-label="next">›</button>
+                </div>
+                <div class="lightbox-counter"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal -->
     <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">

@@ -237,21 +237,76 @@ document.addEventListener("DOMContentLoaded", function () {
         e.preventDefault();
         e.stopPropagation();
         const cell = $(this).closest('.product-img-cell');
-        let imgs;
-        try {
-            imgs = JSON.parse(decodeURIComponent(cell.attr('data-imgs') || '[]'));
-        } catch (_) {
-            imgs = [];
-        }
+        const imgs = parseImgs(cell);
         if (!imgs.length) return;
         const total = imgs.length;
         let idx = parseInt(cell.attr('data-idx') || '0', 10);
         idx = $(this).hasClass('next') ? (idx + 1) % total : (idx - 1 + total) % total;
+        setCellIdx(cell, imgs, idx);
+    });
+
+    // Click on the thumbnail itself → open lightbox at the current index.
+    $('#telegramUserTable').on('click', '.product-img-cell .img-link', function (e) {
+        e.preventDefault();
+        const cell = $(this).closest('.product-img-cell');
+        const imgs = parseImgs(cell);
+        if (!imgs.length) return;
+        const idx = parseInt(cell.attr('data-idx') || '0', 10);
+        openLightbox(imgs, idx);
+    });
+
+    // Lightbox navigation (prev/next + keyboard).
+    const $lightbox = $('#productImageLightbox');
+    let lightboxImgs = [];
+    let lightboxIdx = 0;
+
+    function parseImgs(cell) {
+        try {
+            return JSON.parse(decodeURIComponent(cell.attr('data-imgs') || '[]'));
+        } catch (_) {
+            return [];
+        }
+    }
+
+    function setCellIdx(cell, imgs, idx) {
         cell.attr('data-idx', idx);
         const url = imgs[idx];
         cell.find('img.product-img-primary').attr('src', url);
         cell.find('a.img-link').attr('href', url);
-        cell.find('.img-counter').text((idx + 1) + '/' + total);
+        cell.find('.img-counter').text((idx + 1) + '/' + imgs.length);
+    }
+
+    function renderLightbox() {
+        const total = lightboxImgs.length;
+        if (!total) return;
+        $lightbox.find('.lightbox-img').attr('src', lightboxImgs[lightboxIdx]);
+        $lightbox.find('.lightbox-counter').text((lightboxIdx + 1) + ' / ' + total);
+        $lightbox.find('.lightbox-nav').toggle(total > 1);
+    }
+
+    function openLightbox(imgs, startIdx) {
+        lightboxImgs = imgs;
+        lightboxIdx = Math.max(0, Math.min(startIdx, imgs.length - 1));
+        renderLightbox();
+        $lightbox.modal('show');
+    }
+
+    $lightbox.on('click', '.lightbox-nav', function () {
+        const total = lightboxImgs.length;
+        if (!total) return;
+        lightboxIdx = $(this).hasClass('next')
+            ? (lightboxIdx + 1) % total
+            : (lightboxIdx - 1 + total) % total;
+        renderLightbox();
+    });
+
+    $(document).on('keydown', function (e) {
+        if (!$lightbox.hasClass('show')) return;
+        if (e.key === 'ArrowRight') {
+            $lightbox.find('.lightbox-nav.next').trigger('click');
+        } else if (e.key === 'ArrowLeft') {
+            $lightbox.find('.lightbox-nav.prev').trigger('click');
+        }
     });
 
     let exampleModal = $('#exampleModal');
