@@ -6,13 +6,21 @@ use App\Entity\Files;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use League\Flysystem\FilesystemOperator;
+use Psr\Log\LoggerInterface;
+use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Types\Internal\InputFile;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class FilePathUploadListener
 {
-    public function __construct(private FilesystemOperator $defaultStorage)
-    {
+    public function __construct(
+        private FilesystemOperator $defaultStorage,
+        private Nutgram $bot,
+        private LoggerInterface $logger,
+        private string $projectDir,
+        private string $telegramWarmupChatId,
+    ) {
     }
 
     /**
@@ -96,6 +104,10 @@ class FilePathUploadListener
                 ->setOriginalName($originalName)
                 ->setSize((string) $fileSize);
 
+            // Eagerly upload to Telegram so the bot can use file_id immediately,
+            // without forcing the first user to wait on a URL-fetch / disk-upload.
+            $this->warmTelegramFileId($entity, $contents, $originalName);
+
         } elseif ($file instanceof File) {
             $entity->setPath($file->getFilename());
         }
@@ -104,5 +116,61 @@ class FilePathUploadListener
     private function generateTimeStamp()
     {
         return (new \DateTime())->format('Ymd_H:i:s');
+    }
+
+    /**
+     * Send the just-saved image to a private warmup chat so we capture the
+     * file_id Telegram returns, persist it on the entity, and delete the
+     * warmup message. After this the bot can render the image instantly,
+     * with no upload or URL fetch on the first user encounter.
+     *
+     * Best-effort: any failure (no chat id configured, Telegram unreachable,
+     * etc.) leaves telegram_file_id null and the bot falls back to InputFile
+     * upload on first send. That's the correct degradation path.
+     */
+    private function warmTelegramFileId(Files $entity, string $contents, string $originalName): void
+    {
+        if ($this->telegramWarmupChatId === '' || $contents === '') {
+            return;
+        }
+
+        // Write bytes to a temp file so InputFile can stream them; using the
+        // already-persisted disk path would also work but this avoids depending
+        // on Flysystem's local path resolution.
+        $tmp = tempnam(sys_get_temp_dir(), 'tg_warm_');
+        if ($tmp === false) {
+            return;
+        }
+        try {
+            file_put_contents($tmp, $contents);
+
+            $msg = $this->bot->sendPhoto(
+                chat_id: $this->telegramWarmupChatId,
+                photo: InputFile::make($tmp, $originalName),
+                caption: 'warmup',
+            );
+
+            $sizes = $msg->photo ?? [];
+            $largest = $sizes ? end($sizes) : null;
+            $fileId = $largest->file_id ?? null;
+            if ($fileId) {
+                $entity->setTelegramFileId($fileId);
+            }
+
+            if (isset($msg->message_id)) {
+                try {
+                    $this->bot->deleteMessage((int) $this->telegramWarmupChatId, $msg->message_id);
+                } catch (\Throwable) {
+                    // best-effort cleanup
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Telegram file_id warmup failed on upload', [
+                'error' => $e->getMessage(),
+                'path'  => $entity->getPath(),
+            ]);
+        } finally {
+            @unlink($tmp);
+        }
     }
 }

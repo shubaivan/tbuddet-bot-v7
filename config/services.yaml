@@ -30,6 +30,10 @@ services:
             $loginRoute: 'login_public'       # optional, if login fails user will be redirected there
             $telegramBotName: '%env(APP_TELEGRAM_BOT_NAME)%'
             $telegramBotToken: '%env(TELEGRAM_TOKEN)%'
+            # Private chat used to upload new product images once on save so we
+            # capture Telegram's file_id immediately. Defaults to empty string,
+            # which disables eager warmup (bot will warm on first user encounter).
+            $telegramWarmupChatId: '%env(string:default::TELEGRAM_WARMUP_CHAT_ID)%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
