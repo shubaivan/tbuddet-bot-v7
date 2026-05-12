@@ -95,7 +95,7 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.id,
                 o.total_amount,
                 o.order_status,
-                MAX(CASE WHEN tu.id IS NOT NULL THEN \'tg\' WHEN cui.id IS NOT NULL THEN \'web\' ELSE \'unknown\' END) as purchase_source,
+                MAX(CASE WHEN tu.id IS NOT NULL THEN \'tg\' ELSE \'web\' END) as purchase_source,
                 o.nova_poshta_tracking_number,
                 o.delivery_city,
                 o.delivery_department,
@@ -169,7 +169,7 @@ class UserOrderRepository extends ServiceEntityRepository
                 if ($params['filter_source'] === 'tg') {
                     $conditions[] = 'tu.id IS NOT NULL';
                 } elseif ($params['filter_source'] === 'web') {
-                    $conditions[] = 'cui.id IS NOT NULL';
+                    $conditions[] = 'tu.id IS NULL';
                 }
             }
         }

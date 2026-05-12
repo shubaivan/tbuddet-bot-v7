@@ -250,11 +250,14 @@ class AdminController extends AbstractController
             if ($params['filter_source'] === 'tg') {
                 $where[] = 'o.telegram_user_id IS NOT NULL';
             } elseif ($params['filter_source'] === 'web') {
-                $where[] = 'o.client_user_id IS NOT NULL';
+                $where[] = 'o.telegram_user_id IS NULL';
             }
         }
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
 
+        // Source rule: TG iff telegram_user_id is set; everything else is web
+        // (covers both authenticated client_user purchases AND guest checkouts
+        // via the public quick-buy endpoint, which has no FK).
         $sql = "
             SELECT
                 COUNT(*)                                                                                AS total_count,
@@ -267,7 +270,7 @@ class AdminController extends AbstractController
                 COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'delivered')   AS status_delivered,
                 COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'cancelled')   AS status_cancelled,
                 COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.telegram_user_id IS NOT NULL) AS source_tg,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.client_user_id IS NOT NULL)   AS source_web
+                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.telegram_user_id IS NULL)     AS source_web
             FROM user_order o
         " . $whereSql;
 
