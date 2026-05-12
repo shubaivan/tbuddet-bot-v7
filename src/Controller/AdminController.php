@@ -637,13 +637,18 @@ class AdminController extends AbstractController
 
             if (isset($category['parents'])) {
                 $parentCategories = json_decode($category['parents'], true);
-                $dataTable[$key]['parents'] = [];
+                $seen = [];
                 foreach ($parentCategories as $parentCategory) {
                     if (is_null($parentCategory)) {
                         continue;
                     }
-                    $dataTable[$key]['parents'][] = $parentCategory[UserLanguageEnum::UA->value];
+                    $label = $parentCategory[UserLanguageEnum::UA->value] ?? null;
+                    if ($label === null || $label === '' || isset($seen[$label])) {
+                        continue;
+                    }
+                    $seen[$label] = true;
                 }
+                $dataTable[$key]['parents'] = array_keys($seen);
             }
         }
 
