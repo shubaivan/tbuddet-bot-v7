@@ -61,7 +61,7 @@ class AdminUsersDataService
                 tu.updated_at AS last_visit,
                 COUNT(o.id) AS orders_total_count,
                 COUNT(o.id) FILTER (WHERE o.liq_pay_status = \'success\') AS orders_paid_count,
-                COALESCE(SUM(o.total_amount) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount
+                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount
             FROM telegram_user tu
             LEFT JOIN user_order o ON o.telegram_user_id = tu.id
             GROUP BY tu.id
@@ -78,7 +78,7 @@ class AdminUsersDataService
                 cu.updated_at AS last_visit,
                 COUNT(o.id) AS orders_total_count,
                 COUNT(o.id) FILTER (WHERE o.liq_pay_status = \'success\') AS orders_paid_count,
-                COALESCE(SUM(o.total_amount) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount
+                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount
             FROM client_user cu
             LEFT JOIN user_order o ON o.client_user_id = cu.id
             GROUP BY cu.id
