@@ -39,6 +39,9 @@ class PriceRingConversation extends Conversation
     // Single message ID — everything edits this one message
     public ?int $mainMessageId = null;
     public ?bool $mainMessageHasPhoto = false;
+    // Last photo key (S3 path) sent in the main message — lets us editMessageCaption
+    // instead of editMessageMedia when the photo hasn't changed between steps.
+    public ?string $lastPhotoKey = null;
 
     // Product browsing
     public int $productPage = 0;
@@ -101,9 +104,10 @@ class PriceRingConversation extends Conversation
         return false;
     }
 
-    // ─── Helper: get photo URL (convert avif → jpg for Telegram) ───
+    // ─── Helper: get photo for Telegram (convert avif → jpg if needed) ───
+    // Returns ['key' => stable string per source file, 'arg' => url|InputFile] or null.
 
-    private function getProductPhotoUrl($product): string|InputFile|null
+    private function getProductPhoto($product): ?array
     {
         $files = $product->getFiles();
         if ($files->count() === 0) return null;
@@ -113,7 +117,11 @@ class PriceRingConversation extends Conversation
         foreach ($files as $file) {
             $ext = strtolower($file->getExtension());
             if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                return $this->defaultStorage->publicUrl($file->getPath());
+                $path = $file->getPath();
+                return [
+                    'key' => 'url:' . $path,
+                    'arg' => $this->defaultStorage->publicUrl($path),
+                ];
             }
             if ($ext === 'avif' && $avifFile === null) {
                 $avifFile = $file;
@@ -134,7 +142,10 @@ class PriceRingConversation extends Conversation
                 imagejpeg($img, $tmpPath, 85);
                 imagedestroy($img);
 
-                return InputFile::make($tmpPath);
+                return [
+                    'key' => 'avif:' . $avifFile->getPath(),
+                    'arg' => InputFile::make($tmpPath),
+                ];
             } catch (\Throwable $e) {
                 $this->logger->warning('AVIF conversion failed', ['error' => $e->getMessage()]);
                 return null;
@@ -146,18 +157,32 @@ class PriceRingConversation extends Conversation
 
     // ─── Helper: send or edit the single main message ───
 
-    private function sendOrEdit(Nutgram $bot, string $text, ?InlineKeyboardMarkup $keyboard = null, string|InputFile|null $photoUrl = null): void
+    private function sendOrEdit(Nutgram $bot, string $text, ?InlineKeyboardMarkup $keyboard = null, ?array $photo = null): void
     {
         $chatId = $bot->chatId();
+        $photoArg = $photo['arg'] ?? null;
+        $photoKey = $photo['key'] ?? null;
 
         // Try to edit existing message
         if ($this->mainMessageId) {
             try {
-                if ($photoUrl && $this->mainMessageHasPhoto) {
-                    // Edit photo message
+                if ($photoArg && $this->mainMessageHasPhoto) {
+                    // Same photo as before → just update caption (no Telegram re-fetch)
+                    if ($photoKey !== null && $photoKey === $this->lastPhotoKey) {
+                        $bot->editMessageCaption(
+                            chat_id: $chatId,
+                            message_id: $this->mainMessageId,
+                            caption: $text,
+                            parse_mode: ParseMode::HTML,
+                            reply_markup: $keyboard,
+                        );
+                        return;
+                    }
+
+                    // Different photo → replace media
                     $bot->editMessageMedia(
                         media: new InputMediaPhoto(
-                            media: $photoUrl,
+                            media: $photoArg,
                             caption: $text,
                             parse_mode: ParseMode::HTML,
                         ),
@@ -165,8 +190,9 @@ class PriceRingConversation extends Conversation
                         message_id: $this->mainMessageId,
                         reply_markup: $keyboard,
                     );
+                    $this->lastPhotoKey = $photoKey;
                     return;
-                } elseif (!$photoUrl && !$this->mainMessageHasPhoto) {
+                } elseif (!$photoArg && !$this->mainMessageHasPhoto) {
                     // Edit text message
                     $bot->editMessageText(
                         text: $text,
@@ -182,6 +208,7 @@ class PriceRingConversation extends Conversation
                         $bot->deleteMessage($chatId, $this->mainMessageId);
                     } catch (\Throwable $e) {}
                     $this->mainMessageId = null;
+                    $this->lastPhotoKey = null;
                 }
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to edit message', ['error' => $e->getMessage()]);
@@ -190,20 +217,22 @@ class PriceRingConversation extends Conversation
                     $bot->deleteMessage($chatId, $this->mainMessageId);
                 } catch (\Throwable $e2) {}
                 $this->mainMessageId = null;
+                $this->lastPhotoKey = null;
             }
         }
 
         // Send new message
-        if ($photoUrl) {
+        if ($photoArg) {
             try {
                 $msg = $bot->sendPhoto(
-                    photo: $photoUrl,
+                    photo: $photoArg,
                     caption: $text,
                     parse_mode: ParseMode::HTML,
                     reply_markup: $keyboard,
                 );
                 $this->mainMessageId = $msg->message_id;
                 $this->mainMessageHasPhoto = true;
+                $this->lastPhotoKey = $photoKey;
                 return;
             } catch (\Throwable $e) {
                 $this->logger->warning('Failed to send photo', ['error' => $e->getMessage()]);
@@ -218,6 +247,7 @@ class PriceRingConversation extends Conversation
         );
         $this->mainMessageId = $msg->message_id;
         $this->mainMessageHasPhoto = false;
+        $this->lastPhotoKey = null;
     }
 
     // ─── Build order info text (accumulates as steps progress) ───
@@ -275,6 +305,7 @@ class PriceRingConversation extends Conversation
     {
         $this->mainMessageId = null;
         $this->mainMessageHasPhoto = false;
+        $this->lastPhotoKey = null;
 
         $keyboard = InlineKeyboardMarkup::make();
         foreach ($this->productService->getCategories() as $categorySet) {
@@ -346,7 +377,7 @@ class PriceRingConversation extends Conversation
         }
         $keyboard->addRow(...$navRow);
 
-        $photoUrl = $this->getProductPhotoUrl($product);
+        $photoUrl = $this->getProductPhoto($product);
         $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
     }
 
@@ -482,7 +513,7 @@ class PriceRingConversation extends Conversation
         }
 
         $text = $this->buildInfoText(stepPrompt: $prompt);
-        $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+        $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
     }
 
@@ -518,7 +549,7 @@ class PriceRingConversation extends Conversation
     private function askCityText(Nutgram $bot): void
     {
         $text = $this->buildInfoText(stepPrompt: $this->t('city.ask'));
-        $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+        $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, null, $photoUrl);
         $this->next('handleCityInput');
     }
@@ -544,7 +575,7 @@ class PriceRingConversation extends Conversation
 
         if (empty($cities)) {
             $text = $this->buildInfoText(stepPrompt: $this->t('city.not_found'));
-            $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+            $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $text, null, $photoUrl);
             $this->next('handleCityInput');
             return;
@@ -563,7 +594,7 @@ class PriceRingConversation extends Conversation
         $keyboard->addRow(InlineKeyboardButton::make('🔍 ' . $this->t('city.search_another'), callback_data: 'retry_city'));
 
         $text = $this->buildInfoText(stepPrompt: $this->t('city.choose'));
-        $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+        $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
         $this->next('handleCitySelection');
     }
@@ -603,7 +634,7 @@ class PriceRingConversation extends Conversation
             $this->deliveryCity = null;
             $this->deliveryCityRef = null;
             $text = $this->buildInfoText(stepPrompt: $this->t('warehouse.not_found'));
-            $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+            $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $text, null, $photoUrl);
             $this->next('handleCityInput');
             return;
@@ -622,7 +653,7 @@ class PriceRingConversation extends Conversation
         }
 
         $text = $this->buildInfoText(stepPrompt: $this->t('warehouse.choose'));
-        $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+        $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, $keyboard, $photoUrl);
         $this->next('handleWarehouseSelection');
     }
@@ -650,7 +681,7 @@ class PriceRingConversation extends Conversation
     private function askQuantity(Nutgram $bot): void
     {
         $text = $this->buildInfoText(stepPrompt: $this->t('quantity.ask'));
-        $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+        $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $text, null, $photoUrl);
         $this->next('handleQuantity');
     }
@@ -670,7 +701,7 @@ class PriceRingConversation extends Conversation
 
         if (!preg_match('/^[0-9]+$/', $text) || (int)$text < 1) {
             $infoText = $this->buildInfoText(stepPrompt: $this->t('quantity.invalid'));
-            $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+            $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
             $this->sendOrEdit($bot, $infoText, null, $photoUrl);
             $this->next('handleQuantity');
             return;
@@ -685,7 +716,7 @@ class PriceRingConversation extends Conversation
         );
 
         $infoText = $this->buildInfoText(stepPrompt: $this->t('confirm.title'));
-        $photoUrl = $this->getProductPhotoUrl($this->productService->getProduct($this->productId));
+        $photoUrl = $this->getProductPhoto($this->productService->getProduct($this->productId));
         $this->sendOrEdit($bot, $infoText, $keyboard, $photoUrl);
 
         $this->next('handleConfirm');
@@ -813,7 +844,7 @@ class PriceRingConversation extends Conversation
         $finalText .= sprintf("\n\n🔗 <a href=\"%s\">%s</a>", $link, $this->t('payment.link'));
         $finalText .= "\n\n" . $this->t('payment.thanks');
 
-        $photoUrl = $this->getProductPhotoUrl($product);
+        $photoUrl = $this->getProductPhoto($product);
         $this->sendOrEdit($bot, $finalText, null, $photoUrl);
 
         // Notify managers about new order
