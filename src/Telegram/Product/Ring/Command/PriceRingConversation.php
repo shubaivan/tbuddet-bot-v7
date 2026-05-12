@@ -385,14 +385,13 @@ class PriceRingConversation extends Conversation
             InlineKeyboardButton::make('🛒 ' . $this->t('product.select'), callback_data: 'product_' . $product->getId())
         );
 
-        $navRow = [];
-        if ($this->productPage > 0) {
-            $navRow[] = InlineKeyboardButton::make('◀️', callback_data: 'page_prev');
-        }
-        $navRow[] = InlineKeyboardButton::make('🔙 ' . $this->t('product.categories'), callback_data: 'back_categories');
-        if ($this->productPage < $total - 1) {
-            $navRow[] = InlineKeyboardButton::make('▶️', callback_data: 'page_next');
-        }
+        // Arrows always visible; wrap around at the ends so the carousel
+        // is a loop rather than a dead-end at item 1 or N.
+        $navRow = [
+            InlineKeyboardButton::make('◀️', callback_data: 'page_prev'),
+            InlineKeyboardButton::make('🔙 ' . $this->t('product.categories'), callback_data: 'back_categories'),
+            InlineKeyboardButton::make('▶️', callback_data: 'page_next'),
+        ];
         $keyboard->addRow(...$navRow);
 
         $photoUrl = $this->getProductPhoto($product);
@@ -409,14 +408,15 @@ class PriceRingConversation extends Conversation
 
         $data = $bot->callbackQuery()->data;
 
+        $total = count($this->productIds);
         if ($data === 'page_next') {
-            $this->productPage = min($this->productPage + 1, count($this->productIds) - 1);
+            $this->productPage = $total > 0 ? ($this->productPage + 1) % $total : 0;
             $this->showProduct($bot);
             $this->next('handleProductBrowse');
             return;
         }
         if ($data === 'page_prev') {
-            $this->productPage = max(0, $this->productPage - 1);
+            $this->productPage = $total > 0 ? ($this->productPage - 1 + $total) % $total : 0;
             $this->showProduct($bot);
             $this->next('handleProductBrowse');
             return;
