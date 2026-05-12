@@ -146,6 +146,7 @@ class AdminController extends AbstractController
             'recordsTotal'    => $result['recordsTotal'],
             'recordsFiltered' => $result['recordsFiltered'],
             'data'            => $result['data'],
+            'stats'           => $result['stats'],
         ]);
     }
 

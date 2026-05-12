@@ -10,6 +10,22 @@
 {% block body %}
     {{ parent() }}
 
+    <div id="usersStatsBar" class="users-stats-bar" hidden>
+        <div class="stat">
+            <span class="stat-value" data-stat="users_count">0</span>
+            <span class="stat-label">користувачів</span>
+            <span class="stat-sub" data-stat="sub_split">—</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" data-stat="paid_orders_count">0</span>
+            <span class="stat-label">оплачених замовлень</span>
+        </div>
+        <div class="stat stat-revenue">
+            <span class="stat-value" data-stat="paid_orders_amount">₴0</span>
+            <span class="stat-label">сума</span>
+        </div>
+    </div>
+
     <div class="filters-bar" style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;align-items:end;">
         <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Джерело</label>

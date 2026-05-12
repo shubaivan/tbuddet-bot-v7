@@ -116,8 +116,28 @@ class AdminUsersDataService
         $filteredCountSql = 'SELECT COUNT(*) FROM (' . $totalSql . ') AS u' . $whereSql;
         $recordsFiltered = (int) $this->db->fetchOne($filteredCountSql, $binds);
 
+        // Aggregate stats for the stats bar — respect the same filters as the table.
+        $statsSql = 'SELECT
+                COUNT(*) AS users_count,
+                COUNT(*) FILTER (WHERE source = \'tg\')  AS tg_count,
+                COUNT(*) FILTER (WHERE source = \'web\') AS web_count,
+                COALESCE(SUM(orders_paid_count), 0)  AS paid_orders_count,
+                COALESCE(SUM(orders_paid_amount), 0) AS paid_orders_amount
+            FROM (' . $totalSql . ') AS u' . $whereSql;
+        $stats = $this->db->fetchAssociative($statsSql, $binds) ?: [];
+        $stats = [
+            'users_count'         => (int)   ($stats['users_count']        ?? 0),
+            'tg_count'            => (int)   ($stats['tg_count']           ?? 0),
+            'web_count'           => (int)   ($stats['web_count']          ?? 0),
+            'paid_orders_count'   => (int)   ($stats['paid_orders_count']  ?? 0),
+            'paid_orders_amount'  => (float) ($stats['paid_orders_amount'] ?? 0),
+        ];
+
+        // NULLS LAST for phone, display_name, handle so empty values don't
+        // bubble to the top on DESC.
+        $nullsLast = in_array($sortBy, ['phone', 'display_name', 'handle'], true) ? ' NULLS LAST' : '';
         $dataSql = 'SELECT * FROM (' . $totalSql . ') AS u' . $whereSql
-            . ' ORDER BY ' . $sortBy . ' ' . $orderDir . ', source ASC'
+            . ' ORDER BY ' . $sortBy . ' ' . $orderDir . $nullsLast . ', source ASC'
             . ' LIMIT :lim OFFSET :off';
         $binds['lim'] = $length;
         $binds['off'] = $start;
@@ -146,6 +166,7 @@ class AdminUsersDataService
             'recordsTotal'    => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data'            => $data,
+            'stats'           => $stats,
         ];
     }
 

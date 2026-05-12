@@ -108,6 +108,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 d.filter_reg_to = $('#filterRegTo').val();
                 d.filter_source = $('#filterSource').val();
             },
+            dataSrc: function (json) {
+                if (json && json.stats) renderStats(json.stats);
+                return json.data || [];
+            },
         },
         columns,
         columnDefs: defs,
@@ -157,6 +161,16 @@ document.addEventListener("DOMContentLoaded", function () {
             $modal.find('.uo-body').html('<div class="uo-empty">У користувача поки немає замовлень.</div>');
             return;
         }
+
+        // Per-user totals
+        const paid = data.orders.filter(o => o.is_paid);
+        const paidSum = paid.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+        const pendingCount = data.orders.length - paid.length;
+        const summary = '<div class="uo-summary">' +
+            '<span class="uo-pill paid">' + paid.length + ' оплачено • ₴' + formatMoney(paidSum) + '</span>' +
+            (pendingCount > 0 ? '<span class="uo-pill pending">' + pendingCount + ' очікують</span>' : '') +
+            '</div>';
+
         const rows = data.orders.map(o => {
             const paidBadge = o.is_paid
                 ? '<span class="uo-pill paid">Оплачено</span>'
@@ -169,7 +183,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 '<span class="uo-date">' + escapeHtml(o.created_at || '') + '</span>' +
                 '</a>';
         }).join('');
-        $modal.find('.uo-body').html('<div class="uo-list">' + rows + '</div>');
+        $modal.find('.uo-body').html(summary + '<div class="uo-list">' + rows + '</div>');
+    }
+
+    function renderStats(stats) {
+        const $bar = $('#usersStatsBar');
+        $bar.find('[data-stat="users_count"]').text(stats.users_count || 0);
+        $bar.find('[data-stat="paid_orders_count"]').text(stats.paid_orders_count || 0);
+        $bar.find('[data-stat="paid_orders_amount"]').text('₴' + formatMoney(stats.paid_orders_amount || 0));
+        $bar.find('[data-stat="sub_split"]').text(
+            (stats.tg_count || 0) + ' Telegram • ' + (stats.web_count || 0) + ' Web'
+        );
+        $bar.prop('hidden', false);
     }
 
     function formatMoney(v) {
