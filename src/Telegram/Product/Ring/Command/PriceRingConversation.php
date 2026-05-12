@@ -105,28 +105,43 @@ class PriceRingConversation extends Conversation
     }
 
     // ─── Helper: get photo for Telegram ───
-    // Returns ['key' => stable string, 'arg' => fileId|url, 'filesId' => int] or null.
-    // After first send we cache Telegram's file_id on the Files row so subsequent
-    // renders skip the URL refetch entirely (Telegram serves from its own storage).
+    // Returns ['key' => stable string, 'arg' => fileId|InputFile|url, 'filesId' => int] or null.
+    // Priority:
+    //   1. Cached Telegram file_id → instant, no upload at all.
+    //   2. Local disk bytes via InputFile → bot uploads bytes directly to Telegram,
+    //      Telegram never has to fetch our URL (URL-fetch was unreliable: 30–60s waits).
+    //   3. Public URL → last-resort fallback if disk is missing.
 
     private function getProductPhoto($product): ?array
     {
         $chosen = $product->getFiles()->first() ?: null;
         if ($chosen === null) return null;
 
+        $filesId = $chosen->getId();
+
         $tgFileId = $chosen->getTelegramFileId();
         if ($tgFileId !== null) {
             return [
                 'key' => 'tg:' . $tgFileId,
                 'arg' => $tgFileId,
-                'filesId' => $chosen->getId(),
+                'filesId' => $filesId,
+            ];
+        }
+
+        $relPath = $chosen->getPath();
+        $diskPath = $this->projectDir . '/public/assets/default/' . $relPath;
+        if (is_file($diskPath) && is_readable($diskPath)) {
+            return [
+                'key' => 'disk:' . $relPath,
+                'arg' => InputFile::make($diskPath),
+                'filesId' => $filesId,
             ];
         }
 
         return [
-            'key' => 'url:' . $chosen->getPath(),
-            'arg' => $this->defaultStorage->publicUrl($chosen->getPath()),
-            'filesId' => $chosen->getId(),
+            'key' => 'url:' . $relPath,
+            'arg' => $this->defaultStorage->publicUrl($relPath),
+            'filesId' => $filesId,
         ];
     }
 
