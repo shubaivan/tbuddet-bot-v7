@@ -111,18 +111,7 @@ class PriceRingConversation extends Conversation
 
     private function getProductPhoto($product): ?array
     {
-        // Pick the first Telegram-compatible file. If a product only has AVIF
-        // originals (no JPG fallback yet), we return null and the bot renders
-        // without a photo rather than hanging on conversion — the offline
-        // backfill command app:images:generate-avif-fallbacks regenerates them.
-        $chosen = null;
-        foreach ($product->getFiles() as $file) {
-            $ext = strtolower($file->getExtension());
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                $chosen = $file;
-                break;
-            }
-        }
+        $chosen = $product->getFiles()->first() ?: null;
         if ($chosen === null) return null;
 
         $tgFileId = $chosen->getTelegramFileId();

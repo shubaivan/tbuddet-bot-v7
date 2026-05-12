@@ -52,13 +52,38 @@ class FilePathUploadListener
 
         if ($file instanceof UploadedFile) {
             $fileName = $this->generateTimeStamp();
-            $ext = $file->guessExtension();
-            $path = $fileName.'_'.$file->getClientOriginalName();
-            $fileSize = $file->getSize();
+            $ext = strtolower((string) $file->guessExtension());
+            $contents = file_get_contents($file->getPathname());
+            $originalName = $file->getClientOriginalName();
+
+            // Force every uploaded image into a Telegram-friendly format. AVIF
+            // (and any other not-jpg/png/webp guess) is converted to JPG here so
+            // the rest of the system never has to worry about format fallbacks.
+            $webExts = ['jpg', 'jpeg', 'png', 'webp'];
+            if (!in_array($ext, $webExts, true) && $contents !== false) {
+                $image = @imagecreatefromstring($contents);
+                if ($image !== false) {
+                    ob_start();
+                    imagejpeg($image, null, 88);
+                    $converted = ob_get_clean();
+                    imagedestroy($image);
+                    if ($converted !== false && $converted !== '') {
+                        $contents = $converted;
+                        $ext = 'jpg';
+                        $originalName = preg_replace('/\.[^.]+$/', '.jpg', $originalName) ?: $originalName . '.jpg';
+                    }
+                }
+            }
+
+            $baseName = $originalName;
+            if (in_array($ext, $webExts, true)) {
+                $baseName = preg_replace('/\.[^.]+$/', '.' . $ext, $originalName) ?: $originalName;
+            }
+            $path = $fileName . '_' . $baseName;
+            $fileSize = strlen($contents);
 
             $has = $this->defaultStorage->has($path);
             if (!$has) {
-                $contents = file_get_contents($file->getPathname());
                 $this->defaultStorage->write(
                     $path,
                     $contents,
@@ -68,8 +93,8 @@ class FilePathUploadListener
             $entity
                 ->setPath($path)
                 ->setExtension($ext)
-                ->setOriginalName($file->getClientOriginalName())
-                ->setSize($fileSize);
+                ->setOriginalName($originalName)
+                ->setSize((string) $fileSize);
 
         } elseif ($file instanceof File) {
             $entity->setPath($file->getFilename());
