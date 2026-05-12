@@ -88,19 +88,19 @@ class AdminUsersDataService
         $binds  = [];
         if ($search !== '') {
             $wheres[] = '(LOWER(display_name) LIKE :q OR LOWER(handle) LIKE :q OR LOWER(phone) LIKE :q)';
-            $binds[':q'] = '%' . mb_strtolower($search) . '%';
+            $binds['q'] = '%' . mb_strtolower($search) . '%';
         }
         if ($filterFrom !== '') {
             $wheres[] = 'created_at >= :reg_from';
-            $binds[':reg_from'] = $filterFrom . ' 00:00:00';
+            $binds['reg_from'] = $filterFrom . ' 00:00:00';
         }
         if ($filterTo !== '') {
             $wheres[] = 'created_at <= :reg_to';
-            $binds[':reg_to'] = $filterTo . ' 23:59:59';
+            $binds['reg_to'] = $filterTo . ' 23:59:59';
         }
         if ($filterSource === 'tg' || $filterSource === 'web') {
             $wheres[] = 'source = :source';
-            $binds[':source'] = $filterSource;
+            $binds['source'] = $filterSource;
         }
         if ($filterOrders === 'with_orders') {
             $wheres[] = 'orders_total_count > 0';
@@ -119,8 +119,8 @@ class AdminUsersDataService
         $dataSql = 'SELECT * FROM (' . $totalSql . ') AS u' . $whereSql
             . ' ORDER BY ' . $sortBy . ' ' . $orderDir . ', source ASC'
             . ' LIMIT :lim OFFSET :off';
-        $binds[':lim'] = $length;
-        $binds[':off'] = $start;
+        $binds['lim'] = $length;
+        $binds['off'] = $start;
 
         $rows = $this->db->fetchAllAssociative($dataSql, $binds);
 
