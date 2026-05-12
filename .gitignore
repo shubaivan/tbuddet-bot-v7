@@ -35,3 +35,10 @@ yarn-error.log
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
 docs/*.sql
+
+# local-only artifacts (added 2026-05-12)
+/.claude/
+/changelog-*.md
+/dupl.json
+/qa-test-*.mjs
+/reload.sh
