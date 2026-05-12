@@ -93,52 +93,60 @@ class AdminController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/users/{id}/orders.json', name: 'admin-user-orders-json', options: ['expose' => true], methods: ['GET'])]
-    public function userOrdersJson(#[MapEntity(id: 'id')] TelegramUser $user): Response
+    #[Route('/admin/users/{source}/{id}/orders.json', name: 'admin-user-orders-json', options: ['expose' => true], methods: ['GET'], requirements: ['source' => 'tg|web', 'id' => '\d+'])]
+    public function userOrdersJson(string $source, int $id, EntityManagerInterface $em): Response
     {
-        $rows = [];
-        foreach ($user->getOrders() as $order) {
-            $rows[] = [
-                'id'           => $order->getId(),
-                'total_amount' => $order->getTotalAmount(),
-                'status'       => $order->getOrderStatus()?->value,
-                'liq_pay'      => $order->getLiqPayStatus(),
-                'is_paid'      => $order->getLiqPayStatus() === 'success',
-                'created_at'   => $order->getCreatedAt()?->format('Y-m-d H:i'),
-                'detail_url'   => $this->generateUrl('app_admin_order_detail', ['id' => $order->getId()]),
-            ];
-        }
-        // Most recent first
-        usort($rows, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+        $orders = [];
+        $userInfo = ['id' => $id, 'name' => '—', 'phone' => null, 'extra' => null];
 
-        return $this->json([
-            'user' => [
+        if ($source === 'tg') {
+            $user = $em->getRepository(TelegramUser::class)->find($id);
+            if (!$user) return $this->json(['error' => 'not found'], 404);
+            $orders = $user->getOrders()->toArray();
+            $userInfo = [
                 'id'    => $user->getId(),
                 'name'  => trim(($user->getFirstName() ?? '') . ' ' . ($user->getLastName() ?? '')) ?: ($user->getUsername() ?? '—'),
                 'phone' => $user->getPhoneNumber(),
-            ],
-            'orders' => $rows,
-        ]);
+                'extra' => $user->getUsername() ? '@' . $user->getUsername() : null,
+            ];
+        } else {
+            $user = $em->getRepository(\App\Entity\User::class)->find($id);
+            if (!$user) return $this->json(['error' => 'not found'], 404);
+            $orders = $user->getClientOrders()->toArray();
+            $userInfo = [
+                'id'    => $user->getId(),
+                'name'  => trim(($user->getFirstName() ?? '') . ' ' . ($user->getLastName() ?? '')) ?: ($user->getEmail() ?? '—'),
+                'phone' => $user->getPhone() ?? null,
+                'extra' => $user->getEmail(),
+            ];
+        }
+
+        $rows = array_map(fn($order) => [
+            'id'           => $order->getId(),
+            'total_amount' => $order->getTotalAmount(),
+            'status'       => $order->getOrderStatus()?->value,
+            'liq_pay'      => $order->getLiqPayStatus(),
+            'is_paid'      => $order->getLiqPayStatus() === 'success',
+            'created_at'   => $order->getCreatedAt()?->format('Y-m-d H:i'),
+            'detail_url'   => $this->generateUrl('app_admin_order_detail', ['id' => $order->getId()]),
+        ], $orders);
+        usort($rows, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+
+        return $this->json(['user' => $userInfo, 'orders' => $rows]);
     }
 
     #[Route('/admin/users/data-table', name: 'admin-users-data-table', options: ['expose' => true])]
-    public function getUsersDataTable(TelegramUserRepository $repository, Request $request)
+    public function getUsersDataTable(\App\Service\AdminUsersDataService $dataService, Request $request)
     {
-        $dataTable = $repository
-            ->getDataTablesData($request->request->all());
+        $params = $request->request->all();
+        $result = $dataService->fetch($params);
 
-        return $this->json(
-            array_merge(
-                [
-                    "draw" => $request->request->get('draw'),
-                    "recordsTotal" => $repository
-                        ->getDataTablesData($request->request->all(), true, true),
-                    "recordsFiltered" => $repository
-                        ->getDataTablesData($request->request->all(), true)
-                ],
-                ['data' => $dataTable]
-            )
-        );
+        return $this->json([
+            'draw'            => (int) ($request->request->get('draw') ?? 0),
+            'recordsTotal'    => $result['recordsTotal'],
+            'recordsFiltered' => $result['recordsFiltered'],
+            'data'            => $result['data'],
+        ]);
     }
 
     #############

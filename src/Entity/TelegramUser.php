@@ -17,13 +17,17 @@ class TelegramUser implements UserInterface
 {
     use CreatedUpdatedAtAwareTrait;
 
+    // NOTE: this list also drives the unified admin users view (TG + Web)
+    // via AdminUsersDataService. The column order here must stay in lockstep
+    // with the sortMap in that service.
     public static array $dataTableFields = [
-        'id',
+        'origin_id',
         'user',
-        'phone_number',
+        'phone',
         'orders_summary',
-        'start',
+        'created_at',
         'last_visit',
+        'source',
         'actions'
     ];
 

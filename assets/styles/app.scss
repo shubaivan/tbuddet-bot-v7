@@ -319,6 +319,22 @@ input:required {
         white-space: nowrap;
     }
 
+    .src-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+
+        i { font-size: 11px; }
+
+        &.tg  { background: #dbeafe; color: #1d4ed8; }
+        &.web { background: #ede9fe; color: #6d28d9; }
+    }
+
     .action-btn {
         display: inline-flex;
         align-items: center;

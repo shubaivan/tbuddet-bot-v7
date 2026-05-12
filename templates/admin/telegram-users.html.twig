@@ -12,6 +12,14 @@
 
     <div class="filters-bar" style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;align-items:end;">
         <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Джерело</label>
+            <select id="filterSource" class="form-control form-control-sm" style="width:150px;">
+                <option value="">Всі</option>
+                <option value="tg">Telegram</option>
+                <option value="web">Email / Web</option>
+            </select>
+        </div>
+        <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Замовлення</label>
             <select id="filterOrders" class="form-control form-control-sm" style="width:180px;">
                 <option value="">Всі користувачі</option>
@@ -34,12 +42,13 @@
     </div>
 
     {% set labels = {
-        'id': 'ID',
+        'origin_id': 'ID',
         'user': 'Користувач',
-        'phone_number': 'Телефон',
+        'phone': 'Телефон',
         'orders_summary': 'Замовлення',
-        'start': 'Реєстрація',
+        'created_at': 'Реєстрація',
         'last_visit': 'Остання активність',
+        'source': 'Джерело',
         'actions': ''
     } %}
 

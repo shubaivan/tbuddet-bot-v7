@@ -4,62 +4,62 @@ document.addEventListener("DOMContentLoaded", function () {
     let table;
     const defs = [];
 
-    // id — compact monospace
+    // origin_id — compact monospace, prefixed with source initial
     defs.push({
         targets: 0,
-        render: (data, type, row) => '<span class="row-id">#' + row.id + '</span>',
+        render: (data, type, row) => {
+            const tag = row.source === 'tg' ? 'T' : 'W';
+            return '<span class="row-id">' + tag + ':' + row.origin_id + '</span>';
+        },
     });
 
-    // Combined user identity: bold display name + @username + telegram_id
+    // User cell — display name + handle (email or @username)
     defs.push({
         targets: 1,
-        orderable: false,
+        orderable: true,
         render: (data, type, row) => {
-            const name = (row.first_name || '') + ' ' + (row.last_name || '');
-            const display = name.trim() || '—';
-            const handle = row.username ? '@' + row.username : '';
+            const display = row.display_name && row.display_name.trim() ? row.display_name : '—';
+            const handle = row.handle ? escapeHtml(row.handle) : '';
             return '<div class="user-cell">' +
                 '<div class="user-name">' + escapeHtml(display) + '</div>' +
-                (handle ? '<div class="user-handle">' + escapeHtml(handle) + '</div>' : '') +
+                (handle ? '<div class="user-handle">' + (row.source === 'tg' ? '@' + handle : handle) + '</div>' : '') +
                 '</div>';
         },
     });
 
-    // Phone — plain
+    // Phone
     defs.push({
         targets: 2,
-        render: (data, type, row) => row.phone_number ? '<span class="tel">' + escapeHtml(row.phone_number) + '</span>' : '<span class="muted">—</span>',
+        render: (data, type, row) => row.phone ? '<span class="tel">' + escapeHtml(row.phone) + '</span>' : '<span class="muted">—</span>',
     });
 
-    // Orders summary — chips. Paid (green) shows count + total. Pending (gray) shows leftover count.
+    // Orders chips
     defs.push({
         targets: 3,
-        orderable: false,
+        orderable: true,
         render: (data, type, row) => {
-            const paidCount = parseInt(row.orders_paid_count || 0, 10);
-            const paidAmount = parseFloat(row.orders_paid_amount || 0);
-            const totalCount = parseInt(row.orders_total_count || 0, 10);
+            const paidCount = row.orders_paid_count || 0;
+            const paidAmount = row.orders_paid_amount || 0;
+            const totalCount = row.orders_total_count || 0;
             const pendingCount = Math.max(0, totalCount - paidCount);
 
-            if (!totalCount) {
-                return '<span class="muted">немає</span>';
-            }
+            if (!totalCount) return '<span class="muted">немає</span>';
             const paidChip = paidCount > 0
                 ? '<span class="orders-chip paid" title="Оплачені">' + paidCount + ' • ₴' + formatMoney(paidAmount) + '</span>'
                 : '';
             const pendingChip = pendingCount > 0
                 ? '<span class="orders-chip pending" title="Очікують оплати">' + pendingCount + ' очік.</span>'
                 : '';
-            return '<button type="button" class="orders-summary-btn" data-user-id="' + row.id + '">' +
+            return '<button type="button" class="orders-summary-btn" data-source="' + row.source + '" data-origin-id="' + row.origin_id + '">' +
                 (paidChip || '<span class="orders-chip empty">0</span>') + pendingChip +
                 '</button>';
         },
     });
 
-    // start
+    // created_at
     defs.push({
         targets: 4,
-        render: (data, type, row) => row.start ? '<span class="ts-cell">' + row.start + '</span>' : '',
+        render: (data, type, row) => row.created_at ? '<span class="ts-cell">' + row.created_at + '</span>' : '',
     });
 
     // last_visit
@@ -68,12 +68,21 @@ document.addEventListener("DOMContentLoaded", function () {
         render: (data, type, row) => row.last_visit ? '<span class="ts-cell">' + row.last_visit + '</span>' : '',
     });
 
-    // actions — link to view orders
+    // source pill
     defs.push({
         targets: 6,
         orderable: false,
+        render: (data, type, row) => row.source === 'tg'
+            ? '<span class="src-pill tg" title="Telegram"><i class="fab fa-telegram-plane"></i> Telegram</span>'
+            : '<span class="src-pill web" title="Email/Web"><i class="fas fa-envelope"></i> Web</span>',
+    });
+
+    // actions
+    defs.push({
+        targets: 7,
+        orderable: false,
         render: (data, type, row) =>
-            '<button type="button" class="action-btn action-edit orders-summary-btn" data-user-id="' + row.id + '" title="Замовлення">' +
+            '<button type="button" class="action-btn action-edit orders-summary-btn" data-source="' + row.source + '" data-origin-id="' + row.origin_id + '" title="Замовлення">' +
             '<i class="fas fa-eye"></i></button>',
     });
 
@@ -92,6 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 d.filter_orders = $('#filterOrders').val();
                 d.filter_reg_from = $('#filterRegFrom').val();
                 d.filter_reg_to = $('#filterRegTo').val();
+                d.filter_source = $('#filterSource').val();
             },
         },
         columns: th_keys,
@@ -106,36 +116,38 @@ document.addEventListener("DOMContentLoaded", function () {
         },
     });
 
-    // Filter buttons
     $('#applyFilters').on('click', () => table.ajax.reload());
     $('#resetFilters').on('click', () => {
         $('#filterOrders').val('');
         $('#filterRegFrom').val('');
         $('#filterRegTo').val('');
+        $('#filterSource').val('');
         table.ajax.reload();
     });
 
-    // Orders modal: click chip → load JSON → render
     const $modal = $('#userOrdersModal');
     $('#telegramUserTable').on('click', '.orders-summary-btn', function () {
-        const userId = $(this).data('userId');
-        if (!userId) return;
-        openOrdersModal(userId);
+        const source = $(this).data('source');
+        const originId = $(this).data('originId');
+        if (!source || !originId) return;
+        openOrdersModal(source, originId);
     });
 
-    function openOrdersModal(userId) {
+    function openOrdersModal(source, originId) {
         $modal.find('.uo-body').html('<div class="uo-loading">Завантаження…</div>');
         $modal.find('.uo-user').text('');
         $modal.modal('show');
-        $.getJSON('/admin/users/' + userId + '/orders.json')
+        $.getJSON('/admin/users/' + source + '/' + originId + '/orders.json')
             .done(data => renderUserOrders(data))
             .fail(() => $modal.find('.uo-body').html('<div class="uo-error">Не вдалось завантажити замовлення.</div>'));
     }
 
     function renderUserOrders(data) {
-        $modal.find('.uo-user').text(
-            data.user.name + (data.user.phone ? ' • ' + data.user.phone : '')
-        );
+        const parts = [data.user.name];
+        if (data.user.extra) parts.push(data.user.extra);
+        if (data.user.phone) parts.push(data.user.phone);
+        $modal.find('.uo-user').text(parts.join(' • '));
+
         if (!data.orders.length) {
             $modal.find('.uo-body').html('<div class="uo-empty">У користувача поки немає замовлень.</div>');
             return;
@@ -160,8 +172,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return v.toLocaleString('uk-UA');
     }
     function escapeHtml(s) {
-        return String(s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 });
