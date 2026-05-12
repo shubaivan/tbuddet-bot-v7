@@ -93,6 +93,61 @@ class AdminController extends AbstractController
         ]);
     }
 
+    #[Route('/admin/users/{source}/{id}', name: 'app_admin_user_detail', methods: ['GET'], requirements: ['source' => 'tg|web', 'id' => '\d+'])]
+    public function userDetail(string $source, int $id, EntityManagerInterface $em): Response
+    {
+        $orders = [];
+        if ($source === 'tg') {
+            $u = $em->getRepository(TelegramUser::class)->find($id);
+            if (!$u) throw $this->createNotFoundException();
+            $profile = [
+                'source'      => 'tg',
+                'id'          => $u->getId(),
+                'name'        => trim(($u->getFirstName() ?? '') . ' ' . ($u->getLastName() ?? '')) ?: '—',
+                'handle'      => $u->getUsername() ? '@' . $u->getUsername() : null,
+                'phone'       => $u->getPhoneNumber(),
+                'email'       => null,
+                'telegram_id' => $u->getTelegramId(),
+                'created_at'  => $u->getCreatedAt()?->format('Y-m-d H:i:s'),
+                'last_visit'  => $u->getUpdatedAt()?->format('Y-m-d H:i:s'),
+            ];
+            $orders = $u->getOrders()->toArray();
+        } else {
+            $u = $em->getRepository(\App\Entity\User::class)->find($id);
+            if (!$u) throw $this->createNotFoundException();
+            $profile = [
+                'source'      => 'web',
+                'id'          => $u->getId(),
+                'name'        => trim(($u->getFirstName() ?? '') . ' ' . ($u->getLastName() ?? '')) ?: '—',
+                'handle'      => $u->getEmail(),
+                'phone'       => $u->getPhone() ?? null,
+                'email'       => $u->getEmail(),
+                'telegram_id' => null,
+                'created_at'  => method_exists($u, 'getCreatedAt') ? ($u->getCreatedAt()?->format('Y-m-d H:i:s')) : null,
+                'last_visit'  => method_exists($u, 'getUpdatedAt') ? ($u->getUpdatedAt()?->format('Y-m-d H:i:s')) : null,
+            ];
+            $orders = $u->getClientOrders()->toArray();
+        }
+
+        usort($orders, fn($a, $b) => ($b->getCreatedAt()?->getTimestamp() ?? 0) <=> ($a->getCreatedAt()?->getTimestamp() ?? 0));
+
+        $paidCount = 0;
+        $paidSum   = 0.0;
+        foreach ($orders as $o) {
+            if ($o->getLiqPayStatus() === 'success') {
+                $paidCount++;
+                $paidSum += (float) $o->getTotalAmount();
+            }
+        }
+
+        return $this->render('admin/user-detail.html.twig', [
+            'profile'    => $profile,
+            'orders'     => $orders,
+            'paidCount'  => $paidCount,
+            'paidSum'    => $paidSum,
+        ]);
+    }
+
     #[Route('/admin/users/{source}/{id}/orders.json', name: 'admin-user-orders-json', options: ['expose' => true], methods: ['GET'], requirements: ['source' => 'tg|web', 'id' => '\d+'])]
     public function userOrdersJson(string $source, int $id, EntityManagerInterface $em): Response
     {

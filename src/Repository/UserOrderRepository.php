@@ -102,6 +102,8 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.liq_pay_status,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username) as t_user_info,
                 GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone) as c_user_info,
+                IDENTITY(o.telegram_user_id) as t_user_id,
+                IDENTITY(o.client_user_id) as c_user_id,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at
                 FROM App\Entity\UserOrder o
                 LEFT JOIN o.product_id as p

@@ -73,8 +73,37 @@ document.addEventListener("DOMContentLoaded", function () {
         },
     });
 
-    // Non-orderable: product_info, c_user_info, t_user_info
-    defs.push({ targets: [8, 9, 10], orderable: false });
+    // 8 — product_info (plain text)
+    defs.push({ targets: 8, orderable: false });
+
+    // 9 — c_user_info → link to web user detail page
+    defs.push({
+        targets: 9,
+        orderable: false,
+        render: (data, type, row) => {
+            const id = row.c_user_id;
+            const label = (data || '').trim();
+            if (!id) return label ? '<span class="muted">' + escapeHtml(label) + '</span>' : '';
+            return '<a class="user-ref" href="/admin/users/web/' + id + '" target="_blank">' + escapeHtml(label || ('Web #' + id)) + '</a>';
+        },
+    });
+
+    // 10 — t_user_info → link to telegram user detail page
+    defs.push({
+        targets: 10,
+        orderable: false,
+        render: (data, type, row) => {
+            const id = row.t_user_id;
+            const label = (data || '').trim();
+            if (!id) return label ? '<span class="muted">' + escapeHtml(label) + '</span>' : '';
+            return '<a class="user-ref" href="/admin/users/tg/' + id + '" target="_blank">' + escapeHtml(label || ('TG #' + id)) + '</a>';
+        },
+    });
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
 
     const url = window.Routing.generate('admin-orders-data-table');
 

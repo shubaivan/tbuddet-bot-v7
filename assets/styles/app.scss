@@ -384,6 +384,14 @@ input:required {
     .stat-unpaid .stat-value  { color: #92400e; }
 }
 
+.user-ref {
+    color: #1d4ed8;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1.3;
+    &:hover { text-decoration: underline; }
+}
+
 .orders-table {
     td { vertical-align: middle !important; }
 
