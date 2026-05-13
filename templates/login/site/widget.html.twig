@@ -1,8 +1,33 @@
+<script>
+    // Fallback for browsers that block the widget's popup → top-window redirect
+    // (third-party cookie restrictions, popup blockers). We receive the auth
+    // payload via postMessage and navigate the parent ourselves to the guard
+    // route, which TelegramAuthenticator reads from query string.
+    window.onTelegramAuth = function (user) {
+        try {
+            var params = new URLSearchParams();
+            Object.keys(user).forEach(function (k) {
+                if (user[k] !== undefined && user[k] !== null) {
+                    params.append(k, String(user[k]));
+                }
+            });
+            window.location.href = "{{ url('login_guard') }}" + "?" + params.toString();
+        } catch (e) {
+            console.error('Telegram auth handoff failed', e);
+            var box = document.getElementById('tg-login-error');
+            if (box) {
+                box.textContent = 'Telegram authentication handoff failed: ' + (e && e.message ? e.message : e);
+                box.style.display = 'block';
+            }
+        }
+    };
+</script>
+
 <script
         async
         src="https://telegram.org/js/telegram-widget.js?9"
         data-telegram-login="{{ telegram_bot_name }}"
         data-size="large"
-        data-auth-url="{{ url('login_guard') }}"
+        data-onauth="onTelegramAuth(user)"
         data-request-access="write">
 </script>

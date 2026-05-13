@@ -42,3 +42,4 @@ docs/*.sql
 /dupl.json
 /qa-test-*.mjs
 /reload.sh
+_restore_user_12.json
