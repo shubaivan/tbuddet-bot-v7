@@ -115,6 +115,20 @@ class ProductRepository extends ServiceEntityRepository
             $select .= ' DISTINCT c.* ';
         }
 
+        // Explicit price sort overrides relevance/recency, but only on the
+        // product-listing query (not the count/min/max passes).
+        if (!$total && !$minPrice && !$maxPrice) {
+            $sort = $listRequest->getSort();
+            if ($sort === 'price_asc' || $sort === 'price_desc') {
+                $direction = $sort === 'price_asc' ? 'ASC' : 'DESC';
+                $orderBy = sprintf(
+                    " order by CAST(NULLIF(c.price ->> '%s', '') AS BIGINT) %s NULLS LAST, c.id ASC ",
+                    $languageEnum->value,
+                    $direction
+                );
+            }
+        }
+
         if (!is_null($listRequest->getPriceFrom()) && is_null($listRequest->getPriceTo())) {
             $where[] = sprintf("c.price ->> '%s' != '' AND CAST(c.price ->> '%s' as BIGINT) >= :price_from", $languageEnum->value, $languageEnum->value);
             $bind['price_from'] = $listRequest->getPriceFrom();

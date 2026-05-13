@@ -15,6 +15,8 @@ class ProductListRequest
     private ?string $full_text_search;
     private ?int $price_from;
     private ?int $price_to;
+    // 'price_asc' | 'price_desc' | null. Anything else is ignored server-side.
+    private ?string $sort = null;
 
     #[Ignore]
     private ?int $top_category_id = null;
@@ -28,7 +30,20 @@ class ProductListRequest
         $this->full_text_search = null;
         $this->price_from = null;
         $this->price_to = null;
+        $this->sort = null;
         $this->top_category_id = null;
+    }
+
+    public function getSort(): ?string
+    {
+        return $this->sort;
+    }
+
+    public function setSort(?string $sort): self
+    {
+        $this->sort = $sort;
+
+        return $this;
     }
 
     public function getPage(): int
