@@ -13,6 +13,7 @@ use App\Entity\UserRole;
 use App\Repository\RoleRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserMergeRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -30,6 +31,7 @@ class TelegramAuthController extends AbstractController
         TelegramLoginValidator $validator,
         TelegramUserRepository $telegramUserRepository,
         UserMergeRepository $userMergeRepository,
+        UserRepository $userRepository,
         RoleRepository $roleRepository,
         EntityManagerInterface $em,
         JWTTokenManagerInterface $jwtManager,
@@ -76,12 +78,28 @@ class TelegramAuthController extends AbstractController
         $merge = $userMergeRepository->getByTelegramUser($telegramUser);
         $user = $merge?->getUser();
 
+        // Fallback: an older web-registered user may already be linked to this
+        // Telegram identity via the legacy `telegram_chat_id` field (set by the
+        // customer bot before the web TG widget shipped). Adopt that user
+        // instead of creating a ghost duplicate.
+        if (!$user) {
+            $user = $userRepository->findOneBy(['telegramChatId' => (int) $telegramId]);
+            if ($user) {
+                $merge = new UserMerge();
+                $merge->setTelegramUser($telegramUser);
+                $merge->setUser($user);
+                $em->persist($merge);
+                $em->flush();
+            }
+        }
+
         if (!$user) {
             $user = new User();
             $user
                 ->setEmail(sprintf('tg-%s@telegram.local', $telegramId))
                 ->setFirstName($payload['first_name'] ?? ($payload['username'] ?? 'Telegram user'))
                 ->setLastName($payload['last_name'] ?? null)
+                ->setTelegramChatId((int) $telegramId)
                 ->setIsEmailConfirmed(false);
 
             $role = $roleRepository->findOneBy(['name' => RoleEnum::USER]);

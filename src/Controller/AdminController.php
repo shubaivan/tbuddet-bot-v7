@@ -236,6 +236,7 @@ class AdminController extends AbstractController
             ->getDataTablesData($request->request->all());
 
         foreach ($dataTable as $key => $order) {
+            $dataTable[$key]['product_info'] = '';
             if (isset($order['id'])) {
                 $order = $repository->findOneBy(['id' => $order['id']]);
                 if ($order->getProductId()) {
