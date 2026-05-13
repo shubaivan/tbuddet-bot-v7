@@ -116,16 +116,16 @@ class ProductRepository extends ServiceEntityRepository
         }
 
         // Explicit price sort overrides relevance/recency, but only on the
-        // product-listing query (not the count/min/max passes).
+        // product-listing query (not the count/min/max passes). Postgres
+        // requires DISTINCT/GROUP BY queries to surface ORDER BY expressions
+        // in the SELECT list, so we alias the casted price as _sort_price.
         if (!$total && !$minPrice && !$maxPrice) {
             $sort = $listRequest->getSort();
             if ($sort === 'price_asc' || $sort === 'price_desc') {
                 $direction = $sort === 'price_asc' ? 'ASC' : 'DESC';
-                $orderBy = sprintf(
-                    " order by CAST(NULLIF(c.price ->> '%s', '') AS BIGINT) %s NULLS LAST, c.id ASC ",
-                    $languageEnum->value,
-                    $direction
-                );
+                $sortExpr = sprintf("CAST(NULLIF(c.price ->> '%s', '') AS BIGINT)", $languageEnum->value);
+                $select .= sprintf(', %s AS _sort_price', $sortExpr);
+                $orderBy = sprintf(' order by _sort_price %s NULLS LAST, c.id ASC ', $direction);
             }
         }
 
