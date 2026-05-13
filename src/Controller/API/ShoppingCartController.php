@@ -305,7 +305,7 @@ class ShoppingCartController extends AbstractController
         $em->flush();
 
         $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'ua' : 'en';
-        $resultUrl = sprintf('%s/%s/profile', $this->frontendUrl, $lang);
+        $resultUrl = sprintf('%s/%s/payment-success?order=%d', $this->frontendUrl, $lang, $userOrder->getId());
 
         $params = array(
             'action' => 'pay',
