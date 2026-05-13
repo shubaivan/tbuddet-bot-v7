@@ -406,6 +406,11 @@ class PriceRingConversation extends Conversation
             return;
         }
 
+        // Dismiss the Telegram loading spinner immediately. Without this, the
+        // spinner sits on the button until the 30s callback timeout even when
+        // we render the next page successfully.
+        try { $bot->answerCallbackQuery(); } catch (\Throwable $e) {}
+
         $data = $bot->callbackQuery()->data;
 
         $total = count($this->productIds);

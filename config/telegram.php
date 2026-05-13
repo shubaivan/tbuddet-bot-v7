@@ -32,4 +32,17 @@ $bot->onCallbackQueryData('type:route', RouteCommand::class);
 $bot->onCallbackQueryData('type:product', ProductCommand::class);
 $bot->onCallbackQueryData('type:product:ring:price', PriceRingConversation::class);
 
+// Catch-all for callbacks that no other handler/conversation picked up —
+// e.g. user clicks a stale button after a deploy wiped conversation state.
+// Dismiss the Telegram spinner and nudge them to restart, instead of the
+// click silently hanging until the 30s callback timeout.
+$bot->onCallbackQuery(function (SergiX44\Nutgram\Nutgram $bot): void {
+    try {
+        $bot->answerCallbackQuery(
+            text: 'Сесія застаріла. Надішліть /start, щоб почати заново.',
+            show_alert: false,
+        );
+    } catch (\Throwable $e) {}
+});
+
 $bot->onLocation(LocationCommand::class);

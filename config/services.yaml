@@ -36,6 +36,20 @@ services:
             # capture Telegram's file_id immediately. Defaults to empty string,
             # which disables eager warmup (bot will warm on first user encounter).
             $telegramWarmupChatId: '%env(string:default::TELEGRAM_WARMUP_CHAT_ID)%'
+            # Persistent cache pool for Nutgram conversation/user state. Lives
+            # outside var/cache so `rm -rf var/cache/prod` during deploy does
+            # NOT wipe in-flight conversations.
+            $nutgramCache: '@app.cache.nutgram'
+
+    # Nutgram conversation/user/global state cache. Not tagged as cache.pool —
+    # we don't want it cleared by `cache:clear` or wiped by the deploy step
+    # that nukes var/cache/prod. Directory is created on first use.
+    app.cache.nutgram:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            - 'nutgram'
+            - 0
+            - '%kernel.project_dir%/var/nutgram-cache'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
