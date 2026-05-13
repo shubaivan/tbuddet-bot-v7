@@ -78,6 +78,7 @@ security:
         - { path: ^/api/v1/user/confirm-email, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/user/forgot-password, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/user/reset-password, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/auth/telegram, roles: PUBLIC_ACCESS }
         - { route: 'public_category_list', roles: PUBLIC_ACCESS }
         - { route: 'public_product_purchase_by_id', roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/novaposhta, roles: PUBLIC_ACCESS }

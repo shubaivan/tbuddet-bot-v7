@@ -31,4 +31,13 @@ class UserMergeRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    public function getByTelegramUser(TelegramUser $telegramUser): ?UserMerge
+    {
+        return $this->createQueryBuilder('um')
+            ->where('um.telegramUser = :tu')
+            ->setParameter('tu', $telegramUser)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
