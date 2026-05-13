@@ -72,7 +72,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Regex(pattern: "/^[0-9]*$/", message: "Please use number only")]
     #[Groups([User::USER_ME_GROUP, self::USER_DEFAULT_GROUP, self::USER_PERSONAL_DATA_GROUP, self::USER_OWN_REGISTRATION])]
     #[ORM\Column(name: 'phone', type: 'string', length: 255, unique: true, nullable: true)]
-    private string $phone;
+    private ?string $phone = null;
 
     #[ORM\OneToMany(targetEntity: UserRole::class, mappedBy: 'user', cascade: ['persist'])]
     private Collection|PersistentCollection|ArrayCollection $userRoles;

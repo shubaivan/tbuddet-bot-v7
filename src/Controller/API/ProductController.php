@@ -544,8 +544,8 @@ class ProductController extends AbstractController
                 $userOrders->add($order);
             }
         }
-        $userOrdersByPhone = $orderRepository->findBy(['phone' => $user->getPhone()]);
-        if ($userOrdersByPhone) {
+        if ($user->getPhone()) {
+            $userOrdersByPhone = $orderRepository->findBy(['phone' => $user->getPhone()]);
             foreach ($userOrdersByPhone as $order) {
                 $userOrders->add($order);
             }
