@@ -30,6 +30,8 @@ services:
             $loginRoute: 'login_public'       # optional, if login fails user will be redirected there
             $telegramBotName: '%env(APP_TELEGRAM_BOT_NAME)%'
             $telegramBotToken: '%env(TELEGRAM_TOKEN)%'
+            $telegramAdminBotName: '%env(APP_TELEGRAM_ADMIN_BOT_NAME)%'
+            $telegramAdminBotToken: '%env(TELEGRAM_ADMIN_TOKEN)%'
             # Private chat used to upload new product images once on save so we
             # capture Telegram's file_id immediately. Defaults to empty string,
             # which disables eager warmup (bot will warm on first user encounter).
@@ -58,6 +60,18 @@ services:
         exclude:
             - '../src/Telegram/Location/Model'
             - '../src/Telegram/Model'
+
+    # Admin-side Telegram login uses a separate bot (artbeton_admin_bot) registered to the
+    # api.artbeton.market domain. The customer SPA at artbeton.market keeps using the default
+    # validator (prod_beton_decor_bot / TELEGRAM_TOKEN) via TelegramAuthController.
+    admin_telegram_login_validator:
+        class: App\Authenticator\TelegramLoginValidator
+        arguments:
+            $telegramBotToken: '%env(TELEGRAM_ADMIN_TOKEN)%'
+
+    App\Authenticator\TelegramAuthenticator:
+        arguments:
+            $validator: '@admin_telegram_login_validator'
 
     App\EventListener\FilePathUploadListener:
         tags:
