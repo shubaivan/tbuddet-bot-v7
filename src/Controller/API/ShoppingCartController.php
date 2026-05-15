@@ -304,7 +304,7 @@ class ShoppingCartController extends AbstractController
         $userOrder->setLiqPayorderid($liqPayOrderID);
         $em->flush();
 
-        $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'ua' : 'en';
+        $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en';
         $resultUrl = sprintf('%s/%s/payment-success?order=%d', $this->frontendUrl, $lang, $userOrder->getId());
 
         $params = array(
