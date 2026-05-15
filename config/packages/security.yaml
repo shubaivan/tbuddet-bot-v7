@@ -56,6 +56,7 @@ security:
             custom_authenticators:
                 - App\Authenticator\TelegramAuthenticator
             entry_point: App\Authenticator\TelegramAuthenticator
+            access_denied_handler: App\Security\AdminAccessDeniedHandler
             logout:
                 path: login_app_logout
 
