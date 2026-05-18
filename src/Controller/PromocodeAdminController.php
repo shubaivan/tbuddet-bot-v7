@@ -30,6 +30,12 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_MANAGER')]
 class PromocodeAdminController extends AbstractController
 {
+    #[Route('/admin/promocodes/help', name: 'app_admin_promocodes_help', methods: ['GET'])]
+    public function help(): Response
+    {
+        return $this->render('admin/promocodes/help.html.twig');
+    }
+
     #[Route('/admin/promocodes', name: 'app_admin_promocodes', methods: ['GET'])]
     public function index(PromocodeRepository $repository): Response
     {

@@ -7,7 +7,10 @@
     <div class="container" style="margin-top: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h2>🎟 Промокоди</h2>
-            <a href="{{ path('app_admin_promocodes_new') }}" class="btn btn-primary">+ Створити промокод</a>
+            <div>
+                <a href="{{ path('app_admin_promocodes_help') }}" class="btn btn-outline-info">❓ Інструкція</a>
+                <a href="{{ path('app_admin_promocodes_new') }}" class="btn btn-primary">+ Створити промокод</a>
+            </div>
         </div>
 
         {% for label, messages in app.flashes %}
