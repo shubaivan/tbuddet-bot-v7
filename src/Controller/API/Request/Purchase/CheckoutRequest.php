@@ -30,6 +30,10 @@ class CheckoutRequest
     #[Type('string')]
     private ?string $deliveryDepartmentRef = null;
 
+    /** Optional promocode supplied by the buyer. Validated server-side before being applied. */
+    #[Type('string')]
+    private ?string $promocode = null;
+
     public function getPurchaseProductIds()
     {
         return $this->purchaseProductIds;
@@ -86,6 +90,18 @@ class CheckoutRequest
     public function setDeliveryDepartmentRef(?string $deliveryDepartmentRef): CheckoutRequest
     {
         $this->deliveryDepartmentRef = $deliveryDepartmentRef;
+
+        return $this;
+    }
+
+    public function getPromocode(): ?string
+    {
+        return $this->promocode;
+    }
+
+    public function setPromocode(?string $promocode): CheckoutRequest
+    {
+        $this->promocode = $promocode;
 
         return $this;
     }

@@ -6,6 +6,7 @@ use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\Purchase\CheckoutRequest;
 use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
+use App\Entity\Enum\CurrencyEnum;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\PurchaseProduct as EntityPurchaseProduct;
@@ -15,8 +16,10 @@ use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
+use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
+use App\Service\Promocode\PromocodeService;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
@@ -211,9 +214,42 @@ class ShoppingCartController extends AbstractController
         #[CurrentUser] User $user,
         PurchaseProductRepository $purchaseProductRepository,
         EntityManagerInterface $em,
-        LocalizationService $localizationService
+        LocalizationService $localizationService,
+        CartTotalCalculator $cartTotalCalculator,
+        PromocodeService $promocodeService
     ): JsonResponse
     {
+        $language = $localizationService->getLanguage();
+        $purchaseProductIds = $checkoutRequest->getPurchaseProductIds();
+
+        // Subtotal uses the shared calculator so the /promocode/validate preview
+        // and this final apply step always agree on the number.
+        $subtotal = $cartTotalCalculator->calculate($purchaseProductIds, $language);
+
+        // Re-validate the promocode server-side even though the FE already previewed it —
+        // the cart may have changed, or the code may have been deactivated in between.
+        $appliedPromocode = null;
+        $discount = 0;
+        if ($checkoutRequest->getPromocode() !== null && $checkoutRequest->getPromocode() !== '') {
+            $validation = $promocodeService->validate(
+                $checkoutRequest->getPromocode(),
+                $subtotal,
+                CurrencyEnum::fromUserLanguage($language),
+                $user,
+                null,
+                null,
+            );
+            if (!$validation->ok) {
+                return $this->json([
+                    'error' => 'promocode_invalid',
+                    'error_code' => $validation->error->value,
+                    'error_message' => $validation->error->userMessage(),
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            $appliedPromocode = $validation->promocode;
+            $discount = $validation->discount;
+        }
+
         $userOrder = new UserOrder();
         $userOrder->setClientUserId($user);
         $userOrder->setDeliveryCity($checkoutRequest->getDeliveryCity());
@@ -222,8 +258,6 @@ class ShoppingCartController extends AbstractController
         $userOrder->setDeliveryDepartmentRef($checkoutRequest->getDeliveryDepartmentRef());
         $em->persist($userOrder);
 
-        $purchaseProductIds = $checkoutRequest->getPurchaseProductIds();
-        $total_amount = 0;
         $description = '';
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
 
@@ -241,11 +275,8 @@ class ShoppingCartController extends AbstractController
             }, $purchaseProduct->getProductProperties());
             $product->checkInputProp($productProperties);
 
-            $price = $product->getPrice($localizationService->getLanguage());
-
             $propExplainingSet = [];
             foreach ($productProperties as $productProperty) {
-                $price += $productProperty->getPropertyPriceImpact();
                 $propExplainingSet[] = sprintf(
                     $propExplainingTemplate,
                     $productProperty->getPropertyName(),
@@ -254,10 +285,8 @@ class ShoppingCartController extends AbstractController
                 );
             }
 
-            $total_amount += $price * $purchaseProduct->getQuantity();
-
             $description .= sprintf('Ваше замовлення: %s: в кількості: %s одиниць' . PHP_EOL,
-                $product->getProductName($localizationService->getLanguage()),
+                $product->getProductName($language),
                 $purchaseProduct->getQuantity()
             );
 
@@ -274,10 +303,35 @@ class ShoppingCartController extends AbstractController
             );
         }
 
+        if ($appliedPromocode !== null) {
+            // User-visible line in LiqPay description so the buyer sees exactly which
+            // code applied and how much was knocked off.
+            $description .= PHP_EOL . $appliedPromocode->describeDiscount($discount);
+        }
+
+        $total_amount = $subtotal - $discount;
+        $userOrder->setSubtotalAmount($subtotal);
+        $userOrder->setDiscountAmount($discount);
         $userOrder->setTotalAmount($total_amount);
         $userOrder->setDescription($description);
+        if ($appliedPromocode !== null) {
+            $userOrder->setPromocodeCodeUsed($appliedPromocode->getCode());
+        }
 
         $em->flush();
+
+        if ($appliedPromocode !== null) {
+            // Records the ledger row + bumps times_used. UNIQUE constraint catches
+            // accidental double-apply on retried POSTs (treated as idempotent).
+            $promocodeService->redeem(
+                $appliedPromocode,
+                $userOrder,
+                $user,
+                null,
+                null,
+                $discount,
+            );
+        }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
 
