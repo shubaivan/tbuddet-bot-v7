@@ -65,6 +65,21 @@ class BotTranslations
         'payment.thanks' => ['ua' => '🎉 <b>Дякуємо!</b> Чекайте повідомлення.', 'en' => '🎉 <b>Thank you!</b> We\'ll contact you soon.'],
         'payment.description' => ['ua' => 'Замовлення', 'en' => 'Order'],
         'payment.delivery' => ['ua' => 'Доставка', 'en' => 'Delivery'],
+
+        // Promocode (matches the web checkout flow — same service, same error messages)
+        'promocode.ask' => [
+            'ua' => "🎟 <b>Маєш промокод?</b>\nВведи код повідомленням або натисни <b>Пропустити</b>.",
+            'en' => "🎟 <b>Have a promocode?</b>\nType the code or press <b>Skip</b>.",
+        ],
+        'promocode.skip_btn' => ['ua' => '⏭ Пропустити', 'en' => '⏭ Skip'],
+        'promocode.applied' => [
+            'ua' => "✅ <b>Промокод %s</b> застосовано! Знижка: <b>%d %s</b>.",
+            'en' => "✅ <b>Promocode %s</b> applied! Discount: <b>%d %s</b>.",
+        ],
+        'promocode.invalid' => [
+            'ua' => "❌ %s\n\nСпробуй інший код або натисни <b>Пропустити</b>.",
+            'en' => "❌ %s\n\nTry another code or press <b>Skip</b>.",
+        ],
     ];
 
     public static function t(string $key, string $lang = 'ua'): string

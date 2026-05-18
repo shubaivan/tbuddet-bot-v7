@@ -3,11 +3,13 @@
 namespace App\Telegram\Product\Ring\Command;
 
 use App\Controller\API\Request\Enum\UserLanguageEnum;
+use App\Entity\Enum\CurrencyEnum;
 use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Entity\Enum\RoleEnum;
 use App\Repository\TelegramUserRepository;
 use App\Service\LocalizationService;
+use App\Service\Promocode\PromocodeService;
 use App\Telegram\BotTranslations as T;
 use App\Service\NovaPoshtaService;
 use App\Service\ProductService;
@@ -60,6 +62,12 @@ class PriceRingConversation extends Conversation
     public array $cityResults = [];
     public array $warehouseResults = [];
 
+    // Promocode — populated when user enters a valid code during askPromocode.
+    // We store only the code string; the entity is re-resolved + re-validated in
+    // createOrder so a code that gets deactivated between steps can still be caught.
+    public ?string $promocode = null;
+    public int $promocodeDiscount = 0;
+
     public function __construct(
         private LocalizationService $localizationService,
         private FilesystemOperator $defaultStorage,
@@ -69,6 +77,7 @@ class PriceRingConversation extends Conversation
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         private TelegramUserRepository $telegramUserRepository,
+        private PromocodeService $promocodeService,
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
         private string $liqpayServerUrl,
@@ -773,7 +782,7 @@ class PriceRingConversation extends Conversation
             return;
         }
 
-        $this->createOrder($bot);
+        $this->askPromocode($bot);
     }
 
     public function handlePhone(Nutgram $bot)
@@ -786,7 +795,7 @@ class PriceRingConversation extends Conversation
             )?->delete();
             $this->telegramUserService->savePhone($phone);
             $this->em->flush();
-            $this->createOrder($bot);
+            $this->askPromocode($bot);
             return;
         }
 
@@ -797,6 +806,100 @@ class PriceRingConversation extends Conversation
             )
         );
         $this->next('handlePhone');
+    }
+
+    // ═══════════════════════════════════════════
+    // STEP 8.5: Promocode (optional)
+    // ═══════════════════════════════════════════
+
+    private function askPromocode(Nutgram $bot): void
+    {
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make($this->t('promocode.skip_btn'), callback_data: 'skip_promocode'),
+        );
+        $bot->sendMessage(
+            text: $this->t('promocode.ask'),
+            parse_mode: ParseMode::HTML,
+            reply_markup: $keyboard,
+        );
+        $this->next('handlePromocode');
+    }
+
+    public function handlePromocode(Nutgram $bot): void
+    {
+        // Skip via inline button.
+        if ($bot->isCallbackQuery() && $bot->callbackQuery()->data === 'skip_promocode') {
+            $this->promocode = null;
+            $this->promocodeDiscount = 0;
+            $bot->answerCallbackQuery();
+            $this->createOrder($bot);
+            return;
+        }
+
+        // Text-typed code.
+        if ($bot->message() && is_string($bot->message()->text)) {
+            $raw = trim($bot->message()->text);
+
+            // Also treat /skip or "skip" text as skip, for keyboards that hide buttons.
+            if ($raw === '/skip' || strcasecmp($raw, 'skip') === 0) {
+                $this->promocode = null;
+                $this->promocodeDiscount = 0;
+                $this->createOrder($bot);
+                return;
+            }
+
+            $subtotal = $this->computeSubtotal();
+            $result = $this->promocodeService->validate(
+                $raw,
+                $subtotal,
+                CurrencyEnum::fromUserLanguage($this->lang()),
+                null,
+                $this->telegramUserService->getCurrentUser(),
+                null,
+            );
+
+            if (!$result->ok) {
+                $bot->sendMessage(
+                    text: sprintf($this->t('promocode.invalid'), $result->error->userMessage()),
+                    parse_mode: ParseMode::HTML,
+                    reply_markup: InlineKeyboardMarkup::make()->addRow(
+                        InlineKeyboardButton::make($this->t('promocode.skip_btn'), callback_data: 'skip_promocode'),
+                    ),
+                );
+                $this->next('handlePromocode');
+                return;
+            }
+
+            $this->promocode = $result->promocode->getCode();
+            $this->promocodeDiscount = $result->discount;
+            $bot->sendMessage(
+                text: sprintf(
+                    $this->t('promocode.applied'),
+                    $this->promocode,
+                    $this->promocodeDiscount,
+                    $result->promocode->getCurrency()->label(),
+                ),
+                parse_mode: ParseMode::HTML,
+            );
+            $this->createOrder($bot);
+            return;
+        }
+
+        // Anything else: keep waiting on this step.
+        $this->next('handlePromocode');
+    }
+
+    /**
+     * Mirrors the in-line price math used in createOrder so /validate sees the same number.
+     * Kept as a single method so any future change to property pricing applies to both paths.
+     */
+    private function computeSubtotal(): int
+    {
+        $product = $this->productService->getProduct($this->productId);
+        $basePrice = (int) $product->getPrice($this->lang());
+        $impacts = array_sum(array_column($this->selectedProperties, 'property_price_impact'));
+
+        return ($basePrice + $impacts) * (int) $this->quantity;
     }
 
     // ═══════════════════════════════════════════
@@ -819,10 +922,39 @@ class PriceRingConversation extends Conversation
 
         $basePrice = $product->getPrice($language);
         $impacts = array_sum(array_column($this->selectedProperties, 'property_price_impact'));
-        $totalAmount = ($basePrice + $impacts) * $this->quantity;
+        $subtotal = ($basePrice + $impacts) * $this->quantity;
+
+        // Re-validate the promocode (if any) at apply time — same reason as the web flow:
+        // the code may have been deactivated between askPromocode and createOrder.
+        $appliedPromocode = null;
+        $discount = 0;
+        if ($this->promocode !== null) {
+            $validation = $this->promocodeService->validate(
+                $this->promocode,
+                $subtotal,
+                CurrencyEnum::fromUserLanguage($language),
+                null,
+                $this->telegramUserService->getCurrentUser(),
+                null,
+            );
+            if ($validation->ok) {
+                $appliedPromocode = $validation->promocode;
+                $discount = $validation->discount;
+            }
+            // If re-validation failed (rare), silently drop the discount rather than
+            // aborting the whole order — user already saw the applied confirmation message.
+            // PR #3 keeps this best-effort; admin panel work in PR #4 surfaces failed-validations.
+        }
+
+        $totalAmount = $subtotal - $discount;
 
         $userOrder->setQuantityProduct($language, $this->quantity);
+        $userOrder->setSubtotalAmount($subtotal);
+        $userOrder->setDiscountAmount($discount);
         $userOrder->setTotalAmount($totalAmount);
+        if ($appliedPromocode !== null) {
+            $userOrder->setPromocodeCodeUsed($appliedPromocode->getCode());
+        }
 
         $description = sprintf('Замовлення: %s × %s', $product->getProductName($language), $this->quantity);
         foreach ($this->selectedProperties as $prop) {
@@ -831,10 +963,24 @@ class PriceRingConversation extends Conversation
         if ($this->deliveryCity) {
             $description .= sprintf('. Доставка: %s, %s', $this->deliveryCity, $this->deliveryDepartment ?? '');
         }
+        if ($appliedPromocode !== null) {
+            $description .= '. ' . $appliedPromocode->describeDiscount($discount);
+        }
 
         $userOrder->setDescription($description);
         $this->em->persist($userOrder);
         $this->em->flush();
+
+        if ($appliedPromocode !== null) {
+            $this->promocodeService->redeem(
+                $appliedPromocode,
+                $userOrder,
+                null,
+                $this->telegramUserService->getCurrentUser(),
+                null,
+                $discount,
+            );
+        }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
@@ -843,6 +989,7 @@ class PriceRingConversation extends Conversation
             'action' => 'invoice_send',
             'version' => '3',
             'phone' => $userOrder->getTelegramUserid()->getPhoneNumber(),
+            // Discounted total — LiqPay charges the post-discount amount.
             'amount' => $totalAmount,
             'currency' => $language === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
