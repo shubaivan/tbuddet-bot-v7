@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Ваш персональний промокод</title>
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; background: #f4f4f4; margin: 0; padding: 24px; color: #1a1a1a;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="background: #fff; border-radius: 8px; max-width: 560px; padding: 32px;">
+        <tr>
+            <td>
+                <h1 style="color: #c08737; font-size: 22px; margin: 0 0 16px 0;">🎟 Ваш персональний промокод</h1>
+                <p style="font-size: 15px; line-height: 1.5; margin: 0 0 20px 0;">
+                    Вітаємо! Для вас приготовано персональну знижку від <strong>Арт Бетон Маркет</strong>.
+                </p>
+
+                <div style="background: #f8f4ee; border: 1px dashed #c08737; border-radius: 6px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
+                    <div style="font-size: 13px; color: #555; margin-bottom: 8px;">Промокод</div>
+                    <div style="font-size: 26px; font-weight: 700; letter-spacing: 2px; font-family: 'Courier New', monospace;">{{ promocode.code }}</div>
+                    <div style="font-size: 15px; margin-top: 12px; color: #c08737;">Знижка: <strong>{{ discountLabel }}</strong></div>
+                </div>
+
+                {% if promocode.validTo %}
+                    <p style="font-size: 14px; color: #555; margin: 0 0 16px 0;">
+                        ⏳ Дійсний до: <strong>{{ promocode.validTo|date('d.m.Y') }}</strong>
+                    </p>
+                {% endif %}
+
+                {% if promocode.minOrderAmount %}
+                    <p style="font-size: 14px; color: #555; margin: 0 0 16px 0;">
+                        💰 Мінімальна сума замовлення: <strong>{{ promocode.minOrderAmount }} {{ promocode.currency.label }}</strong>
+                    </p>
+                {% endif %}
+
+                <p style="font-size: 14px; line-height: 1.6; margin: 24px 0 0 0;">
+                    Щоб скористатися знижкою, введіть промокод у відповідному полі під час оформлення замовлення на сайті
+                    <a href="https://artbeton.market" style="color: #c08737;">artbeton.market</a> або в нашому Telegram-боті.
+                </p>
+
+                <p style="font-size: 13px; color: #888; margin: 32px 0 0 0;">
+                    З повагою,<br>команда Арт Бетон Маркет
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

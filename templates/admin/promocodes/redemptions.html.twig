@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Використання промокоду {{ promocode.code }}{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="container" style="margin-top: 24px;">
+        <a href="{{ path('app_admin_promocodes') }}">← До списку промокодів</a>
+        <h2 style="margin-top: 16px;">📊 Використання <code>{{ promocode.code }}</code></h2>
+        <p>
+            Всього використань: <strong>{{ promocode.timesUsed }}</strong>
+            {% if promocode.maxUses %} з {{ promocode.maxUses }}{% endif %}
+        </p>
+
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Дата</th>
+                <th>Замовлення</th>
+                <th>Хто</th>
+                <th>Знижка</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for r in redemptions %}
+                <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.redeemedAt|date('d.m.Y H:i') }}</td>
+                    <td>#{{ r.userOrder.id }} ({{ r.userOrder.totalAmount }} {{ r.currency.label }})</td>
+                    <td>
+                        {% if r.user %}
+                            👤 {{ r.user.firstName }} {{ r.user.lastName }} — {{ r.user.email }}
+                        {% elseif r.telegramUser %}
+                            📱 TG @{{ r.telegramUser.username ?? '?' }} — {{ r.telegramUser.phoneNumber ?? '—' }}
+                        {% elseif r.guestPhone %}
+                            🕶 Гість — {{ r.guestPhone }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>−{{ r.discountApplied }} {{ r.currency.label }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="text-center">Ще ніхто не скористався цим промокодом</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

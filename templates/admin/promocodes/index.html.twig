@@ -1,0 +1,96 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Промокоди — Адмін{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="container" style="margin-top: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2>🎟 Промокоди</h2>
+            <a href="{{ path('app_admin_promocodes_new') }}" class="btn btn-primary">+ Створити промокод</a>
+        </div>
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'warning' }}">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Код</th>
+                <th>Тип / значення</th>
+                <th>Валюта</th>
+                <th>Використань</th>
+                <th>Дія</th>
+                <th>Призначений</th>
+                <th>Доставка</th>
+                <th>Активний</th>
+                <th>Створено</th>
+                <th>Управління</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for p in promocodes %}
+                <tr>
+                    <td>{{ p.id }}</td>
+                    <td><code>{{ p.code }}</code></td>
+                    <td>
+                        {% if p.discountType.value == 'percent' %}
+                            {{ p.value }}%
+                        {% else %}
+                            {{ p.value }} {{ p.currency.label }}
+                        {% endif %}
+                    </td>
+                    <td>{{ p.currency.value }}</td>
+                    <td>
+                        {{ p.timesUsed }} / {{ p.maxUses ?? '∞' }}
+                        {% if p.maxUsesPerUser %} (макс {{ p.maxUsesPerUser }}/клієнт){% endif %}
+                    </td>
+                    <td>
+                        {% if p.validFrom %}з {{ p.validFrom|date('d.m.Y') }}{% endif %}
+                        {% if p.validTo %} до {{ p.validTo|date('d.m.Y') }}{% endif %}
+                        {% if not p.validFrom and not p.validTo %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if p.assignedUser %}
+                            👤 {{ p.assignedUser.firstName }} {{ p.assignedUser.lastName }} ({{ p.assignedUser.email }})
+                        {% elseif p.assignedTelegramUser %}
+                            📱 TG @{{ p.assignedTelegramUser.username }}
+                        {% else %}
+                            <span class="text-muted">всі</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.deliveredAt %}
+                            ✓ {{ p.deliveryChannel }} ({{ p.deliveredAt|date('d.m H:i') }})
+                        {% elseif p.assignedUser or p.assignedTelegramUser %}
+                            <form method="POST" action="{{ path('app_admin_promocodes_issue', {id: p.id}) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">📩 Надіслати</button>
+                            </form>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ path('app_admin_promocodes_toggle', {id: p.id}) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm {{ p.isActive ? 'btn-success' : 'btn-outline-secondary' }}">
+                                {{ p.isActive ? '✓ Активний' : '✗ Вимкнено' }}
+                            </button>
+                        </form>
+                    </td>
+                    <td>{{ p.createdAt|date('d.m.Y') }}</td>
+                    <td>
+                        <a href="{{ path('app_admin_promocodes_edit', {id: p.id}) }}" class="btn btn-sm btn-outline-secondary">✏️</a>
+                        <a href="{{ path('app_admin_promocodes_redemptions', {id: p.id}) }}" class="btn btn-sm btn-outline-info">📊</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="11" class="text-center">Промокодів ще немає</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

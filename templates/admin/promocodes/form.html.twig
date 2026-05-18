@@ -1,0 +1,210 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ promocode ? 'Редагувати' : 'Створити' }} промокод{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="container" style="margin-top: 24px; max-width: 720px;">
+        <h2>{{ promocode ? 'Редагувати промокод #' ~ promocode.id : '+ Створити промокод' }}</h2>
+
+        {# Preset radio — UI-only, just toggles which fields are editable / pre-filled.
+           Data stored is always the normalized {max_uses, max_uses_per_user}. #}
+        <div class="card" style="padding: 16px; margin-bottom: 16px;">
+            <strong>Тип кампанії:</strong>
+            <div style="margin-top: 8px; display: flex; gap: 12px;">
+                <label>
+                    <input type="radio" name="preset" value="campaign" checked>
+                    Маркетингова (один код для всіх, багато використань)
+                </label>
+                <label>
+                    <input type="radio" name="preset" value="single">
+                    Одноразова (один код одному клієнту)
+                </label>
+                <label>
+                    <input type="radio" name="preset" value="custom">
+                    Особлива (всі поля вручну)
+                </label>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ promocode ? path('app_admin_promocodes_edit', {id: promocode.id}) : path('app_admin_promocodes_new') }}">
+            <div class="form-group">
+                <label>Код:</label>
+                <input type="text"
+                       name="code"
+                       class="form-control"
+                       value="{{ promocode ? promocode.code : suggestedCode }}"
+                       maxlength="32"
+                       style="text-transform: uppercase;">
+                <small class="text-muted">Залиш порожнім, щоб згенерувати автоматично (ABM-XXXX-XXXX).</small>
+            </div>
+
+            <div class="form-group">
+                <label>Тип знижки:</label>
+                <select name="discount_type" class="form-control" id="discount-type-select">
+                    <option value="percent" {{ promocode and promocode.discountType.value == 'percent' ? 'selected' : '' }}>Відсоток</option>
+                    <option value="fixed_amount" {{ promocode and promocode.discountType.value == 'fixed_amount' ? 'selected' : '' }}>Фіксована сума</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Значення: <span id="value-suffix">(%)</span></label>
+                <input type="number" name="value" class="form-control" value="{{ promocode.value ?? '' }}" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>Валюта:</label>
+                <select name="currency" class="form-control">
+                    <option value="UAH" {{ not promocode or promocode.currency.value == 'UAH' ? 'selected' : '' }}>UAH (грн)</option>
+                    <option value="USD" {{ promocode and promocode.currency.value == 'USD' ? 'selected' : '' }}>USD ($)</option>
+                </select>
+                <small class="text-muted">Промокод спрацює лише в магазині цієї валюти.</small>
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 12px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Дійсний з:</label>
+                    <input type="datetime-local" name="valid_from" class="form-control" value="{{ promocode and promocode.validFrom ? promocode.validFrom|date('Y-m-d\\TH:i') : '' }}">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Дійсний до:</label>
+                    <input type="datetime-local" name="valid_to" class="form-control" value="{{ promocode and promocode.validTo ? promocode.validTo|date('Y-m-d\\TH:i') : '' }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Мінімальна сума замовлення:</label>
+                <input type="number" name="min_order_amount" class="form-control" value="{{ promocode.minOrderAmount ?? '' }}" min="0" placeholder="без обмежень">
+            </div>
+
+            <div class="form-row" style="display: flex; gap: 12px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Макс. використань загалом:</label>
+                    <input type="number" name="max_uses" id="max-uses-input" class="form-control" value="{{ promocode.maxUses ?? '' }}" min="1" placeholder="без обмежень">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Макс. на одного клієнта:</label>
+                    <input type="number" name="max_uses_per_user" id="max-uses-per-user-input" class="form-control" value="{{ promocode.maxUsesPerUser ?? '' }}" min="1" placeholder="без обмежень">
+                </div>
+            </div>
+
+            <hr>
+            <div class="form-group">
+                <label>Призначити конкретному клієнту (для одноразових кодів):</label>
+                <input type="text" id="assignee-search" class="form-control" placeholder="Шукати за іменем, email або телефоном…" autocomplete="off">
+                <div id="assignee-results" style="border: 1px solid #ccc; border-top: none; max-height: 220px; overflow-y: auto; display: none;"></div>
+                <input type="hidden" name="assigned_kind" id="assigned-kind" value="{% if promocode and promocode.assignedUser %}user{% elseif promocode and promocode.assignedTelegramUser %}telegram{% endif %}">
+                <input type="hidden" name="assigned_id" id="assigned-id" value="{% if promocode and promocode.assignedUser %}{{ promocode.assignedUser.id }}{% elseif promocode and promocode.assignedTelegramUser %}{{ promocode.assignedTelegramUser.id }}{% endif %}">
+                <div id="assigned-label" style="margin-top: 6px;">
+                    {% if promocode and promocode.assignedUser %}
+                        Призначено: <strong>{{ promocode.assignedUser.firstName }} {{ promocode.assignedUser.lastName }} ({{ promocode.assignedUser.email }})</strong>
+                        <button type="button" class="btn btn-sm btn-link" onclick="clearAssignee()">Очистити</button>
+                    {% elseif promocode and promocode.assignedTelegramUser %}
+                        Призначено: <strong>TG @{{ promocode.assignedTelegramUser.username }}</strong>
+                        <button type="button" class="btn btn-sm btn-link" onclick="clearAssignee()">Очистити</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="is_active" value="1" {{ not promocode or promocode.isActive ? 'checked' : '' }}>
+                    Активний
+                </label>
+            </div>
+
+            {% if not promocode %}
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="send_now" value="1">
+                        Надіслати клієнту одразу після створення (TG або email)
+                    </label>
+                </div>
+            {% endif %}
+
+            <div style="margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">{{ promocode ? 'Зберегти' : 'Створити' }}</button>
+                <a href="{{ path('app_admin_promocodes') }}" class="btn btn-secondary">Скасувати</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    (function() {
+      const presetRadios = document.querySelectorAll('input[name="preset"]');
+      const maxUses = document.getElementById('max-uses-input');
+      const maxUsesPerUser = document.getElementById('max-uses-per-user-input');
+
+      function applyPreset(name) {
+        if (name === 'campaign') {
+          maxUses.value = '';
+          maxUsesPerUser.value = '1';
+        } else if (name === 'single') {
+          maxUses.value = '1';
+          maxUsesPerUser.value = '1';
+        }
+        // 'custom' leaves whatever is in the fields.
+      }
+      presetRadios.forEach(r => r.addEventListener('change', () => applyPreset(r.value)));
+
+      // Update value suffix label based on discount type.
+      const typeSelect = document.getElementById('discount-type-select');
+      const valueSuffix = document.getElementById('value-suffix');
+      function updateSuffix() {
+        valueSuffix.textContent = typeSelect.value === 'percent' ? '(%)' : '(сума в обраній валюті)';
+      }
+      typeSelect.addEventListener('change', updateSuffix);
+      updateSuffix();
+
+      // Assignee autocomplete.
+      const searchInput = document.getElementById('assignee-search');
+      const resultsBox = document.getElementById('assignee-results');
+      const hiddenKind = document.getElementById('assigned-kind');
+      const hiddenId = document.getElementById('assigned-id');
+      const labelBox = document.getElementById('assigned-label');
+      let searchTimer = null;
+
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const q = searchInput.value.trim();
+        if (q.length < 2) {
+          resultsBox.style.display = 'none';
+          return;
+        }
+        searchTimer = setTimeout(async () => {
+          const r = await fetch('{{ path('app_admin_promocodes_search_users') }}?q=' + encodeURIComponent(q));
+          const data = await r.json();
+          resultsBox.innerHTML = '';
+          if (!data.results.length) {
+            resultsBox.innerHTML = '<div style="padding: 8px; color: #888;">Нічого не знайдено</div>';
+          } else {
+            data.results.forEach(item => {
+              const row = document.createElement('div');
+              row.style.padding = '8px';
+              row.style.cursor = 'pointer';
+              row.style.borderBottom = '1px solid #eee';
+              row.textContent = item.label;
+              row.addEventListener('mouseenter', () => row.style.background = '#f0f0f0');
+              row.addEventListener('mouseleave', () => row.style.background = '');
+              row.addEventListener('click', () => {
+                hiddenKind.value = item.kind;
+                hiddenId.value = item.id;
+                labelBox.innerHTML = 'Призначено: <strong>' + item.label + '</strong> <button type="button" class="btn btn-sm btn-link" onclick="clearAssignee()">Очистити</button>';
+                resultsBox.style.display = 'none';
+                searchInput.value = '';
+              });
+              resultsBox.appendChild(row);
+            });
+          }
+          resultsBox.style.display = 'block';
+        }, 200);
+      });
+
+      window.clearAssignee = function() {
+        hiddenKind.value = '';
+        hiddenId.value = '';
+        labelBox.innerHTML = '';
+      };
+    })();
+    </script>
+{% endblock %}
