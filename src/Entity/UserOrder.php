@@ -45,6 +45,21 @@ class UserOrder
     #[ORM\Column(type: 'string', length: 255, nullable: false)]
     private int $total_amount;
 
+    /** Pre-discount subtotal (UAH). NULL for legacy rows created before the promocode system. */
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    #[ORM\Column(name: 'subtotal_amount', type: 'integer', nullable: true)]
+    private ?int $subtotal_amount = null;
+
+    /** Discount applied to this order (UAH). Snapshot — never recomputed against the live Promocode. */
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    #[ORM\Column(name: 'discount_amount', type: 'integer', nullable: false, options: ['default' => 0])]
+    private int $discount_amount = 0;
+
+    /** Raw promocode string used on this order. Snapshot — survives Promocode deletion. */
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    #[ORM\Column(name: 'promocode_code_used', type: 'string', length: 32, nullable: true)]
+    private ?string $promocode_code_used = null;
+
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
@@ -152,6 +167,42 @@ class UserOrder
     public function setTotalAmount(int $total_amount): UserOrder
     {
         $this->total_amount = $total_amount;
+
+        return $this;
+    }
+
+    public function getSubtotalAmount(): ?int
+    {
+        return $this->subtotal_amount;
+    }
+
+    public function setSubtotalAmount(?int $subtotal_amount): self
+    {
+        $this->subtotal_amount = $subtotal_amount;
+
+        return $this;
+    }
+
+    public function getDiscountAmount(): int
+    {
+        return $this->discount_amount;
+    }
+
+    public function setDiscountAmount(int $discount_amount): self
+    {
+        $this->discount_amount = $discount_amount;
+
+        return $this;
+    }
+
+    public function getPromocodeCodeUsed(): ?string
+    {
+        return $this->promocode_code_used;
+    }
+
+    public function setPromocodeCodeUsed(?string $promocode_code_used): self
+    {
+        $this->promocode_code_used = $promocode_code_used;
 
         return $this;
     }
