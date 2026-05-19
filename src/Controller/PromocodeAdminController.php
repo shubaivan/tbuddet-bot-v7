@@ -195,6 +195,8 @@ class PromocodeAdminController extends AbstractController
         if ($admin instanceof User) {
             $tgChatId = $admin->getTelegramChatId() ? (int) $admin->getTelegramChatId() : null;
             $email = $admin->getEmail();
+        } elseif ($admin instanceof TelegramUser) {
+            $tgChatId = $admin->getChatId() ? (int) $admin->getChatId() : null;
         }
 
         $customPrefix = trim((string) $request->request->get('custom_message', '')) ?: null;
