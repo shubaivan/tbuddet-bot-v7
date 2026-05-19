@@ -1,0 +1,103 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Розсилка промокоду — Адмін{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="container" style="margin-top: 24px; max-width: 720px;">
+        <h2>📢 Розсилка промокоду</h2>
+
+        <div class="alert alert-info">
+            <strong>Код:</strong> <code>{{ promocode.code }}</code>
+            &nbsp;|&nbsp;
+            <strong>Знижка:</strong>
+            {% if promocode.discountType.value == 'percent' %}
+                {{ promocode.value }}%
+            {% else %}
+                {{ promocode.value }} {{ promocode.currency.label }}
+            {% endif %}
+            {% if promocode.validTo %}
+                &nbsp;|&nbsp;<strong>До:</strong> {{ promocode.validTo|date('d.m.Y') }}
+            {% endif %}
+            {% if not promocode.isActive %}
+                &nbsp;|&nbsp;<span class="badge bg-danger">Вимкнено</span>
+            {% endif %}
+        </div>
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'warning' }}">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        <form method="POST" id="broadcastForm">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Аудиторія:</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="audience" id="aud_both" value="both" checked>
+                    <label class="form-check-label" for="aud_both">
+                        <strong>Усі</strong> — TG-користувачі бота ({{ counts.telegram }}) + веб-користувачі з підтвердженим email ({{ counts.email }})
+                        — <strong>{{ counts.total }}</strong> отримувачів
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="audience" id="aud_tg" value="telegram">
+                    <label class="form-check-label" for="aud_tg">
+                        Тільки Telegram-бот — <strong>{{ counts.telegram }}</strong> отримувачів
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="audience" id="aud_email" value="email">
+                    <label class="form-check-label" for="aud_email">
+                        Тільки email (без TG) — <strong>{{ counts.email }}</strong> отримувачів
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="custom_message" class="form-label fw-bold">Власне повідомлення (необов'язково)</label>
+                <textarea class="form-control" name="custom_message" id="custom_message" rows="4"
+                          placeholder="Напр.: Привіт! Свято наближається — даруємо знижку 20% на всі вазони. Дійсний до 31.05."></textarea>
+                <div class="form-text">
+                    Текст з'явиться <strong>перед</strong> стандартним блоком із кодом і знижкою. Залиште порожнім, щоб використати стандартне привітання.
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="button" id="btnTest" class="btn btn-outline-primary">
+                    🧪 Надіслати тест собі
+                </button>
+                <button type="button" id="btnSend" class="btn btn-danger">
+                    🚀 Надіслати всім
+                </button>
+                <a href="{{ path('app_admin_promocodes') }}" class="btn btn-outline-secondary">Назад</a>
+            </div>
+
+            <p class="text-muted mt-3" style="font-size: 13px;">
+                Тестова кнопка надсилає одне повідомлення на ваш адмін-акаунт (через TG, якщо ваш профіль має chat_id, та/або email).
+                Жодних обмежень тест не використовує. Основна розсилка може зайняти декілька хвилин для великих аудиторій
+                (~30 повідомлень/сек у TG).
+            </p>
+        </form>
+
+        <script>
+            (function () {
+                const form = document.getElementById('broadcastForm');
+                document.getElementById('btnTest').addEventListener('click', function () {
+                    form.action = '{{ path('app_admin_promocodes_broadcast_test', {id: promocode.id}) }}';
+                    form.submit();
+                });
+                document.getElementById('btnSend').addEventListener('click', function () {
+                    const audience = form.querySelector('input[name=audience]:checked').value;
+                    const counts = {telegram: {{ counts.telegram }}, email: {{ counts.email }}, both: {{ counts.total }}};
+                    const recipients = counts[audience === 'both' ? 'both' : audience];
+                    if (!confirm('Надіслати промокод ' + recipients + ' отримувачам? Цю дію не можна скасувати.')) {
+                        return;
+                    }
+                    form.action = '{{ path('app_admin_promocodes_broadcast_send', {id: promocode.id}) }}';
+                    form.submit();
+                });
+            })();
+        </script>
+    </div>
+{% endblock %}

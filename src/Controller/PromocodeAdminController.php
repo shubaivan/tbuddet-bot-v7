@@ -11,6 +11,7 @@ use App\Repository\PromocodeRedemptionRepository;
 use App\Repository\PromocodeRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserRepository;
+use App\Service\Promocode\PromocodeBroadcastService;
 use App\Service\Promocode\PromocodeCodeGenerator;
 use App\Service\Promocode\PromocodeDeliveryService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -155,6 +156,100 @@ class PromocodeAdminController extends AbstractController
                 ? sprintf('Промокод %s надіслано через %s', $promocode->getCode(), $channel)
                 : sprintf('Не вдалося надіслати %s — у клієнта немає Telegram/email', $promocode->getCode()),
         );
+
+        return $this->redirectToRoute('app_admin_promocodes');
+    }
+
+    #[Route('/admin/promocodes/{id}/broadcast', name: 'app_admin_promocodes_broadcast', methods: ['GET'])]
+    public function broadcastForm(
+        int $id,
+        PromocodeRepository $repository,
+        PromocodeBroadcastService $broadcastService,
+    ): Response {
+        $promocode = $repository->find($id);
+        if ($promocode === null) {
+            throw $this->createNotFoundException();
+        }
+
+        return $this->render('admin/promocodes/broadcast.html.twig', [
+            'promocode' => $promocode,
+            'counts' => $broadcastService->previewCounts(),
+        ]);
+    }
+
+    #[Route('/admin/promocodes/{id}/broadcast/test', name: 'app_admin_promocodes_broadcast_test', methods: ['POST'])]
+    public function broadcastTest(
+        int $id,
+        Request $request,
+        PromocodeRepository $repository,
+        PromocodeBroadcastService $broadcastService,
+    ): RedirectResponse {
+        $promocode = $repository->find($id);
+        if ($promocode === null) {
+            throw $this->createNotFoundException();
+        }
+
+        $admin = $this->getUser();
+        $tgChatId = null;
+        $email = null;
+        if ($admin instanceof User) {
+            $tgChatId = $admin->getTelegramChatId() ? (int) $admin->getTelegramChatId() : null;
+            $email = $admin->getEmail();
+        }
+
+        $customPrefix = trim((string) $request->request->get('custom_message', '')) ?: null;
+        $result = $broadcastService->sendTest($promocode, $tgChatId, $email, $customPrefix);
+
+        $parts = [];
+        if ($result['tg_ok']) {
+            $parts[] = sprintf('TG (%s)', $tgChatId);
+        }
+        if ($result['email_ok']) {
+            $parts[] = sprintf('email (%s)', $email);
+        }
+        if ($parts) {
+            $this->addFlash('success', sprintf('Тестове повідомлення надіслано: %s', implode(', ', $parts)));
+        }
+        if ($result['error'] !== null) {
+            $this->addFlash('warning', $result['error']);
+        }
+        if (!$parts && $result['error'] === null) {
+            $this->addFlash('warning', 'Не вдалося надіслати тест — у вашого адмін-акаунта немає Telegram chat_id або email.');
+        }
+
+        return $this->redirectToRoute('app_admin_promocodes_broadcast', ['id' => $id]);
+    }
+
+    #[Route('/admin/promocodes/{id}/broadcast/send', name: 'app_admin_promocodes_broadcast_send', methods: ['POST'])]
+    public function broadcastSend(
+        int $id,
+        Request $request,
+        PromocodeRepository $repository,
+        PromocodeBroadcastService $broadcastService,
+    ): RedirectResponse {
+        $promocode = $repository->find($id);
+        if ($promocode === null) {
+            throw $this->createNotFoundException();
+        }
+
+        $audience = (string) $request->request->get('audience', PromocodeBroadcastService::AUDIENCE_BOTH);
+        if (!in_array($audience, [
+            PromocodeBroadcastService::AUDIENCE_TELEGRAM,
+            PromocodeBroadcastService::AUDIENCE_EMAIL,
+            PromocodeBroadcastService::AUDIENCE_BOTH,
+        ], true)) {
+            $audience = PromocodeBroadcastService::AUDIENCE_BOTH;
+        }
+
+        $customPrefix = trim((string) $request->request->get('custom_message', '')) ?: null;
+        $result = $broadcastService->dispatch($promocode, $audience, $customPrefix);
+
+        $this->addFlash('success', sprintf(
+            'Розсилку завершено: TG %d, email %d. Помилок: %d.',
+            $result['tg_sent'],
+            $result['email_sent'],
+            count($result['failures']),
+        ));
 
         return $this->redirectToRoute('app_admin_promocodes');
     }

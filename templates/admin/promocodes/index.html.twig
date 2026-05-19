@@ -88,6 +88,7 @@
                     <td>
                         <a href="{{ path('app_admin_promocodes_edit', {id: p.id}) }}" class="btn btn-sm btn-outline-secondary">✏️</a>
                         <a href="{{ path('app_admin_promocodes_redemptions', {id: p.id}) }}" class="btn btn-sm btn-outline-info">📊</a>
+                        <a href="{{ path('app_admin_promocodes_broadcast', {id: p.id}) }}" class="btn btn-sm btn-outline-warning" title="Розсилка всім користувачам">📢</a>
                     </td>
                 </tr>
             {% else %}
