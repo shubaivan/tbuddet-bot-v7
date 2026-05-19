@@ -98,7 +98,9 @@ class PromocodeDeliveryService
             "🎟 <b>Ваш персональний промокод</b>\n\n"
             . "<code>%s</code>\n\n"
             . "Знижка: <b>%s</b>%s\n\n"
-            . "Введіть цей код у полі \"Промокод\" при оформленні замовлення.",
+            . "Введіть цей код у полі \"Промокод\" при оформленні замовлення:\n"
+            . "🌐 на сайті <a href=\"https://artbeton.market\">artbeton.market</a>\n"
+            . "🤖 або тут у Telegram-боті",
             $promocode->getCode(),
             $this->formatDiscountValue($promocode),
             $validity,

@@ -5,24 +5,32 @@
 {% block stylesheets %}
     {{ parent() }}
     <style>
-        .help-page { max-width: 860px; margin: 24px auto; padding: 0 16px; line-height: 1.6; }
-        .help-page h1 { margin-top: 0; }
-        .help-page h2 { margin-top: 32px; padding-top: 8px; border-top: 1px solid #eee; }
-        .help-page h3 { margin-top: 24px; color: #c08737; }
-        .help-page .callout { padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+        .help-page { max-width: 880px; margin: 24px auto; padding: 0 20px; line-height: 1.7; font-size: 16px; color: #2a2a2a; }
+        .help-page h1 { margin-top: 0; font-size: 2em; }
+        .help-page h2 { margin-top: 40px; padding-top: 12px; border-top: 2px solid #c08737; font-size: 1.5em; color: #1a1a1a; }
+        .help-page h3 { margin-top: 28px; color: #c08737; font-size: 1.2em; }
+        .help-page p { margin: 12px 0; }
+        .help-page .callout { padding: 14px 18px; border-radius: 6px; margin: 18px 0; }
         .help-page .callout.tip { background: #eef8ff; border-left: 4px solid #2b8cd5; }
         .help-page .callout.warn { background: #fff8e6; border-left: 4px solid #d59c2b; }
         .help-page .callout.danger { background: #ffeeee; border-left: 4px solid #d52b2b; }
-        .help-page code { background: #f4f4f4; padding: 1px 6px; border-radius: 3px; font-size: 0.95em; }
-        .help-page .field-list dt { font-weight: 600; margin-top: 12px; color: #333; }
-        .help-page .field-list dd { margin-left: 0; color: #555; }
-        .help-page ol li, .help-page ul li { margin: 4px 0; }
-        .help-page .step { background: #fafafa; padding: 16px 20px; border-radius: 6px; margin: 16px 0; border: 1px solid #e0e0e0; }
-        .help-page .step-number { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; background: #c08737; color: white; border-radius: 50%; font-weight: 600; margin-right: 8px; }
+        .help-page code { background: #f4f4f4; padding: 2px 7px; border-radius: 3px; font-size: 0.95em; color: #b03030; }
+        .help-page .field-list dt { font-weight: 700; margin-top: 16px; color: #1a1a1a; font-size: 1.02em; }
+        .help-page .field-list dd { margin-left: 0; color: #4a4a4a; margin-bottom: 4px; }
+        .help-page ol li, .help-page ul li { margin: 6px 0; }
+        .help-page .step { background: #fafafa; padding: 18px 22px; border-radius: 8px; margin: 18px 0; border: 1px solid #e0e0e0; }
+        .help-page .step > p:first-child { margin-top: 0; font-size: 1.05em; }
+        .help-page .step-number { display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center; background: #c08737; color: white; border-radius: 50%; font-weight: 700; margin-right: 10px; font-size: 1em; }
         .help-page .screenshot-placeholder { background: #f0f0f0; border: 2px dashed #ccc; padding: 32px; text-align: center; color: #888; font-style: italic; margin: 12px 0; border-radius: 4px; }
-        .help-page .toc { background: #f8f8f8; padding: 16px 24px; border-radius: 6px; margin-bottom: 24px; }
+        .help-page .screenshot { display: block; max-width: 100%; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin: 14px 0; }
+        .help-page .screenshot.small { max-width: 420px; }
+        .help-page .toc { background: #f8f8f8; padding: 18px 28px; border-radius: 8px; margin-bottom: 28px; border-left: 4px solid #c08737; }
         .help-page .toc a { color: #2b6cb0; text-decoration: none; }
         .help-page .toc a:hover { text-decoration: underline; }
+        .help-page .tldr { background: linear-gradient(135deg, #fff8ed, #fff); border: 1px solid #e8c78d; border-radius: 8px; padding: 20px 26px; margin: 20px 0 32px; }
+        .help-page .tldr h3 { margin-top: 0; }
+        .help-page .tldr ul { margin: 8px 0 0 0; }
+        .help-page kbd { background: #fafafa; border: 1px solid #d0d0d0; border-radius: 4px; padding: 2px 7px; font-family: inherit; font-size: 0.9em; box-shadow: 0 1px 0 #d0d0d0; }
     </style>
 {% endblock %}
 
@@ -36,8 +44,20 @@
         <p>
             Цей розділ показує, як адміністратор створює, видає та контролює промокоди.
             Клієнти бачать поле «Промокод» при оформленні замовлення на сайті
-            <code>artbeton.market</code> або в Telegram-боті.
+            <code>artbeton.market</code> або в Telegram-боті
+            (поле <strong>необов'язкове</strong> — без коду замовлення все одно можна оформити).
         </p>
+
+        <div class="tldr">
+            <h3>⚡ Швидко що де</h3>
+            <ul>
+                <li><strong>Створити код</strong> → <kbd>+ Створити промокод</kbd> у правому верхньому куті.</li>
+                <li><strong>Надіслати одному клієнту</strong> (одноразовий) → <kbd>📩 Надіслати</kbd> у рядку коду.</li>
+                <li><strong>Розіслати всім</strong> (маркетинговий) → <kbd>📢</kbd> у колонці «Управління».</li>
+                <li><strong>Подивитися використання</strong> → <kbd>📊</kbd> у рядку коду.</li>
+                <li><strong>Вимкнути код</strong> → <kbd>✓ Активний</kbd> кнопка в колонці «Активний».</li>
+            </ul>
+        </div>
 
         <div class="toc">
             <strong>Зміст:</strong>
@@ -49,6 +69,7 @@
                 <li><a href="#single-use">Одноразові коди: призначення та автодоставка</a></li>
                 <li><a href="#manage">Управління: вмикання, редагування, видалення</a></li>
                 <li><a href="#stats">Як подивитися, хто і коли скористався</a></li>
+                <li><a href="#broadcast">Розсилка промокоду всім клієнтам</a></li>
                 <li><a href="#pitfalls">Часті питання та обмеження</a></li>
             </ol>
         </div>
@@ -108,7 +129,7 @@
                 або відразу перейти за посиланням
                 <a href="{{ path('app_admin_promocodes') }}">/admin/promocodes</a>.
             </p>
-            <div class="screenshot-placeholder">[Скріншот: список промокодів]</div>
+            <img src="/admin/help/promocodes/img/list.png" alt="Список промокодів" class="screenshot">
         </div>
 
         <div class="step">
@@ -319,7 +340,80 @@
             Якщо код має ліміт — він теж показаний (наприклад, «3 / 50»).
         </p>
 
-        <h2 id="pitfalls">8. Часті питання та обмеження</h2>
+        <h2 id="broadcast">8. Розсилка промокоду всім клієнтам</h2>
+        <p>
+            Якщо хочеш надіслати маркетинговий код (наприклад, <code>SPRING20</code>)
+            одразу всім користувачам бота і всім веб-користувачам з підтвердженим email —
+            використай кнопку <code>📢</code> справа в рядку коду.
+        </p>
+
+        <div class="step">
+            <p><span class="step-number">1</span> <strong>Натисни <code>📢</code> в рядку коду</strong></p>
+            <p>
+                У колонці «Управління» поряд із <code>✏️</code> та <code>📊</code> є нова
+                жовто-помаранчева кнопка з мегафоном. Підказка — «Розсилка всім користувачам».
+            </p>
+            <img src="/admin/help/promocodes/img/row-actions.png" alt="Кнопка 📢 в рядку коду" class="screenshot small">
+        </div>
+
+        <div class="step">
+            <p><span class="step-number">2</span> <strong>Обери аудиторію</strong></p>
+            <p>
+                Біля кожної опції одразу видно кількість отримувачів:
+            </p>
+            <ul>
+                <li><strong>Усі</strong> — TG-користувачі + веб з email (рекомендовано для широких акцій).</li>
+                <li><strong>Тільки Telegram</strong> — тільки користувачі бота. Найшвидше доходить.</li>
+                <li><strong>Тільки email (без TG)</strong> — тільки веб-користувачі без прив'язаного TG. Для тих, хто не у боті.</li>
+            </ul>
+            <img src="/admin/help/promocodes/img/broadcast-form.png" alt="Форма розсилки" class="screenshot">
+            <div class="callout tip">
+                <strong>💡 Дедуплікація автоматична:</strong> якщо клієнт зареєстрований на сайті
+                <em>та</em> залогінився через TG-віджет — він отримає <em>тільки</em> одне повідомлення в Telegram.
+                Аудиторія «email» не пересікається з «Telegram».
+            </div>
+        </div>
+
+        <div class="step">
+            <p><span class="step-number">3</span> <strong>Власне повідомлення (необов'язково)</strong></p>
+            <p>
+                У полі «Власне повідомлення» можна додати текст, який з'явиться <strong>перед</strong>
+                стандартним блоком із кодом та знижкою. Наприклад:
+                <em>«Привіт! Свято наближається — даруємо знижку 20% на всі вазони. Дійсний до 31.05.»</em>
+                Якщо лишити порожнім — піде стандартне привітання.
+            </p>
+        </div>
+
+        <div class="step">
+            <p><span class="step-number">4</span> <strong>Спочатку — тест собі</strong></p>
+            <p>
+                Кнопка <code>🧪 Надіслати тест собі</code> надішле одне повідомлення на твій адмін-акаунт
+                (через Telegram, якщо твій профіль має chat_id, та/або email). Жодних обмежень тест не
+                використовує. Перевір, що текст виглядає як треба.
+            </p>
+            <img src="/admin/help/promocodes/img/broadcast-test-success.png" alt="Успіх тестової розсилки" class="screenshot">
+            <p>
+                У Telegram повідомлення виглядає так:
+            </p>
+            <img src="/admin/help/promocodes/img/tg-received.png" alt="Отримане повідомлення в TG" class="screenshot small">
+        </div>
+
+        <div class="step">
+            <p><span class="step-number">5</span> <strong>Натисни <code>🚀 Надіслати всім</code></strong></p>
+            <p>
+                Підтверди в діалозі. Розсилка йде з обмеженням ~30 повідомлень/сек у Telegram
+                (так вимагає Telegram API) — для великих аудиторій це може зайняти декілька хвилин.
+                Після завершення зверху з'явиться повідомлення:
+                <em>«Розсилку завершено: TG N, email M. Помилок: K.»</em>
+            </p>
+            <div class="callout warn">
+                <strong>⚠ Це незворотньо.</strong> Кожен отримувач отримає повідомлення один раз —
+                якщо вийшла помилка в тексті, не можна «відкликати» його з усіх чатів.
+                Завжди тестуй на собі перед основною розсилкою.
+            </div>
+        </div>
+
+        <h2 id="pitfalls">9. Часті питання та обмеження</h2>
 
         <dl class="field-list">
             <dt>Можна застосувати два промокоди в одному замовленні?</dt>
