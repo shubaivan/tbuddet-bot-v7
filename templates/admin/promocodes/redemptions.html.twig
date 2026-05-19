@@ -20,11 +20,12 @@
                 <th>Замовлення</th>
                 <th>Хто</th>
                 <th>Знижка</th>
+                <th>Статус</th>
             </tr>
             </thead>
             <tbody>
             {% for r in redemptions %}
-                <tr>
+                <tr {% if r.canceled %}style="color:#888; text-decoration:line-through;"{% endif %}>
                     <td>{{ r.id }}</td>
                     <td>{{ r.redeemedAt|date('d.m.Y H:i') }}</td>
                     <td>#{{ r.userOrder.id }} ({{ r.userOrder.totalAmount }} {{ r.currency.label }})</td>
@@ -40,9 +41,16 @@
                         {% endif %}
                     </td>
                     <td>−{{ r.discountApplied }} {{ r.currency.label }}</td>
+                    <td>
+                        {% if r.canceled %}
+                            <span class="badge bg-secondary">скасовано {{ r.canceledAt|date('d.m H:i') }}</span>
+                        {% else %}
+                            <span class="badge bg-success">активне</span>
+                        {% endif %}
+                    </td>
                 </tr>
             {% else %}
-                <tr><td colspan="5" class="text-center">Ще ніхто не скористався цим промокодом</td></tr>
+                <tr><td colspan="6" class="text-center">Ще ніхто не скористався цим промокодом</td></tr>
             {% endfor %}
             </tbody>
         </table>

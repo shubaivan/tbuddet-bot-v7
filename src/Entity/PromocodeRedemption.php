@@ -58,6 +58,10 @@ class PromocodeRedemption
     #[ORM\Column(name: 'redeemed_at', type: Types::DATETIME_MUTABLE, nullable: false)]
     private \DateTime $redeemedAt;
 
+    /** NULL while the redemption is active. Set when the order is cancelled — the row stays for audit. */
+    #[ORM\Column(name: 'canceled_at', type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTime $canceledAt = null;
+
     public function __construct()
     {
         $this->redeemedAt = new \DateTime();
@@ -162,5 +166,22 @@ class PromocodeRedemption
         $this->redeemedAt = $redeemedAt;
 
         return $this;
+    }
+
+    public function getCanceledAt(): ?\DateTime
+    {
+        return $this->canceledAt;
+    }
+
+    public function setCanceledAt(?\DateTime $canceledAt): self
+    {
+        $this->canceledAt = $canceledAt;
+
+        return $this;
+    }
+
+    public function isCanceled(): bool
+    {
+        return $this->canceledAt !== null;
     }
 }

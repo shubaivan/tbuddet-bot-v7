@@ -159,6 +159,51 @@ class PromocodeService
         return true;
     }
 
+    /**
+     * Release a redemption when its order is cancelled — stamps canceled_at on the
+     * ledger row (history preserved) and decrements Promocode.times_used.
+     *
+     * Idempotent: no-op if no redemption exists for the order, or if the existing
+     * redemption is already canceled. Returns true when a release actually happened.
+     *
+     * The decrement uses raw DBAL with `AND times_used > 0` so we can never drive
+     * the counter below zero even under unexpected races (e.g. manual SQL fixes
+     * that already lowered it).
+     */
+    public function cancelForOrder(UserOrder $userOrder): bool
+    {
+        $redemption = $this->redemptionRepository->findOneBy(['userOrder' => $userOrder]);
+        if ($redemption === null || $redemption->isCanceled()) {
+            return false;
+        }
+
+        $conn = $this->em->getConnection();
+
+        // Stamp canceled_at via raw DBAL to mirror the redeem() pattern and avoid
+        // tangling this with whatever the caller is flushing in the same request.
+        $now = new \DateTime();
+        $conn->executeStatement(
+            'UPDATE promocode_redemption SET canceled_at = :ts WHERE id = :id AND canceled_at IS NULL',
+            ['ts' => $now->format('Y-m-d H:i:s'), 'id' => $redemption->getId()],
+        );
+
+        // Decrement the denormalized counter, guarded so the counter never goes
+        // negative even under unexpected races or manual SQL repairs.
+        $promocode = $redemption->getPromocode();
+        $conn->executeStatement(
+            'UPDATE promocode SET times_used = times_used - 1 WHERE id = :id AND times_used > 0',
+            ['id' => $promocode->getId()],
+        );
+
+        // Keep in-memory entities consistent with the DB.
+        $redemption->setCanceledAt($now);
+        if ($promocode->getTimesUsed() > 0) {
+            $promocode->setTimesUsed($promocode->getTimesUsed() - 1);
+        }
+
+        return true;
+    }
+
     private function buyerMatchesAssignment(
         Promocode $promocode,
         ?User $user,

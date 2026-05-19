@@ -21,6 +21,7 @@ use App\Repository\ProductRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\EmailService;
+use App\Service\Promocode\PromocodeService;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -377,6 +378,7 @@ class AdminController extends AbstractController
         Nutgram $bot,
         TelegramUserRepository $telegramUserRepository,
         EmailService $emailService,
+        PromocodeService $promocodeService,
     ): Response
     {
         $oldStatus = $order->getOrderStatus();
@@ -388,6 +390,13 @@ class AdminController extends AbstractController
         $order->setOrderStatus($newStatus);
         $order->setNovaPoshtaTrackingNumber($trackingNumber ?: null);
         $em->flush();
+
+        // Release the promocode redemption if this transition is into "cancelled".
+        // Decrements Promocode.times_used and stamps canceled_at on the ledger row.
+        // Idempotent — re-saving a cancelled order with status still 'cancelled' is a no-op.
+        if ($newStatus === OrderStatusEnum::CANCELLED->value && $oldStatus !== OrderStatusEnum::CANCELLED->value) {
+            $promocodeService->cancelForOrder($order);
+        }
 
         // Notify client via email on status change (skip if status didn't change)
         if ($oldStatus !== $newStatus) {
