@@ -2,6 +2,8 @@
 
 namespace App\Entity\Enum;
 
+use App\Controller\API\Request\Enum\UserLanguageEnum;
+
 enum CurrencyEnum: string
 {
     case UAH = 'UAH';

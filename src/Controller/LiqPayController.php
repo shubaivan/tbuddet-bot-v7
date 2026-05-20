@@ -65,6 +65,18 @@ class LiqPayController extends AbstractController
 
         $previousStatus = $userOrder->getLiqPaystatus();
         $newStatus = $json_decode['status'];
+
+        // A retried payment can produce a late callback from an earlier, failed
+        // attempt. Never let it downgrade an order LiqPay already confirmed paid.
+        if ($previousStatus === 'success' && in_array($newStatus, ['failure', 'error'], true)) {
+            $logger->warning('liqpay stale failure callback ignored for paid order', [
+                'order_id' => $order_id,
+                'new_status' => $newStatus,
+            ]);
+
+            return $this->json(['status' => true]);
+        }
+
         $userOrder->setLiqPaystatus($newStatus);
         $em->flush();
 

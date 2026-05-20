@@ -16,6 +16,7 @@ use App\Entity\UserOrder;
 use App\Liqpay\LiqPay;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
+use App\Repository\UserOrderRepository;
 use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
@@ -386,5 +387,66 @@ class ShoppingCartController extends AbstractController
         ], Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
+    }
+
+    /**
+     * Regenerate a LiqPay payment link for an existing, not-yet-paid order so the
+     * customer can retry payment (e.g. after a declined card) straight from /profile.
+     * The order itself is reused — only a fresh LiqPay order_id is issued.
+     */
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/order/{id}/pay', name: 'order_repay', methods: [Request::METHOD_POST])]
+    public function repayOrder(
+        string $id,
+        #[CurrentUser] User $user,
+        UserOrderRepository $orderRepository,
+        ObjectHandler $objectHandler,
+        EntityManagerInterface $em,
+        LocalizationService $localizationService,
+    ): JsonResponse
+    {
+        $objectHandler->entityLookup($id, UserOrder::class, 'id');
+        /** @var UserOrder $userOrder */
+        $userOrder = $orderRepository->findOneBy(['id' => $id]);
+
+        if (!$user->getClientOrders()->contains($userOrder)) {
+            return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if ($userOrder->getLiqPayStatus() === 'success') {
+            return $this->json(['error' => 'order_already_paid'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $language = $localizationService->getLanguage();
+        $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
+
+        $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
+
+        $lang = $language === UserLanguageEnum::UA ? 'uk' : 'en';
+        $resultUrl = sprintf('%s/%s/payment-success?order=%d', $this->frontendUrl, $lang, $userOrder->getId());
+
+        $params = array(
+            'action' => 'pay',
+            'version' => '3',
+            'amount' => $userOrder->getTotalAmount(),
+            'currency' => $language === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'result_url' => $resultUrl,
+            'description' => $userOrder->getDescription(),
+        );
+        $cnb_form_raw = $liqpay->cnb_form_raw($params);
+
+        $userOrder->setLiqPayOrderId($liqPayOrderID);
+        $em->flush();
+
+        $link = sprintf(
+            '%s?%s&%s',
+            $cnb_form_raw['url'],
+            'data=' . $cnb_form_raw['data'],
+            'signature=' . $cnb_form_raw['signature'],
+        );
+
+        return $this->json(['link' => $link], Response::HTTP_OK);
     }
 }
