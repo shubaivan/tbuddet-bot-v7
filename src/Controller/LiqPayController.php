@@ -124,10 +124,28 @@ class LiqPayController extends AbstractController
             }
 
             $orderUrl = $request->getSchemeAndHttpHost() . '/admin/orders/' . $userOrder->getId();
+
+            // When a promocode was applied, spell out the original amount and the
+            // discount so the manager sees what the customer actually paid vs. the
+            // catalogue price. Otherwise keep the single-line "Сума".
+            if ($userOrder->getPromocodeCodeUsed() && $userOrder->getDiscountAmount() > 0) {
+                $subtotal = $userOrder->getSubtotalAmount()
+                    ?? ($userOrder->getTotalAmount() + $userOrder->getDiscountAmount());
+                $amountInfo = sprintf(
+                    "Сума до сплати: %s грн\nПочаткова сума: %s грн\nПромокод: %s (знижка %s грн)\n",
+                    $userOrder->getTotalAmount(),
+                    $subtotal,
+                    $userOrder->getPromocodeCodeUsed(),
+                    $userOrder->getDiscountAmount()
+                );
+            } else {
+                $amountInfo = sprintf("Сума: %s грн\n", $userOrder->getTotalAmount());
+            }
+
             $managerMsg = sprintf(
-                "<b>Нове замовлення #%d</b>\nСума: %s грн\n%s%sКлієнт: %s\n\n<a href=\"%s\">Відкрити замовлення</a>",
+                "<b>Нове замовлення #%d</b>\n%s%s%sКлієнт: %s\n\n<a href=\"%s\">Відкрити замовлення</a>",
                 $userOrder->getId(),
-                $userOrder->getTotalAmount(),
+                $amountInfo,
                 $userOrder->getDeliveryCity() ? 'Місто: ' . $userOrder->getDeliveryCity() . "\n" : '',
                 $userOrder->getDeliveryDepartment() ? 'Відділення: ' . $userOrder->getDeliveryDepartment() . "\n" : '',
                 $clientInfo ?: 'Невідомий',
