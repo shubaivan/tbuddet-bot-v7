@@ -81,8 +81,10 @@ class PromocodeController extends AbstractController
     public function welcomeOffer(
         #[CurrentUser] User $user,
         FirstOrderPromocodeService $firstOrderPromocodeService,
+        LocalizationService $localizationService,
     ): JsonResponse {
-        $offer = $firstOrderPromocodeService->getActiveOfferForUser($user);
+        $currency = CurrencyEnum::fromUserLanguage($localizationService->getLanguage());
+        $offer = $firstOrderPromocodeService->getActiveOfferForUser($user, $currency);
 
         if ($offer === null) {
             return $this->json(['eligible' => false]);

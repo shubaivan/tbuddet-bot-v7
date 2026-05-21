@@ -51,26 +51,32 @@ class FirstOrderPromocodeService
     }
 
     /**
-     * Personal first-order code for a web user, or null if they no longer qualify.
-     * A freshly minted code is also delivered (email / Telegram DM) as a reminder.
+     * Personal first-order code for a web user in the given storefront currency,
+     * or null if they no longer qualify. The buyer gets one code per currency
+     * (UAH on the Ukrainian site, USD on the English site). A freshly minted
+     * code is also delivered (email / Telegram DM) as a reminder.
      */
-    public function getActiveOfferForUser(User $user): ?Promocode
+    public function getActiveOfferForUser(User $user, CurrencyEnum $currency = CurrencyEnum::UAH): ?Promocode
     {
-        return $this->resolve($user, null, deliverOnMint: true);
+        return $this->resolve($user, null, deliverOnMint: true, currency: $currency);
     }
 
     /**
      * Personal first-order code for a Telegram bot user, or null if they no longer
-     * qualify. Delivery is skipped on mint — the bot renders the code inline in the
-     * /start menu, so a separate DM would just duplicate it.
+     * qualify. The bot storefront is UAH. Delivery is skipped on mint — the bot
+     * renders the code inline in the /start menu, so a DM would just duplicate it.
      */
     public function getActiveOfferForTelegramUser(TelegramUser $telegramUser): ?Promocode
     {
-        return $this->resolve(null, $telegramUser, deliverOnMint: false);
+        return $this->resolve(null, $telegramUser, deliverOnMint: false, currency: CurrencyEnum::UAH);
     }
 
-    private function resolve(?User $user, ?TelegramUser $telegramUser, bool $deliverOnMint): ?Promocode
-    {
+    private function resolve(
+        ?User $user,
+        ?TelegramUser $telegramUser,
+        bool $deliverOnMint,
+        CurrencyEnum $currency,
+    ): ?Promocode {
         // 1. A buyer who has already paid for an order has converted — offer over.
         //    QA-whitelisted IDs skip this check so the flow can be tested by an
         //    account that already has real orders.
@@ -79,8 +85,8 @@ class FirstOrderPromocodeService
             return null;
         }
 
-        // 2. Existing personal code still usable → hand back the same one.
-        $existing = $this->promocodeRepository->findLatestFirstOrderFor($user, $telegramUser);
+        // 2. Existing personal code (in this currency) still usable → hand it back.
+        $existing = $this->promocodeRepository->findLatestFirstOrderFor($user, $telegramUser, $currency);
         if ($existing !== null && $this->isStillOfferable($existing)) {
             return $existing;
         }
@@ -91,7 +97,7 @@ class FirstOrderPromocodeService
             $this->em->flush();
         }
 
-        return $this->mint($user, $telegramUser, $deliverOnMint);
+        return $this->mint($user, $telegramUser, $deliverOnMint, $currency);
     }
 
     /**
@@ -136,8 +142,12 @@ class FirstOrderPromocodeService
         return false;
     }
 
-    private function mint(?User $user, ?TelegramUser $telegramUser, bool $deliver): Promocode
-    {
+    private function mint(
+        ?User $user,
+        ?TelegramUser $telegramUser,
+        bool $deliver,
+        CurrencyEnum $currency,
+    ): Promocode {
         $now = new \DateTime();
         $validTo = (clone $now)->modify(sprintf('+%d days', self::VALIDITY_DAYS));
 
@@ -146,7 +156,7 @@ class FirstOrderPromocodeService
             ->setPurpose(PromocodePurposeEnum::FIRST_ORDER)
             ->setDiscountType(DiscountTypeEnum::PERCENT)
             ->setValue(self::DISCOUNT_PERCENT)
-            ->setCurrency(CurrencyEnum::UAH)
+            ->setCurrency($currency)
             ->setValidFrom($now)
             ->setValidTo($validTo)
             ->setMaxUses(1)

@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Enum\CurrencyEnum;
 use App\Entity\Enum\PromocodePurposeEnum;
 use App\Entity\Promocode;
 use App\Entity\TelegramUser;
@@ -35,21 +36,29 @@ class PromocodeRepository extends ServiceEntityRepository
     }
 
     /**
-     * Most-recently-created FIRST_ORDER code assigned to the given buyer, or null.
+     * Most-recently-created FIRST_ORDER code assigned to the given buyer in the
+     * given currency, or null.
      *
      * Used by {@see \App\Service\Promocode\FirstOrderPromocodeService} to find the
      * buyer's existing personal code before deciding whether to rotate it. Pass
      * exactly one of $user / $telegramUser — whichever identity the caller holds.
+     * Currency is part of the lookup because a buyer gets one code per storefront
+     * (UAH and USD codes are distinct).
      */
-    public function findLatestFirstOrderFor(?User $user, ?TelegramUser $telegramUser): ?Promocode
-    {
+    public function findLatestFirstOrderFor(
+        ?User $user,
+        ?TelegramUser $telegramUser,
+        CurrencyEnum $currency,
+    ): ?Promocode {
         if ($user === null && $telegramUser === null) {
             return null;
         }
 
         $qb = $this->createQueryBuilder('p')
             ->where('p.purpose = :purpose')
+            ->andWhere('p.currency = :currency')
             ->setParameter('purpose', PromocodePurposeEnum::FIRST_ORDER)
+            ->setParameter('currency', $currency)
             ->orderBy('p.id', 'DESC')
             ->setMaxResults(1);
 
