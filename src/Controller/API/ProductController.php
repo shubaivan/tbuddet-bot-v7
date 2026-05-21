@@ -7,6 +7,7 @@ use App\Controller\API\Request\ProductListRequest;
 use App\Controller\API\Request\Purchase\PublicPurchaseProduct;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
 use App\Entity\CategoryRelation;
+use App\Entity\Enum\CurrencyEnum;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\User;
@@ -19,6 +20,7 @@ use App\Repository\ProductRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
+use App\Service\Promocode\PromocodeService;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
@@ -298,7 +300,8 @@ class ProductController extends AbstractController
         ObjectHandler $objectHandler,
         #[MapRequestPayload] PurchaseProduct $purchaseProduct,
         #[CurrentUser] User $user,
-        LocalizationService $localizationService
+        LocalizationService $localizationService,
+        PromocodeService $promocodeService
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -338,9 +341,41 @@ class ProductController extends AbstractController
             );
         }
 
-        $total_amount = $price * $purchaseProduct->getQuantity();
+        $subtotal = (int) ($price * $purchaseProduct->getQuantity());
 
+        // Promocode (optional). Re-validate server-side even though the FE
+        // previewed it — the code may have been deactivated since. Mirrors
+        // ShoppingCartController::checkoutAction.
+        $appliedPromocode = null;
+        $discount = 0;
+        if ($purchaseProduct->getPromocode()) {
+            $validation = $promocodeService->validate(
+                $purchaseProduct->getPromocode(),
+                $subtotal,
+                CurrencyEnum::fromUserLanguage($localizationService->getLanguage()),
+                $user,
+                null,
+                null,
+            );
+            if (!$validation->ok) {
+                return $this->json([
+                    'error' => 'promocode_invalid',
+                    'error_code' => $validation->error->value,
+                    'error_message' => $validation->error->userMessage(),
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $appliedPromocode = $validation->promocode;
+            $discount = $validation->discount;
+        }
+
+        $total_amount = $subtotal - $discount;
+
+        $userOrder->setSubtotalAmount($subtotal);
+        $userOrder->setDiscountAmount($discount);
         $userOrder->setTotalAmount($total_amount);
+        if ($appliedPromocode !== null) {
+            $userOrder->setPromocodeCodeUsed($appliedPromocode->getCode());
+        }
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
             $product->getProductName($localizationService->getLanguage()),
             $purchaseProduct->getQuantity()
@@ -350,10 +385,21 @@ class ProductController extends AbstractController
             $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet);
         }
 
+        if ($appliedPromocode !== null) {
+            $description .= PHP_EOL . $appliedPromocode->describeDiscount($discount);
+        }
+
         $userOrder->setDescription($description);
 
         $this->em->persist($userOrder);
         $this->em->flush();
+
+        // Record the redemption now that the order has an id. The discount
+        // snapshot is already on the order above, so the order stays
+        // consistent even if the ledger insert is a retried duplicate.
+        if ($appliedPromocode !== null) {
+            $promocodeService->redeem($appliedPromocode, $userOrder, $user, null, null, $discount);
+        }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
 

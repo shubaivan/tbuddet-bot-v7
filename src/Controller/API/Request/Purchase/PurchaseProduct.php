@@ -41,6 +41,10 @@ class PurchaseProduct
     #[Type('string')]
     protected ?string $contact_phone = null;
 
+    /** Optional promocode entered in the quick-buy modal. */
+    #[Type('string')]
+    protected ?string $promocode = null;
+
     public function getQuantity()
     {
         return $this->quantity;
@@ -81,6 +85,11 @@ class PurchaseProduct
     public function getContactPhone(): ?string
     {
         return $this->contact_phone;
+    }
+
+    public function getPromocode(): ?string
+    {
+        return $this->promocode;
     }
 
     public function getProductProperties(): array
