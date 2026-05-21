@@ -63,9 +63,13 @@
                     </td>
                     <td>
                         {% if p.assignedUser %}
-                            👤 {{ p.assignedUser.firstName }} {{ p.assignedUser.lastName }} ({{ p.assignedUser.email }})
+                            <a href="{{ path('app_admin_user_detail', {source: 'web', id: p.assignedUser.id}) }}">
+                                👤 {{ p.assignedUser.firstName }} {{ p.assignedUser.lastName }} ({{ p.assignedUser.email }})
+                            </a>
                         {% elseif p.assignedTelegramUser %}
-                            📱 TG @{{ p.assignedTelegramUser.username }}
+                            <a href="{{ path('app_admin_user_detail', {source: 'tg', id: p.assignedTelegramUser.id}) }}">
+                                📱 TG @{{ p.assignedTelegramUser.username }}
+                            </a>
                         {% else %}
                             <span class="text-muted">всі</span>
                         {% endif %}
