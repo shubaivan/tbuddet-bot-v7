@@ -50,7 +50,11 @@
                     <td>{{ p.currency.value }}</td>
                     <td>
                         {{ p.timesUsed }} / {{ p.maxUses ?? '∞' }}
-                        {% if p.maxUsesPerUser %} (макс {{ p.maxUsesPerUser }}/клієнт){% endif %}
+                        {% if p.assignedUser or p.assignedTelegramUser %}
+                            (лише для призначеного клієнта)
+                        {% elseif p.maxUsesPerUser %}
+                            (макс {{ p.maxUsesPerUser }}/клієнт)
+                        {% endif %}
                     </td>
                     <td>
                         {% if p.validFrom %}з {{ p.validFrom|date('d.m.Y') }}{% endif %}
