@@ -115,14 +115,26 @@ class PromocodeDeliveryService
 
     private function sendEmail(string $emailAddress, Promocode $promocode): void
     {
+        // Language follows the code's currency: USD codes belong to the English
+        // storefront, UAH to the Ukrainian one.
+        $isEn = $promocode->getCurrency() === \App\Entity\Enum\CurrencyEnum::USD;
+
+        // The code goes into the subject so each email is unique — otherwise
+        // Gmail threads identical promocode emails and collapses the body
+        // behind a "···" (show-trimmed-content) toggle.
+        $subject = $isEn
+            ? sprintf('Promocode %s — Art Beton Market', $promocode->getCode())
+            : sprintf('Промокод %s — Арт Бетон Маркет', $promocode->getCode());
+
         $email = (new TemplatedEmail())
-            ->from(new Address($this->mailerFrom, 'Арт Бетон Маркет'))
+            ->from(new Address($this->mailerFrom, $isEn ? 'Art Beton Market' : 'Арт Бетон Маркет'))
             ->to($emailAddress)
-            ->subject('Ваш персональний промокод — Арт Бетон Маркет')
+            ->subject($subject)
             ->htmlTemplate('email/promocode.html.twig')
             ->context([
                 'promocode' => $promocode,
                 'discountLabel' => $this->formatDiscountValue($promocode),
+                'lang' => $isEn ? 'en' : 'uk',
             ]);
 
         $this->mailer->send($email);
