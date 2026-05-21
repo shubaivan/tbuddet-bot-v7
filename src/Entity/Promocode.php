@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Entity\Enum\CurrencyEnum;
 use App\Entity\Enum\DiscountTypeEnum;
+use App\Entity\Enum\PromocodePurposeEnum;
 use App\Repository\PromocodeRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -70,6 +71,13 @@ class Promocode
 
     #[ORM\Column(name: 'is_active', type: 'boolean', nullable: false, options: ['default' => true])]
     private bool $isActive = true;
+
+    /**
+     * Why this code exists. GENERIC = hand-issued / campaign code; FIRST_ORDER =
+     * auto-generated personal code rotated for buyers without a paid order yet.
+     */
+    #[ORM\Column(name: 'purpose', type: 'string', length: 20, nullable: false, enumType: PromocodePurposeEnum::class, options: ['default' => 'generic'])]
+    private PromocodePurposeEnum $purpose = PromocodePurposeEnum::GENERIC;
 
     /** If set, only this web user may redeem (single-use codes issued by admin). */
     #[ORM\ManyToOne(targetEntity: User::class)]
@@ -225,6 +233,18 @@ class Promocode
     public function setIsActive(bool $isActive): self
     {
         $this->isActive = $isActive;
+
+        return $this;
+    }
+
+    public function getPurpose(): PromocodePurposeEnum
+    {
+        return $this->purpose;
+    }
+
+    public function setPurpose(PromocodePurposeEnum $purpose): self
+    {
+        $this->purpose = $purpose;
 
         return $this;
     }

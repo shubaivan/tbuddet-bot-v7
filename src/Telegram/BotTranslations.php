@@ -80,6 +80,19 @@ class BotTranslations
             'ua' => "❌ %s\n\nСпробуй інший код або натисни <b>Пропустити</b>.",
             'en' => "❌ %s\n\nTry another code or press <b>Skip</b>.",
         ],
+
+        // First-order personal offer (shown under the /start menu).
+        // %1$s = code, %2$d = discount %, %3$s = valid-until date.
+        'promocode.first_order_offer' => [
+            'ua' => "🎁 <b>Знижка %2\$d%% на перше замовлення!</b>\n\n"
+                . "Ваш персональний промокод:\n<code>%1\$s</code>\n\n"
+                . "Введіть його на кроці «Промокод» при оформленні замовлення.\n"
+                . "Дійсний до <b>%3\$s</b>.",
+            'en' => "🎁 <b>%2\$d%% off your first order!</b>\n\n"
+                . "Your personal promocode:\n<code>%1\$s</code>\n\n"
+                . "Enter it at the «Promocode» step during checkout.\n"
+                . "Valid until <b>%3\$s</b>.",
+        ],
     ];
 
     public static function t(string $key, string $lang = 'ua'): string

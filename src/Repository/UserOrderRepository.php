@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\TelegramUser;
+use App\Entity\User;
 use App\Entity\UserOrder;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -22,6 +23,33 @@ class UserOrderRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, UserOrder::class);
+    }
+
+    /**
+     * Count of orders the buyer has actually paid for — an order counts as paid
+     * when liq_pay_status = 'success' (the same definition used across the admin
+     * panel and stats queries). Pending/unpaid/cancelled orders are ignored.
+     *
+     * Pass exactly one of $user / $telegramUser. Drives first-order-offer
+     * eligibility: a buyer with zero paid orders still qualifies for the offer.
+     */
+    public function countPaidOrdersFor(?User $user, ?TelegramUser $telegramUser): int
+    {
+        if ($user === null && $telegramUser === null) {
+            return 0;
+        }
+
+        $qb = $this->createQueryBuilder('o')
+            ->select('COUNT(o.id)')
+            ->where("o.liq_pay_status = 'success'");
+
+        if ($user !== null) {
+            $qb->andWhere('o.client_user_id = :user')->setParameter('user', $user);
+        } else {
+            $qb->andWhere('o.telegram_user_id = :tgUser')->setParameter('tgUser', $telegramUser);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     public function getByIdFromLiqPay(int $id): ?UserOrder

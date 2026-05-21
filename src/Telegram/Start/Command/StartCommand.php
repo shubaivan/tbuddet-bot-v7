@@ -2,6 +2,7 @@
 
 namespace App\Telegram\Start\Command;
 
+use App\Service\Promocode\FirstOrderPromocodeService;
 use App\Service\TelegramLinkService;
 use App\Service\TelegramUserService;
 use App\Telegram\BotTranslations as T;
@@ -16,6 +17,7 @@ class StartCommand
     public function __construct(
         private TelegramUserService $telegramUserService,
         private TelegramLinkService $telegramLinkService,
+        private FirstOrderPromocodeService $firstOrderPromocodeService,
         private LoggerInterface $logger,
     ) {}
 
@@ -58,6 +60,8 @@ class StartCommand
                         InlineKeyboardButton::make($langFlag . ' ' . T::t('menu.language', $lang), callback_data: 'type:lang:toggle'),
                     )
             );
+
+            $this->sendFirstOrderOffer($bot, $chatId, $lang);
         } catch (\Throwable $e) {
             $this->logger->error('StartCommand failed', [
                 'error' => $e->getMessage(),
@@ -68,6 +72,46 @@ class StartCommand
                     $bot->sendMessage(text: '⚠️ Помилка обробки команди. Спробуйте ще раз або напишіть менеджеру.', chat_id: $chatId);
                 }
             } catch (\Throwable) {}
+        }
+    }
+
+    /**
+     * Show the buyer their rolling personal "first order" promocode under the menu.
+     * Skipped silently for buyers who already converted (a paid order) — and any
+     * failure here is swallowed so it can never break the /start menu itself.
+     */
+    private function sendFirstOrderOffer(Nutgram $bot, ?int $chatId, string $lang): void
+    {
+        if ($chatId === null) {
+            return;
+        }
+
+        try {
+            $tgUser = $this->telegramUserService->getCurrentUser();
+            if ($tgUser === null) {
+                return;
+            }
+
+            $offer = $this->firstOrderPromocodeService->getActiveOfferForTelegramUser($tgUser);
+            if ($offer === null) {
+                return;
+            }
+
+            $bot->sendMessage(
+                text: sprintf(
+                    T::t('promocode.first_order_offer', $lang),
+                    $offer->getCode(),
+                    $offer->getValue(),
+                    $offer->getValidTo()?->format('d.m.Y') ?? '',
+                ),
+                chat_id: $chatId,
+                parse_mode: ParseMode::HTML,
+            );
+        } catch (\Throwable $e) {
+            $this->logger->error('First-order offer in /start failed', [
+                'error' => $e->getMessage(),
+                'file'  => $e->getFile() . ':' . $e->getLine(),
+            ]);
         }
     }
 }

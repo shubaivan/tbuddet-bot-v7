@@ -8,6 +8,7 @@ use App\Entity\Enum\RoleEnum;
 use App\Entity\User;
 use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
+use App\Service\Promocode\FirstOrderPromocodeService;
 use App\Service\Promocode\PromocodeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -64,6 +65,37 @@ class PromocodeController extends AbstractController
             'total_after_discount' => $subtotal - $result->discount,
             'currency' => $currency->value,
             'description' => $result->promocode->describeDiscount($result->discount),
+        ]);
+    }
+
+    /**
+     * Personal "first order" offer for the current user.
+     *
+     * Returns the user's rolling 10% first-order promocode while they have not yet
+     * placed a paid order; the code rotates every 30 days (see
+     * {@see FirstOrderPromocodeService}). Once the user has a paid order the
+     * endpoint reports `eligible: false` and the FE hides the offer.
+     */
+    #[IsGranted(RoleEnum::USER->value)]
+    #[Route('/welcome-offer', name: 'promocode_welcome_offer', methods: [Request::METHOD_GET])]
+    public function welcomeOffer(
+        #[CurrentUser] User $user,
+        FirstOrderPromocodeService $firstOrderPromocodeService,
+    ): JsonResponse {
+        $offer = $firstOrderPromocodeService->getActiveOfferForUser($user);
+
+        if ($offer === null) {
+            return $this->json(['eligible' => false]);
+        }
+
+        return $this->json([
+            'eligible' => true,
+            'code' => $offer->getCode(),
+            'discount_type' => $offer->getDiscountType()->value,
+            'discount_value' => $offer->getValue(),
+            'currency' => $offer->getCurrency()->value,
+            'min_order_amount' => $offer->getMinOrderAmount(),
+            'valid_to' => $offer->getValidTo()?->format('c'),
         ]);
     }
 }

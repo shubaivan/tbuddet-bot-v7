@@ -36,6 +36,11 @@ services:
             # capture Telegram's file_id immediately. Defaults to empty string,
             # which disables eager warmup (bot will warm on first user encounter).
             $telegramWarmupChatId: '%env(string:default::TELEGRAM_WARMUP_CHAT_ID)%'
+            # QA-only: client_user / telegram_user IDs treated as eligible for the
+            # first-order promo even if they already have a paid order. Keep empty
+            # in production once testing is done.
+            $firstOrderTestUserIds: '%env(csv:FIRST_ORDER_PROMO_TEST_USER_IDS)%'
+            $firstOrderTestTelegramUserIds: '%env(csv:FIRST_ORDER_PROMO_TEST_TG_USER_IDS)%'
             # Persistent cache pool for Nutgram conversation/user state. Lives
             # outside var/cache so `rm -rf var/cache/prod` during deploy does
             # NOT wipe in-flight conversations.
