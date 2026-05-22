@@ -12,6 +12,8 @@ use App\Entity\ProductCategory;
 use App\Entity\PurchaseProduct;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
+use App\Liqpay\LiqPay;
+use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use App\Repository\CategoryRepository;
@@ -45,7 +47,12 @@ class AdminController extends AbstractController
 {
     public function __construct(
         protected readonly DenormalizerInterface $denormalizer,
-        protected readonly SerializerInterface $serializer
+        protected readonly SerializerInterface $serializer,
+        private readonly string $liqpayPublicKey,
+        private readonly string $liqpayPrivateKey,
+        private readonly string $liqpayServerUrl,
+        private readonly string $frontendUrl,
+        private readonly LoggerInterface $logger,
     ) {}
 
     #[Route('/admin', name: 'app_admin')]
@@ -368,6 +375,51 @@ class AdminController extends AbstractController
             'statuses' => OrderStatusEnum::cases(),
             'liqPayResponseFormatted' => $liqPayResponseFormatted,
         ]);
+    }
+
+    /**
+     * Generates a fresh LiqPay payment link for an unpaid order so a manager can
+     * send it to the client (e.g. an order created under old test creds, or any
+     * order still awaiting payment). Mirrors ShoppingCartController::repayOrder
+     * but is admin-triggered — no order-owner check.
+     */
+    #[Route('/admin/orders/{id}/payment-link', name: 'app_admin_order_payment_link', methods: [Request::METHOD_POST])]
+    public function orderPaymentLink(
+        #[MapEntity(id: 'id')] UserOrder $order,
+        EntityManagerInterface $em,
+    ): Response {
+        if ($order->getLiqPayStatus() === 'success') {
+            $this->addFlash('warning', 'Замовлення вже оплачено — посилання не сформовано.');
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+
+        $liqPayOrderID = sprintf('%s-%s', $order->getId(), time());
+        $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
+        $resultUrl = sprintf('%s/uk/payment-success?order=%d', $this->frontendUrl, $order->getId());
+
+        $cnb = $liqpay->cnb_form_raw([
+            'action' => 'pay',
+            'version' => '3',
+            'amount' => $order->getTotalAmount(),
+            'currency' => 'UAH',
+            'order_id' => $liqPayOrderID,
+            'server_url' => $this->liqpayServerUrl,
+            'result_url' => $resultUrl,
+            'description' => $order->getDescription(),
+        ]);
+
+        $order->setLiqPayOrderId($liqPayOrderID);
+        $em->flush();
+
+        $this->addFlash('payment_link', sprintf(
+            '%s?data=%s&signature=%s',
+            $cnb['url'],
+            $cnb['data'],
+            $cnb['signature'],
+        ));
+
+        return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
     }
 
     #[Route('/admin/orders/{id}/update', name: 'app_admin_order_update', methods: [Request::METHOD_POST])]
