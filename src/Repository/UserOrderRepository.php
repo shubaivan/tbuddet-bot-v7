@@ -129,7 +129,7 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.delivery_department,
                 o.liq_pay_status,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username) as t_user_info,
-                GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone) as c_user_info,
+                GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone, \' \', cui.email) as c_user_info,
                 IDENTITY(o.telegram_user_id) as t_user_id,
                 IDENTITY(o.client_user_id) as c_user_id,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at
@@ -163,6 +163,7 @@ class UserOrderRepository extends ServiceEntityRepository
             $or[] = 'ILIKE(cui.firstName, :var_search) = TRUE';
             $or[] = 'ILIKE(cui.lastName, :var_search) = TRUE';
             $or[] = 'ILIKE(cui.phone, :var_search) = TRUE';
+            $or[] = 'ILIKE(cui.email, :var_search) = TRUE';
 
             $bindParams['var_search'] = '%'.$parameterBag->get('search').'%';
             $conditions[] = '(' . implode(' OR ', $or) .')';
