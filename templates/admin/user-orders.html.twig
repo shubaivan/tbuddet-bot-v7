@@ -10,6 +10,10 @@
 {% block body %}
     {{ parent() }}
 
+    <div style="text-align: right; margin: 10px 16px 0;">
+        <a href="{{ path('app_admin_orders_help') }}" class="btn btn-secondary btn-sm">❓ Інструкція</a>
+    </div>
+
     <div id="ordersStatsBar" class="users-stats-bar orders-stats-bar" hidden>
         <div class="stat stat-revenue">
             <span class="stat-value" data-stat="paid_amount">₴0</span>

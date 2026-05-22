@@ -355,7 +355,13 @@ class AdminController extends AbstractController
         ];
     }
 
-    #[Route('/admin/orders/{id}', name: 'app_admin_order_detail', methods: [Request::METHOD_GET])]
+    #[Route('/admin/orders/help', name: 'app_admin_orders_help', methods: [Request::METHOD_GET])]
+    public function ordersHelp(): Response
+    {
+        return $this->render('admin/orders/help.html.twig');
+    }
+
+    #[Route('/admin/orders/{id}', name: 'app_admin_order_detail', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
     public function orderDetail(
         #[MapEntity(id: 'id')] UserOrder $order,
     ): Response

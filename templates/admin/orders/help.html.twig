@@ -1,0 +1,236 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Інструкція: замовлення{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .help-page { max-width: 880px; margin: 24px auto; padding: 0 20px; line-height: 1.7; font-size: 16px; color: #2a2a2a; }
+        .help-page h1 { margin-top: 0; font-size: 2em; }
+        .help-page h2 { margin-top: 40px; padding-top: 12px; border-top: 2px solid #c08737; font-size: 1.5em; color: #1a1a1a; }
+        .help-page h3 { margin-top: 28px; color: #c08737; font-size: 1.2em; }
+        .help-page p { margin: 12px 0; }
+        .help-page .callout { padding: 14px 18px; border-radius: 6px; margin: 18px 0; }
+        .help-page .callout.tip { background: #eef8ff; border-left: 4px solid #2b8cd5; }
+        .help-page .callout.warn { background: #fff8e6; border-left: 4px solid #d59c2b; }
+        .help-page .callout.danger { background: #ffeeee; border-left: 4px solid #d52b2b; }
+        .help-page code { background: #f4f4f4; padding: 2px 7px; border-radius: 3px; font-size: 0.95em; color: #b03030; }
+        .help-page ol li, .help-page ul li { margin: 6px 0; }
+        .help-page .step { background: #fafafa; padding: 18px 22px; border-radius: 8px; margin: 18px 0; border: 1px solid #e0e0e0; }
+        .help-page .step > p:first-child { margin-top: 0; font-size: 1.05em; }
+        .help-page .step-number { display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center; background: #c08737; color: white; border-radius: 50%; font-weight: 700; margin-right: 10px; font-size: 1em; }
+        .help-page .screenshot-placeholder { background: #f0f0f0; border: 2px dashed #ccc; padding: 32px; text-align: center; color: #888; font-style: italic; margin: 12px 0; border-radius: 4px; }
+        .help-page .screenshot { display: block; max-width: 100%; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin: 14px 0; }
+        .help-page .screenshot.small { max-width: 420px; }
+        .help-page .toc { background: #f8f8f8; padding: 18px 28px; border-radius: 8px; margin-bottom: 28px; border-left: 4px solid #c08737; }
+        .help-page .toc a { color: #2b6cb0; text-decoration: none; }
+        .help-page .toc a:hover { text-decoration: underline; }
+        .help-page .tldr { background: linear-gradient(135deg, #fff8ed, #fff); border: 1px solid #e8c78d; border-radius: 8px; padding: 20px 26px; margin: 20px 0 32px; }
+        .help-page .tldr h3 { margin-top: 0; }
+        .help-page .tldr ul { margin: 8px 0 0 0; }
+        .help-page kbd { background: #fafafa; border: 1px solid #d0d0d0; border-radius: 4px; padding: 2px 7px; font-family: inherit; font-size: 0.9em; box-shadow: 0 1px 0 #d0d0d0; }
+        .help-page table.cols { border-collapse: collapse; width: 100%; margin: 14px 0; }
+        .help-page table.cols th, .help-page table.cols td { border: 1px solid #e0e0e0; padding: 8px 12px; text-align: left; font-size: 0.95em; }
+        .help-page table.cols th { background: #f8f4ee; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="help-page">
+
+        <a href="{{ path('app_admin_orders') }}">← До списку замовлень</a>
+
+        <h1>📦 Інструкція: як працювати із замовленнями</h1>
+        <p>
+            Цей розділ показує, як менеджер переглядає замовлення, шукає потрібне,
+            змінює статус, надсилає клієнту посилання на оплату та проставляє
+            номер ТТН Нової Пошти.
+        </p>
+
+        <div class="tldr">
+            <h3>⚡ Швидко що де</h3>
+            <ul>
+                <li><strong>Знайти замовлення</strong> → поле <kbd>Пошук</kbd> справа над таблицею (за ID, телефоном, містом тощо).</li>
+                <li><strong>Відкрити замовлення</strong> → клік на рядок або на <kbd>#ID</kbd>.</li>
+                <li><strong>Надіслати клієнту оплату</strong> → у картці замовлення кнопка <kbd>Надіслати клієнту посилання на оплату</kbd>.</li>
+                <li><strong>Змінити статус / додати ТТН</strong> → блок «Управління замовленням» у картці, потім <kbd>Зберегти</kbd>.</li>
+            </ul>
+        </div>
+
+        <div class="toc">
+            <strong>Зміст:</strong>
+            <ol>
+                <li><a href="#overview">Список замовлень і статистика</a></li>
+                <li><a href="#search">Пошук і фільтри</a></li>
+                <li><a href="#card">Картка замовлення</a></li>
+                <li><a href="#payment">Посилання на оплату для клієнта</a></li>
+                <li><a href="#statuses">Статуси замовлення</a></li>
+                <li><a href="#ttn">Номер ТТН (Нова Пошта)</a></li>
+                <li><a href="#faq">Часті питання</a></li>
+            </ol>
+        </div>
+
+        <h2 id="overview">1. Список замовлень і статистика</h2>
+        <p>
+            Розділ <a href="{{ path('app_admin_orders') }}">/admin/orders</a> — це
+            таблиця всіх замовлень. Угорі — кольорова панель статистики:
+            загальна сума оплачених замовлень, кількість у кожному статусі
+            (Нові, В обробці, Відправлено, Доставлено, Скасовано) та неоплачені.
+        </p>
+        <div class="screenshot-placeholder">[Скріншот: сторінка /admin/orders зі статистикою та таблицею]</div>
+
+        <h3>Колонки таблиці</h3>
+        <table class="cols">
+            <tr><th>Колонка</th><th>Що показує</th></tr>
+            <tr><td>ID</td><td>Номер замовлення. Клік відкриває картку.</td></tr>
+            <tr><td>Сума</td><td>Сума до сплати (зі знижкою, якщо був промокод).</td></tr>
+            <tr><td>Статус</td><td>Стан виконання: Нове, В обробці, Відправлено, Доставлено, Скасовано.</td></tr>
+            <tr><td>Джерело</td><td>Звідки замовлення — <strong>Web</strong> (сайт) або <strong>Telegram</strong> (бот).</td></tr>
+            <tr><td>ТТН</td><td>Номер накладної Нової Пошти (якщо проставлений).</td></tr>
+            <tr><td>Оплата</td><td><strong>Оплачено</strong> — гроші отримано; інакше — очікує оплати.</td></tr>
+            <tr><td>Веб- / TG-користувач</td><td>Клієнт, який зробив замовлення.</td></tr>
+            <tr><td>Створено</td><td>Дата й час оформлення.</td></tr>
+        </table>
+
+        <h2 id="search">2. Пошук і фільтри</h2>
+        <p>Над таблицею є кілька інструментів, щоб швидко знайти потрібне:</p>
+        <ul>
+            <li><strong>Пошук</strong> — поле справа: вводь ID, телефон, місто, відділення — таблиця фільтрується миттєво.</li>
+            <li><strong>Статус замовлення</strong> — показати лише Нові / В обробці / Відправлені тощо.</li>
+            <li><strong>Оплата</strong> — лише оплачені або лише неоплачені.</li>
+            <li><strong>Джерело</strong> — лише Web або лише Telegram.</li>
+            <li><strong>Дата від / до</strong> — період оформлення.</li>
+            <li><strong>Сховати неоплачені</strong> — галочка; коли увімкнена, у списку лишаються тільки оплачені замовлення.</li>
+        </ul>
+        <div class="callout warn">
+            <strong>⚠ Не бачите замовлення?</strong> Найчастіша причина — увімкнена галочка
+            <strong>«Сховати неоплачені»</strong>: неоплачені (і ті, де оплату ще очікують)
+            у списку не показуються. Зніміть галочку та натисніть <kbd>Фільтрувати</kbd>.
+        </div>
+
+        <h2 id="card">3. Картка замовлення</h2>
+        <p>
+            Клік на рядок (або на <code>#ID</code>) відкриває картку замовлення —
+            <code>/admin/orders/&lt;ID&gt;</code>. Тут зібрано все: сума й статус оплати,
+            дані клієнта (ім'я, телефон, email), адреса доставки Нової Пошти,
+            перелік товарів, а також блок «Управління замовленням».
+        </p>
+        <div class="screenshot-placeholder">[Скріншот: картка замовлення /admin/orders/ID]</div>
+
+        <h2 id="payment">4. Посилання на оплату для клієнта</h2>
+        <p>
+            Якщо замовлення ще <strong>не оплачене</strong> (наприклад, клієнт не завершив
+            оплату, або замовлення старе), менеджер може надіслати клієнту посилання
+            на оплату прямо з картки замовлення.
+        </p>
+
+        <div class="step">
+            <p><span class="step-number">1</span> <strong>Відкрий картку замовлення</strong></p>
+            <p>Знайди потрібне замовлення у списку та відкрий його.</p>
+        </div>
+        <div class="step">
+            <p><span class="step-number">2</span> <strong>Блок «Оплата клієнтом»</strong></p>
+            <p>
+                Внизу картки натисни <kbd>Надіслати клієнту посилання на оплату</kbd>.
+                Система згенерує посилання LiqPay та <strong>надішле його на email клієнта</strong>.
+            </p>
+        </div>
+        <div class="step">
+            <p><span class="step-number">3</span> <strong>Перевір підтвердження</strong></p>
+            <p>
+                Після натискання з'явиться зелене повідомлення
+                «Посилання на оплату надіслано клієнту на email: …».
+                Якщо в замовлення немає email — буде показано саме посилання,
+                щоб надіслати його клієнту вручну.
+            </p>
+        </div>
+
+        <h3>Що отримує клієнт</h3>
+        <p>На пошту клієнту приходить лист із деталями замовлення та кнопкою «Оплатити»:</p>
+        <img src="/admin/help/orders/img/payment-link-email.png" alt="Лист клієнту з посиланням на оплату" class="screenshot small">
+
+        <div class="callout tip">
+            <strong>💡 Після оплати</strong> статус замовлення оновиться на «Оплачено»
+            автоматично — LiqPay повідомить систему. Окремо нічого змінювати не треба.
+        </div>
+        <div class="callout tip">
+            <strong>💡 Клієнт також може оплатити сам:</strong> неоплачене замовлення
+            видно у його особистому кабінеті на сайті, де є кнопка «Сплатити».
+        </div>
+
+        <h2 id="statuses">5. Статуси замовлення</h2>
+        <p>Статус показує, на якому етапі виконання замовлення:</p>
+        <table class="cols">
+            <tr><th>Статус</th><th>Коли ставити</th></tr>
+            <tr><td>Нове</td><td>Замовлення щойно створене (ставиться автоматично).</td></tr>
+            <tr><td>В обробці</td><td>Замовлення прийнято в роботу, готується до відправки.</td></tr>
+            <tr><td>Відправлено</td><td>Посилку передано Новій Пошті (тоді ж проставляється ТТН).</td></tr>
+            <tr><td>Доставлено</td><td>Клієнт отримав замовлення.</td></tr>
+            <tr><td>Скасовано</td><td>Замовлення скасоване.</td></tr>
+        </table>
+        <p>
+            Щоб змінити статус — у картці замовлення, блок «Управління замовленням»,
+            обери потрібний статус у списку та натисни <kbd>Зберегти</kbd>.
+        </p>
+        <div class="callout tip">
+            <strong>💡 Клієнт отримує лист</strong> при зміні статусу на «В обробці»,
+            «Відправлено», «Доставлено» чи «Скасовано» — повідомляти його окремо не треба.
+        </div>
+
+        <h2 id="ttn">6. Номер ТТН (Нова Пошта)</h2>
+        <p>
+            ТТН — це номер експрес-накладної Нової Пошти, за яким відстежується посилка.
+            Коли замовлення відправлене, його треба внести в картку.
+        </p>
+
+        <div class="step">
+            <p><span class="step-number">1</span> <strong>Створи накладну в Новій Пошті</strong></p>
+            <p>
+                Накладна оформлюється у кабінеті Нової Пошти (сайт або застосунок) —
+                там ти отримуєш 14-значний номер ТТН (наприклад, <code>20450012345678</code>).
+            </p>
+        </div>
+        <div class="step">
+            <p><span class="step-number">2</span> <strong>Внеси номер у картку замовлення</strong></p>
+            <p>
+                У блоці «Управління замовленням» є поле <strong>«Номер ТТН (Нова Пошта)»</strong>.
+                Встав туди номер, заодно постав статус <strong>«Відправлено»</strong>
+                і натисни <kbd>Зберегти</kbd>.
+            </p>
+        </div>
+        <div class="step">
+            <p><span class="step-number">3</span> <strong>Перевір відстеження</strong></p>
+            <p>
+                Після збереження під полем ТТН з'явиться посилання
+                <strong>«Відстежити посилку →»</strong> — воно відкриває статус
+                посилки на сайті Нової Пошти.
+            </p>
+        </div>
+        <div class="screenshot-placeholder">[Скріншот: поле «Номер ТТН» та посилання «Відстежити посилку»]</div>
+        <div class="callout tip">
+            <strong>💡 Порада:</strong> вноси ТТН одразу разом зі зміною статусу на
+            «Відправлено» — так клієнт у листі про відправку зможе відстежити посилку.
+        </div>
+
+        <h2 id="faq">7. Часті питання</h2>
+        <h3>Замовлення зникло зі списку</h3>
+        <p>
+            Найімовірніше увімкнена галочка «Сховати неоплачені», а замовлення —
+            неоплачене. Зніміть галочку та натисніть «Фільтрувати».
+        </p>
+        <h3>Клієнт каже, що не отримав посилання на оплату</h3>
+        <p>
+            Перевірте email у картці замовлення (блок «Клієнт»). Якщо email відсутній —
+            при натисканні кнопки система покаже саме посилання, його можна надіслати
+            клієнту вручну (Telegram, месенджер тощо).
+        </p>
+        <h3>Статус оплати «Оплачено», але грошей немає</h3>
+        <p>
+            Якщо замовлення дуже старе — можливо, оплата проходила в тестовому режимі.
+            Зверніться до розробника, щоб скинути статус оплати; після цього можна
+            згенерувати клієнту нове посилання на оплату.
+        </p>
+
+    </div>
+{% endblock %}
