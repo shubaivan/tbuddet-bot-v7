@@ -11,6 +11,8 @@ use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\KeyboardButton;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardMarkup;
 
 class StartCommand
 {
@@ -62,6 +64,7 @@ class StartCommand
             );
 
             $this->sendFirstOrderOffer($bot, $chatId, $lang);
+            $this->promptForPhone($bot, $chatId, $lang);
         } catch (\Throwable $e) {
             $this->logger->error('StartCommand failed', [
                 'error' => $e->getMessage(),
@@ -109,6 +112,45 @@ class StartCommand
             );
         } catch (\Throwable $e) {
             $this->logger->error('First-order offer in /start failed', [
+                'error' => $e->getMessage(),
+                'file'  => $e->getFile() . ':' . $e->getLine(),
+            ]);
+        }
+    }
+
+    /**
+     * Ask the buyer to share their phone number once — Telegram only hands over
+     * the phone via a request_contact button (a plain /start never carries it),
+     * so without this step a bot user is stored with no phone. Skipped once we
+     * already have it; the contact reply is saved by {@see SaveContactCommand}.
+     */
+    private function promptForPhone(Nutgram $bot, ?int $chatId, string $lang): void
+    {
+        if ($chatId === null) {
+            return;
+        }
+
+        try {
+            $tgUser = $this->telegramUserService->getCurrentUser();
+            if ($tgUser === null || $tgUser->getPhoneNumber()) {
+                return;
+            }
+
+            $bot->sendMessage(
+                text: $lang === 'ua'
+                    ? "📱 Поділіться номером телефону, щоб ми могли зв'язатися з вами щодо замовлень."
+                    : '📱 Share your phone number so we can reach you about your orders.',
+                chat_id: $chatId,
+                reply_markup: ReplyKeyboardMarkup::make(resize_keyboard: true, one_time_keyboard: true)
+                    ->addRow(
+                        KeyboardButton::make(
+                            $lang === 'ua' ? '📱 Поділитися номером' : '📱 Share phone number',
+                            true,
+                        ),
+                    ),
+            );
+        } catch (\Throwable $e) {
+            $this->logger->error('promptForPhone in /start failed', [
                 'error' => $e->getMessage(),
                 'file'  => $e->getFile() . ':' . $e->getLine(),
             ]);

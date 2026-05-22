@@ -8,6 +8,7 @@ use \App\Telegram\Product\Ring\Command\ProductCommand;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\RunningMode\Webhook;
 use \App\Telegram\Start\Command\StartCommand;
+use \App\Telegram\Start\Command\SaveContactCommand;
 use \App\Telegram\Product\Ring\Command\PriceRingConversation;
 use \App\Telegram\Product\Ring\Command\OwnOrderCommand;
 use \App\Telegram\Product\Ring\Command\OrderCommand;
@@ -46,3 +47,7 @@ $bot->onCallbackQuery(function (SergiX44\Nutgram\Nutgram $bot): void {
 });
 
 $bot->onLocation(LocationCommand::class);
+
+// Saves the phone number when a user shares their contact (the request_contact
+// button from /start). Conversations that ask for a contact handle it first.
+$bot->onContact(SaveContactCommand::class);
