@@ -387,6 +387,7 @@ class AdminController extends AbstractController
     public function orderPaymentLink(
         #[MapEntity(id: 'id')] UserOrder $order,
         EntityManagerInterface $em,
+        EmailService $emailService,
     ): Response {
         if ($order->getLiqPayStatus() === 'success') {
             $this->addFlash('warning', 'Замовлення вже оплачено — посилання не сформовано.');
@@ -412,12 +413,30 @@ class AdminController extends AbstractController
         $order->setLiqPayOrderId($liqPayOrderID);
         $em->flush();
 
-        $this->addFlash('payment_link', sprintf(
-            '%s?data=%s&signature=%s',
-            $cnb['url'],
-            $cnb['data'],
-            $cnb['signature'],
-        ));
+        $link = sprintf('%s?data=%s&signature=%s', $cnb['url'], $cnb['data'], $cnb['signature']);
+
+        try {
+            $sentTo = $emailService->sendPaymentLinkEmail($order, $link);
+        } catch (\Throwable $e) {
+            $this->logger->error('Payment link email failed', [
+                'order' => $order->getId(),
+                'error' => $e->getMessage(),
+            ]);
+            $sentTo = null;
+        }
+
+        if ($sentTo !== null) {
+            $this->addFlash('notice', sprintf(
+                'Посилання на оплату надіслано клієнту на email: %s',
+                $sentTo,
+            ));
+        } else {
+            $this->addFlash('warning', sprintf(
+                'Email клієнту не надіслано (немає адреси або сталася помилка). '
+                . 'Скопіюйте посилання та надішліть вручну: %s',
+                $link,
+            ));
+        }
 
         return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
     }

@@ -68,6 +68,34 @@ class EmailService
         $this->mailer->send($email);
     }
 
+    /**
+     * Emails the client a LiqPay payment link for an unpaid order.
+     * Returns the email address it was sent to, or null if the order has no
+     * client email (e.g. a bot order) — the caller then shows the link for
+     * manual delivery.
+     */
+    public function sendPaymentLinkEmail(UserOrder $order, string $link): ?string
+    {
+        $emailAddress = $order->getClientUserId()?->getEmail();
+        if (!$emailAddress) {
+            return null;
+        }
+
+        $email = (new TemplatedEmail())
+            ->from(new Address($this->mailerFrom, 'Арт Бетон Маркет'))
+            ->to($emailAddress)
+            ->subject(sprintf('Оплата замовлення #%d — Арт Бетон Маркет', $order->getId()))
+            ->htmlTemplate('email/payment-link.html.twig')
+            ->context([
+                'order' => $order,
+                'paymentLink' => $link,
+            ]);
+
+        $this->mailer->send($email);
+
+        return $emailAddress;
+    }
+
     public function sendOrderStatusChangeEmail(UserOrder $order, string $newStatus): void
     {
         $statusEnum = OrderStatusEnum::tryFrom($newStatus);

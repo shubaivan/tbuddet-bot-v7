@@ -264,33 +264,29 @@
             </form>
         </div>
 
-        {# Payment link for the client (re-pay / orders awaiting payment) #}
+        {# Send the client a LiqPay payment link (re-pay / orders awaiting payment) #}
         <div class="section">
-            <div class="section-title">Посилання на оплату для клієнта</div>
-
-            {% for link in app.flashes('payment_link') %}
-                <p style="margin: 0 0 8px; color: #155724;">
-                    Посилання сформовано. Скопіюйте та надішліть клієнту — він перейде на сторінку оплати LiqPay:
-                </p>
-                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                    <input type="text" id="payment-link-field" class="form-input" readonly value="{{ link }}">
-                    <button type="button" class="btn-back" onclick="navigator.clipboard.writeText(document.getElementById('payment-link-field').value); this.textContent='Скопійовано ✓';">Копіювати</button>
-                </div>
-            {% endfor %}
-
-            {% for msg in app.flashes('warning') %}
-                <p style="color: #856404; margin: 0 0 12px;">{{ msg }}</p>
-            {% endfor %}
+            <div class="section-title">Оплата клієнтом</div>
 
             {% if order.liqPayStatus == 'success' %}
                 <p style="color: #6c757d; margin: 0;">Замовлення вже оплачено — посилання не потрібне.</p>
             {% else %}
                 <p style="color: #555; margin: 0 0 12px;">
-                    Сформуйте посилання на оплату та надішліть його клієнту (Telegram, email тощо).
-                    Після оплати статус замовлення оновиться автоматично.
+                    Сформувати посилання на оплату LiqPay і надіслати його клієнту на email.
+                    Після оплати клієнтом статус замовлення оновиться автоматично.
                 </p>
+                {% if order.clientUserId and order.clientUserId.email %}
+                    <p style="color: #555; margin: 0 0 12px;">
+                        Буде надіслано на email клієнта: <strong>{{ order.clientUserId.email }}</strong>
+                    </p>
+                {% else %}
+                    <p style="color: #856404; margin: 0 0 12px;">
+                        У замовлення немає email клієнта — посилання з'явиться у повідомленні після
+                        натискання кнопки, надішліть його вручну.
+                    </p>
+                {% endif %}
                 <form method="post" action="{{ path('app_admin_order_payment_link', {id: order.id}) }}">
-                    <button type="submit" class="btn-save">Сформувати посилання на оплату</button>
+                    <button type="submit" class="btn-save">Надіслати клієнту посилання на оплату</button>
                 </form>
             {% endif %}
         </div>
