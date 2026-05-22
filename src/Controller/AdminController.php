@@ -361,6 +361,12 @@ class AdminController extends AbstractController
         return $this->render('admin/orders/help.html.twig');
     }
 
+    #[Route('/admin/marketplace/help', name: 'app_admin_marketplace_help', methods: [Request::METHOD_GET])]
+    public function marketplaceHelp(): Response
+    {
+        return $this->render('admin/marketplace/help.html.twig');
+    }
+
     #[Route('/admin/orders/{id}', name: 'app_admin_order_detail', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
     public function orderDetail(
         #[MapEntity(id: 'id')] UserOrder $order,

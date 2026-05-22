@@ -1,0 +1,154 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Інструкція: Prom.ua{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .help-page { max-width: 880px; margin: 24px auto; padding: 0 20px; line-height: 1.7; font-size: 16px; color: #2a2a2a; }
+        .help-page h1 { margin-top: 0; font-size: 2em; }
+        .help-page h2 { margin-top: 40px; padding-top: 12px; border-top: 2px solid #c08737; font-size: 1.5em; color: #1a1a1a; }
+        .help-page h3 { margin-top: 28px; color: #c08737; font-size: 1.2em; }
+        .help-page p { margin: 12px 0; }
+        .help-page .callout { padding: 14px 18px; border-radius: 6px; margin: 18px 0; }
+        .help-page .callout.tip { background: #eef8ff; border-left: 4px solid #2b8cd5; }
+        .help-page .callout.warn { background: #fff8e6; border-left: 4px solid #d59c2b; }
+        .help-page code { background: #f4f4f4; padding: 2px 7px; border-radius: 3px; font-size: 0.95em; color: #b03030; }
+        .help-page ol li, .help-page ul li { margin: 6px 0; }
+        .help-page .step { background: #fafafa; padding: 18px 22px; border-radius: 8px; margin: 18px 0; border: 1px solid #e0e0e0; }
+        .help-page .step > p:first-child { margin-top: 0; font-size: 1.05em; }
+        .help-page .step-number { display: inline-block; width: 32px; height: 32px; line-height: 32px; text-align: center; background: #c08737; color: white; border-radius: 50%; font-weight: 700; margin-right: 10px; font-size: 1em; }
+        .help-page .screenshot { display: block; max-width: 100%; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin: 14px 0; }
+        .help-page .toc { background: #f8f8f8; padding: 18px 28px; border-radius: 8px; margin-bottom: 28px; border-left: 4px solid #c08737; }
+        .help-page .toc a { color: #2b6cb0; text-decoration: none; }
+        .help-page .toc a:hover { text-decoration: underline; }
+        .help-page .tldr { background: linear-gradient(135deg, #fff8ed, #fff); border: 1px solid #e8c78d; border-radius: 8px; padding: 20px 26px; margin: 20px 0 32px; }
+        .help-page .tldr h3 { margin-top: 0; }
+        .help-page kbd { background: #fafafa; border: 1px solid #d0d0d0; border-radius: 4px; padding: 2px 7px; font-family: inherit; font-size: 0.9em; box-shadow: 0 1px 0 #d0d0d0; }
+        .help-page .feed-url { display: inline-block; background: #f4f4f4; border: 1px solid #ddd; border-radius: 4px; padding: 6px 12px; font-family: monospace; font-size: 0.95em; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="help-page">
+
+        <a href="{{ path('app_admin') }}">← До адмін-панелі</a>
+
+        <h1>🛒 Інструкція: розміщення товарів на Prom.ua</h1>
+        <p>
+            Цей розділ показує, як опублікувати весь каталог Арт Бетон Маркет на
+            маркетплейсі <strong>Prom.ua</strong>. Товари передаються автоматично —
+            через спеціальний файл-фід, тож вручну заводити кожен товар не треба.
+        </p>
+
+        <div class="tldr">
+            <h3>⚡ Швидко що до чого</h3>
+            <ul>
+                <li><strong>Фід товарів</strong> (готовий, оновлюється сам):<br>
+                    <span class="feed-url">https://api.artbeton.market/feed/prom.xml</span></li>
+                <li><strong>Що зробити:</strong> зареєструватись продавцем → купити тариф → вставити фід в «Імпорт».</li>
+                <li><strong>Тариф:</strong> вистачає найменшого — «1 000 товарів» (у каталозі ~102 товари).</li>
+            </ul>
+        </div>
+
+        <div class="toc">
+            <strong>Зміст:</strong>
+            <ol>
+                <li><a href="#register">Реєстрація продавця</a></li>
+                <li><a href="#cabinet">Кабінет продавця</a></li>
+                <li><a href="#plan">Купівля тарифу</a></li>
+                <li><a href="#import">Імпорт товарів через фід</a></li>
+                <li><a href="#feed">Як працює фід</a></li>
+            </ol>
+        </div>
+
+        <h2 id="register">1. Реєстрація продавця</h2>
+        <div class="step">
+            <p><span class="step-number">1</span> <strong>Відкрий prom.ua</strong></p>
+            <p>
+                На головній сторінці справа є блок <em>«Почніть продавати на Prom вже сьогодні»</em>.
+                Натисни фіолетову кнопку <kbd>Почати продавати</kbd> (НЕ «Кабінет» —
+                то вхід для покупців).
+            </p>
+        </div>
+        <img src="/admin/help/marketplace/img/prom-1-start-selling.png" alt="Кнопка «Почати продавати» на prom.ua" class="screenshot">
+        <p>
+            Далі Prom запитає дані компанії та контакти — заповни їх. Після цього
+            відкриється кабінет продавця.
+        </p>
+
+        <h2 id="cabinet">2. Кабінет продавця</h2>
+        <p>
+            На головній кабінету є блок <em>«Почніть роботу»</em> з трьома кроками:
+            купити тариф, додати товари, продавати та сплачувати комісію.
+        </p>
+        <img src="/admin/help/marketplace/img/prom-2-cabinet.png" alt="Головна сторінка кабінету продавця Prom" class="screenshot">
+
+        <h2 id="plan">3. Купівля тарифу</h2>
+        <p>
+            Щоб товари опублікувались, потрібен платний річний тариф
+            (<em>«Тарифи та рахунки» → «Тарифи»</em>).
+        </p>
+        <img src="/admin/help/marketplace/img/prom-3-plan.png" alt="Сторінка тарифів Prom" class="screenshot">
+        <div class="callout tip">
+            <strong>💡 Який обрати:</strong> бери найменший — <strong>«1 000 товарів»</strong>.
+            У каталозі ~102 товари, тож ліміту 1 000 вистачає з великим запасом —
+            платити за «6 000» чи «10 000» немає сенсу. У ціну тарифу входить
+            невеликий <strong>баланс</strong>, з якого Prom списує комісію за продажі.
+        </div>
+        <p>Натисни <kbd>Придбати</kbd> під потрібним тарифом і сплати.</p>
+
+        <h2 id="import">4. Імпорт товарів через фід</h2>
+        <p>
+            Замість того щоб заводити товари вручну, Prom завантажує їх із нашого
+            фіду автоматично.
+        </p>
+        <div class="step">
+            <p><span class="step-number">1</span> <strong>Відкрий «Товари та послуги» → «Імпорт»</strong></p>
+        </div>
+        <div class="step">
+            <p><span class="step-number">2</span> <strong>Встав посилання на фід</strong></p>
+            <p>
+                Обери імпорт <strong>за посиланням</strong> і встав:<br>
+                <span class="feed-url">https://api.artbeton.market/feed/prom.xml</span><br>
+                Формат — <strong>YML</strong> (Prom визначить сам).
+            </p>
+        </div>
+        <div class="step">
+            <p><span class="step-number">3</span> <strong>Увімкни автооновлення</strong></p>
+            <p>
+                У блоці <em>«Автоматичне оновлення посилання»</em> постав
+                <strong>«Раз на 4 години»</strong> — тоді зміни цін і товарів на сайті
+                підтягуються на Prom самі. Решту налаштувань можна лишити за замовчуванням.
+            </p>
+        </div>
+        <img src="/admin/help/marketplace/img/prom-4-import.png" alt="Сторінка імпорту товарів Prom" class="screenshot">
+        <div class="step">
+            <p><span class="step-number">4</span> <strong>Натисни «Почати імпорт»</strong></p>
+            <p>Prom завантажить ~102 товари з категоріями та фото.</p>
+        </div>
+        <div class="callout warn">
+            <strong>⚠ Важливо:</strong> товари опублікуються лише <strong>після
+            активації тарифу</strong>. Імпорт можна запустити й раніше — товари
+            з'являться в каталозі, щойно тариф стане активним.
+        </div>
+
+        <h2 id="feed">5. Як працює фід</h2>
+        <ul>
+            <li>Фід <span class="feed-url">https://api.artbeton.market/feed/prom.xml</span> —
+                це <strong>живе посилання</strong>, а не файл: воно формується щоразу
+                наново з актуальних товарів сайту.</li>
+            <li>Додав товар або змінив ціну на сайті — фід оновлюється автоматично,
+                Prom підтягне зміни за розкладом автооновлення.</li>
+            <li>Той самий фід підходить і для інших майданчиків —
+                <strong>Rozetka</strong>, <strong>Hotline</strong> тощо
+                (формат YML універсальний).</li>
+        </ul>
+        <div class="callout tip">
+            <strong>💡 Потрібна допомога з фідом</strong> (додати/прибрати поля, виключити
+            якісь товари) — звертайтесь до розробника.
+        </div>
+
+    </div>
+{% endblock %}
