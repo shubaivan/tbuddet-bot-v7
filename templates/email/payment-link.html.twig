@@ -11,10 +11,43 @@
                 <h1 style="color: #c08737; font-size: 22px; margin: 0 0 16px 0;">💳 Оплата замовлення #{{ order.id }}</h1>
 
                 <p style="font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Вітаємо! Щоб завершити оформлення замовлення <strong>#{{ order.id }}</strong>
-                    на суму <strong>{{ order.totalAmount }} грн</strong>, натисніть кнопку нижче
-                    та сплатіть зручним способом через LiqPay.
+                    Вітаємо! Нижче — деталі вашого замовлення. Щоб завершити оформлення,
+                    натисніть кнопку «Оплатити» та сплатіть зручним способом через LiqPay.
                 </p>
+
+                {# Order summary #}
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8f4ee; border: 1px solid #e8dcc4; border-radius: 6px; margin: 0 0 24px 0;">
+                    <tr><td style="padding: 18px 20px; font-size: 14px; line-height: 1.6;">
+                        <div style="margin-bottom: 6px;">
+                            <span style="color: #777;">Замовлення:</span> <strong>#{{ order.id }}</strong>
+                        </div>
+                        {% if order.createdAt %}
+                            <div style="margin-bottom: 6px;">
+                                <span style="color: #777;">Дата:</span> {{ order.createdAt|date('d.m.Y') }}
+                            </div>
+                        {% endif %}
+                        {% if order.description %}
+                            <div style="margin: 10px 0; padding-top: 10px; border-top: 1px solid #e8dcc4;">
+                                {{ order.description|nl2br }}
+                            </div>
+                        {% endif %}
+                        {% if order.deliveryCity %}
+                            <div style="margin-bottom: 6px; padding-top: 10px; border-top: 1px solid #e8dcc4;">
+                                <span style="color: #777;">Доставка:</span>
+                                {{ order.deliveryCity }}{% if order.deliveryDepartment %}, {{ order.deliveryDepartment }}{% endif %}
+                            </div>
+                        {% endif %}
+                        {% if order.phone %}
+                            <div style="margin-bottom: 6px;">
+                                <span style="color: #777;">Телефон:</span> {{ order.phone }}
+                            </div>
+                        {% endif %}
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e8dcc4; font-size: 16px;">
+                            <span style="color: #777;">До сплати:</span>
+                            <strong style="color: #c08737;">{{ order.totalAmount }} грн</strong>
+                        </div>
+                    </td></tr>
+                </table>
 
                 <p style="text-align: center; margin: 0 0 24px 0;">
                     <a href="{{ paymentLink }}" style="display: inline-block; background: #c08737; color: #fff; text-decoration: none; padding: 14px 36px; border-radius: 6px; font-size: 16px; font-weight: 700;">
