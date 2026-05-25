@@ -11,6 +11,12 @@ parameters:
     liqpay_server_url: '%env(SERVER_URL)%'
 
 services:
+    # Auto-tag every implementation of DeliveryCarrierInterface so the registry
+    # collects them via !tagged_iterator below.
+    _instanceof:
+        App\Service\Delivery\DeliveryCarrierInterface:
+            tags: ['app.delivery_carrier']
+
     # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
@@ -21,6 +27,9 @@ services:
             $liqpayPrivateKey: '%liqpay_private_key%'
             $liqpayServerUrl: '%liqpay_server_url%'
             $novaPoshtaApiKey: '%env(NOVA_POSHTA_API_KEY)%'
+            $ukrposhtaBearerToken: '%env(string:default::UKRPOSHTA_BEARER_TOKEN)%'
+            $meestApiKey: '%env(string:default::MEEST_API_KEY)%'
+            $justinApiKey: '%env(string:default::JUSTIN_API_KEY)%'
             $frontendUrl: '%env(FRONTEND_URL)%'
             $mailerFrom: '%env(MAILER_FROM)%'
             $jwtTtl: '%env(int:JWT_TTL)%'
@@ -120,3 +129,7 @@ services:
     App\Migrations\Factory\MigrationFactoryDecorator:
         decorates: 'doctrine.migrations.migrations_factory'
         arguments: ['@.inner', '@service_container']
+
+    App\Service\Delivery\DeliveryCarrierRegistry:
+        arguments:
+            $carriers: !tagged_iterator app.delivery_carrier

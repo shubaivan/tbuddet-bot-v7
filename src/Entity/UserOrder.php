@@ -124,6 +124,10 @@ class UserOrder
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $delivery_department_ref = null;
 
+    #[ORM\Column(type: 'string', length: 20, options: ['default' => 'nova_poshta'])]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private string $delivery_carrier = 'nova_poshta';
+
     #[ORM\Column(type: 'string', length: 50, options: ['default' => 'new'])]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private string $order_status = 'new';
@@ -384,6 +388,18 @@ class UserOrder
     public function setDeliveryDepartmentRef(?string $delivery_department_ref): UserOrder
     {
         $this->delivery_department_ref = $delivery_department_ref;
+
+        return $this;
+    }
+
+    public function getDeliveryCarrier(): string
+    {
+        return $this->delivery_carrier;
+    }
+
+    public function setDeliveryCarrier(string $delivery_carrier): UserOrder
+    {
+        $this->delivery_carrier = $delivery_carrier;
 
         return $this;
     }
