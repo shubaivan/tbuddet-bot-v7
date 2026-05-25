@@ -22,6 +22,31 @@ class FeedController extends AbstractController
     private const SITE_URL = 'https://artbeton.market';
     private const SHOP_NAME = 'Art Beton Market';
 
+    /**
+     * Override our internal category names with the canonical Prom.ua catalog
+     * names so the marketplace's matcher routes products to the right tree.
+     * Without this, Prom guesses from product photos and mislabels (e.g. it
+     * filed 41 concrete planters under "Живі рослини" / live plants).
+     * Several internal categories collapse to the same Prom node — that's
+     * intentional and supported by the YML format.
+     */
+    private const PROM_CATEGORY_NAMES = [
+        44 => 'Вазони, кашпо, горщики садові',  // Вазон
+        48 => 'Вазони, кашпо, горщики садові',  // Циліндр
+        47 => 'Вазони, кашпо, горщики садові',  // Куб
+        49 => 'Вазони, кашпо, горщики садові',  // Лонг
+        58 => 'Вазони, кашпо, горщики садові',  // Бел
+        46 => 'Вазони, кашпо, горщики садові',  // Хілс
+        52 => 'Тротуарна плитка',                // Садова плитка
+        60 => 'Тротуарна плитка',                // Плитка
+        51 => 'Паркувальні стовпчики',           // Обмежувачі руху
+        43 => 'Лави садові',                     // Лавки
+        50 => 'Столи садові',                    // Столи
+        40 => 'Урни для сміття',                 // Урни
+        41 => 'Раковини для ванної кімнати',     // Раковини
+        42 => 'Садовий декор',                   // Елементи декору
+    ];
+
     #[Route('/feed/prom.xml', name: 'feed_prom', methods: ['GET'])]
     public function promFeed(
         ProductRepository $productRepository,
@@ -31,12 +56,16 @@ class FeedController extends AbstractController
         $lang = UserLanguageEnum::UA;
         $products = $productRepository->findAll();
 
-        // Distinct categories used by the products.
+        // Distinct categories used by the products. Names are remapped to
+        // Prom-canonical labels (see PROM_CATEGORY_NAMES) so Prom's auto-matcher
+        // routes products correctly instead of guessing from photos.
         $categories = [];
         foreach ($products as $product) {
             foreach ($product->getProductCategory() as $pc) {
                 $cat = $pc->getCategory();
-                $categories[$cat->getId()] = trim((string) $cat->getCategoryName($lang));
+                $id = $cat->getId();
+                $categories[$id] = self::PROM_CATEGORY_NAMES[$id]
+                    ?? trim((string) $cat->getCategoryName($lang));
             }
         }
 
