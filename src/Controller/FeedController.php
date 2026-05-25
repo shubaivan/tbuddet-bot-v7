@@ -95,10 +95,8 @@ class FeedController extends AbstractController
             }
 
             foreach ($filesRepository->getFileByProductId($product->getId()) as $file) {
-                $xml->writeElement('picture', $defaultStorage->publicUrl($file->getPath()));
+                $xml->writeElement('picture', $this->encodeUrl($defaultStorage->publicUrl($file->getPath())));
             }
-
-            $xml->writeElement('vendor', self::SHOP_NAME);
 
             $description = trim(strip_tags((string) $product->getDescription($lang)));
             if ($description !== '') {
@@ -118,5 +116,22 @@ class FeedController extends AbstractController
             Response::HTTP_OK,
             ['Content-Type' => 'application/xml; charset=utf-8'],
         );
+    }
+
+    /**
+     * Percent-encode each path segment of a URL. Flysystem's publicUrl() leaves
+     * spaces, parentheses, and other URL-unsafe characters in filenames as-is,
+     * which strict downloaders (e.g. Prom.ua's image fetcher) reject.
+     */
+    private function encodeUrl(string $url): string
+    {
+        $parsed = parse_url($url);
+        if ($parsed === false || !isset($parsed['scheme'], $parsed['host'], $parsed['path'])) {
+            return $url;
+        }
+
+        $encodedPath = implode('/', array_map('rawurlencode', explode('/', $parsed['path'])));
+
+        return $parsed['scheme'] . '://' . $parsed['host'] . $encodedPath;
     }
 }
