@@ -47,6 +47,13 @@ class FeedController extends AbstractController
         42 => 'Садовий декор',                   // Елементи декору
     ];
 
+    /**
+     * Internal category IDs to exclude from the Prom feed only (they stay
+     * visible on the site). Requested by the Prom manager: drop the
+     * "Тротуарна плитка" group — internal cats 52 (Садова плитка) and 60 (Плитка).
+     */
+    private const PROM_EXCLUDED_CATEGORIES = [52, 60];
+
     #[Route('/feed/prom.xml', name: 'feed_prom', methods: ['GET'])]
     public function promFeed(
         ProductRepository $productRepository,
@@ -64,6 +71,9 @@ class FeedController extends AbstractController
             foreach ($product->getProductCategory() as $pc) {
                 $cat = $pc->getCategory();
                 $id = $cat->getId();
+                if (in_array($id, self::PROM_EXCLUDED_CATEGORIES, true)) {
+                    continue;
+                }
                 $categories[$id] = self::PROM_CATEGORY_NAMES[$id]
                     ?? trim((string) $cat->getCategoryName($lang));
             }
@@ -102,6 +112,19 @@ class FeedController extends AbstractController
             $price = (int) $product->getPrice($lang);
             if ($price <= 0) {
                 // No UAH price — nothing to sell on the marketplace.
+                continue;
+            }
+
+            // Skip products in excluded groups (e.g. "Тротуарна плитка") — Prom
+            // only; they remain on the site.
+            $excluded = false;
+            foreach ($product->getProductCategory() as $pc) {
+                if (in_array($pc->getCategory()->getId(), self::PROM_EXCLUDED_CATEGORIES, true)) {
+                    $excluded = true;
+                    break;
+                }
+            }
+            if ($excluded) {
                 continue;
             }
 
