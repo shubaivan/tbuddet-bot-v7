@@ -45,6 +45,14 @@ services:
             # outside var/cache so `rm -rf var/cache/prod` during deploy does
             # NOT wipe in-flight conversations.
             $nutgramCache: '@app.cache.nutgram'
+            # Support-chat AI assistant (artbeton.market chat widget).
+            $anthropicApiKey: '%env(ANTHROPIC_API_KEY)%'
+            $supportChatModel: '%env(ANTHROPIC_CHAT_MODEL)%'
+            # Manager activity bot → group «Заявки ArtBeton». Reuses the admin
+            # bot token (@artbeton_admin_bot, already an admin in the group and
+            # not sitting on a webhook). Chat id is the group's negative id.
+            $managerBotToken: '%env(TELEGRAM_ADMIN_TOKEN)%'
+            $managerChatId: '%env(TELEGRAM_MANAGER_CHAT_ID)%'
 
     # Nutgram conversation/user/global state cache. Not tagged as cache.pool —
     # we don't want it cleared by `cache:clear` or wiped by the deploy step

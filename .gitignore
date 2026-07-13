@@ -44,3 +44,10 @@ docs/*.sql
 /.qa.env
 /reload.sh
 _restore_user_12.json
+
+# Local scratch / drafts — may contain secrets, never commit
+/client-keys-liqpay-novaposhta.txt
+/klaravik-connect-profile.txt
+/klaravik-cover-letter.txt
+/lena-api-key-guide-uk.txt
+/northern-tech-about-you.txt

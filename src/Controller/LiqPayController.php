@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Enum\RoleEnum;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
+use App\Service\Analytics\ActivityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
@@ -26,6 +27,7 @@ class LiqPayController extends AbstractController
         UserOrderRepository $orderRepository,
         TelegramUserRepository $telegramUserRepository,
         EntityManagerInterface $em,
+        ActivityService $activity,
         string $liqpayPrivateKey,
     ): JsonResponse
     {
@@ -167,6 +169,12 @@ class LiqPayController extends AbstractController
                     ]);
                 }
             }
+
+            // Той самий факт оплати — одним постом у групу «Заявки ArtBeton».
+            $extraHtml = rtrim($amountInfo)
+                . ($clientInfo ? "\nКлієнт: " . $clientInfo : '')
+                . sprintf("\n\n<a href=\"%s\">Відкрити замовлення</a>", $orderUrl);
+            $activity->orderPaid($userOrder->getId(), $extraHtml);
         }
 
         return $this->json(['status' => true]);

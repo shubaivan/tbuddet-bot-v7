@@ -17,6 +17,7 @@ use App\Liqpay\LiqPay;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Repository\UserOrderRepository;
+use App\Service\Analytics\ActivityService;
 use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
@@ -217,7 +218,8 @@ class ShoppingCartController extends AbstractController
         EntityManagerInterface $em,
         LocalizationService $localizationService,
         CartTotalCalculator $cartTotalCalculator,
-        PromocodeService $promocodeService
+        PromocodeService $promocodeService,
+        ActivityService $activity
     ): JsonResponse
     {
         $language = $localizationService->getLanguage();
@@ -333,6 +335,19 @@ class ShoppingCartController extends AbstractController
                 $discount,
             );
         }
+
+        // Сповіщення менеджерам у групу «Заявки ArtBeton» про щойно створене замовлення.
+        $currencyLabel = $language === UserLanguageEnum::UA ? 'грн' : 'USD';
+        $customerName = trim($user->getFirstName() . ' ' . $user->getLastName());
+        if ($user->getPhone()) {
+            $customerName = trim($customerName . ', ' . $user->getPhone());
+        }
+        $activity->orderPlaced(
+            $userOrder->getId(),
+            sprintf('Сума: %s %s', $total_amount, $currencyLabel),
+            $customerName !== '' ? $customerName : null,
+            count($purchaseProductIds),
+        );
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
 

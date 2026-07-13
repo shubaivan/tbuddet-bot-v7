@@ -1,0 +1,7 @@
+framework:
+    rate_limiter:
+        # Події активності (візити/кліки) — часті, але з захистом від флуду per-IP.
+        event:
+            policy: 'sliding_window'
+            limit: 60
+            interval: '1 minute'

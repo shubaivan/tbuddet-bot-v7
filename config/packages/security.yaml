@@ -83,6 +83,8 @@ security:
         - { route: 'public_category_list', roles: PUBLIC_ACCESS }
         - { route: 'public_product_purchase_by_id', roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/novaposhta, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/chat, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1/event, roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/guide, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_MANAGER }
