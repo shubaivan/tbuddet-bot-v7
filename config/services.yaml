@@ -48,6 +48,12 @@ services:
             # Support-chat AI assistant (artbeton.market chat widget).
             $anthropicApiKey: '%env(ANTHROPIC_API_KEY)%'
             $supportChatModel: '%env(ANTHROPIC_CHAT_MODEL)%'
+            # Support-chat guardrails: daily UAH spend ceiling + USD→UAH rate for
+            # token→money accounting. Persistent bucket lives in a pool outside
+            # var/cache so the deploy step that nukes var/cache/prod can't reset it.
+            $dailyBudgetUah: '%env(float:AI_DAILY_BUDGET_UAH)%'
+            $usdUahRate: '%env(float:USD_UAH_RATE)%'
+            $supportChatCache: '@app.cache.support_chat'
             # Manager activity bot → group «Заявки ArtBeton». Reuses the admin
             # bot token (@artbeton_admin_bot, already an admin in the group and
             # not sitting on a webhook). Chat id is the group's negative id.
@@ -63,6 +69,15 @@ services:
             - 'nutgram'
             - 0
             - '%kernel.project_dir%/var/nutgram-cache'
+
+    # Support-chat daily budget bucket. Same rationale as nutgram: persistent,
+    # outside var/cache so `cache:clear` / deploy don't reset the day's spend.
+    app.cache.support_chat:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            - 'support_chat'
+            - 0
+            - '%kernel.project_dir%/var/support-chat-cache'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
