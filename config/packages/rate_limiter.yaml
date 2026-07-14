@@ -5,3 +5,13 @@ framework:
             policy: 'sliding_window'
             limit: 60
             interval: '1 minute'
+        # ІІ-консультант (кожен виклик = токени Claude) — суворіше, per-IP.
+        chat:
+            policy: 'sliding_window'
+            limit: 25
+            interval: '1 minute'
+        # Денний ліміт per-IP — стоп сталому абузу з однієї адреси.
+        chat_daily:
+            policy: 'fixed_window'
+            limit: 200
+            interval: '1 day'
