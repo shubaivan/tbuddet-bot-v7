@@ -284,9 +284,16 @@ class ProductController extends AbstractController
 
         // Capture the full name map before flattening — the frontend needs the
         // other language's name to build that language's SEO slug URL for the
-        // hreflang pair.
+        // hreflang pair. Keys are normalised to the locale codes used in public
+        // URLs ('uk'), since the stored jsonb uses 'ua' for Ukrainian.
         $nameMap = $product->getProductName();
-        $product->setProductNameI18n(is_array($nameMap) ? $nameMap : []);
+        $nameMap = is_array($nameMap) ? $nameMap : [];
+        $product->setProductNameI18n(array_filter([
+            UserLanguageEnum::UK->value => $nameMap[UserLanguageEnum::UA->value]
+                ?? $nameMap[UserLanguageEnum::UK->value]
+                ?? null,
+            UserLanguageEnum::EN->value => $nameMap[UserLanguageEnum::EN->value] ?? null,
+        ]));
 
         $product->setPrice($product->getPrice($this->localizationService->getLanguage()));
         $product->setProductName($product->getProductName($this->localizationService->getLanguage()));
