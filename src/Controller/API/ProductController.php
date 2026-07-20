@@ -282,6 +282,12 @@ class ProductController extends AbstractController
         }
         $product->setFilePath($path);
 
+        // Capture the full name map before flattening — the frontend needs the
+        // other language's name to build that language's SEO slug URL for the
+        // hreflang pair.
+        $nameMap = $product->getProductName();
+        $product->setProductNameI18n(is_array($nameMap) ? $nameMap : []);
+
         $product->setPrice($product->getPrice($this->localizationService->getLanguage()));
         $product->setProductName($product->getProductName($this->localizationService->getLanguage()));
         $product->setDescription($product->getDescription($this->localizationService->getLanguage()));

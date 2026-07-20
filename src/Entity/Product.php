@@ -117,6 +117,14 @@ class Product implements AttachmentFilesInterface
     ])]
     private array $file_path = [];
 
+    /**
+     * Untranslated {uk: ..., en: ...} name map, kept alongside the flattened
+     * product_name so the frontend can build the SEO slug URL for the *other*
+     * language (needed for a correct hreflang pair on product pages).
+     * Transient — populated explicitly, never persisted.
+     */
+    private array $product_name_i18n = [];
+
     #[ORM\OneToMany(
         targetEntity: PurchaseProduct::class,
         mappedBy: 'product', cascade: ["persist", "remove"], orphanRemoval: true)]
@@ -344,6 +352,20 @@ class Product implements AttachmentFilesInterface
     public function getCountPurchase()
     {
         return $this->getOrders()->count();
+    }
+
+    #[SerializedName('product_name_i18n')]
+    #[Groups([self::PUBLIC_PRODUCT_VIEW_GROUP])]
+    public function getProductNameI18n(): array
+    {
+        return $this->product_name_i18n;
+    }
+
+    public function setProductNameI18n(array $product_name_i18n): Product
+    {
+        $this->product_name_i18n = $product_name_i18n;
+
+        return $this;
     }
 
     public function getFilePath(): array
