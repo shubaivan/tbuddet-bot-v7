@@ -51,7 +51,17 @@ when@prod:
                 path: "%kernel.logs_dir%/prod.log"
                 level: debug
                 formatter: monolog.formatter.json
+            # Сканери ботів довбляться в /.env, /wp-config.php і подібне —
+            # Symfony віддає 404, а прямий stream-хендлер писав кожен такий
+            # промах як ERROR: 17 тисяч записів із 17 тисяч, 13 МБ сміття.
+            # Тепер журнал помилок фільтрує 404/405 так само, як main.
             error_file:
+                type: fingers_crossed
+                action_level: error
+                handler: error_file_nested
+                excluded_http_codes: [404, 405]
+                buffer_size: 50
+            error_file_nested:
                 type: stream
                 path: "%kernel.logs_dir%/prod_errors.log"
                 level: error
