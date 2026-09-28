@@ -41,6 +41,8 @@
                 max-width: 1240px; margin-left: auto; margin-right: auto; padding-left: 16px; padding-right: 16px;
             }
             body.adm .adm-top, body.adm .adm-sub { background: transparent; }
+            /* Кнопка-посилання прямо в body (як «+ Створити Продукт») — на ту ж лінію, що й контент. */
+            body.adm > a.btn { display: inline-block; margin: 0 0 12px max(16px, calc((100vw - 1240px) / 2 + 16px)); }
             body.adm .btn { border-radius: 8px; }
             body.adm .btn-primary { background: #2f6fd0; border-color: #2f6fd0; }
             body.adm .btn-primary:hover { background: #255bb0; border-color: #255bb0; }
