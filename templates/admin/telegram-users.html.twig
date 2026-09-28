@@ -8,6 +8,11 @@
 {% endblock %}
 
 {% block body %}
+    <style>
+        .orders-chip.cart { background: #fff4e0; color: #9a6a10; }
+        .cart-line { margin-top: 4px; }
+        .cart-items { font-size: 12px; color: #6a7280; margin-top: 2px; max-width: 320px; white-space: normal; }
+    </style>
     {{ parent() }}
 
     <div id="usersStatsBar" class="users-stats-bar" hidden>
@@ -32,6 +37,15 @@
             <span class="stat-value" data-stat="paid_orders_amount">₴0</span>
             <span class="stat-label">сума</span>
         </div>
+        <div class="stat stat-divider"></div>
+        <div class="stat">
+            <span class="stat-value" data-stat="carts_count">0</span>
+            <span class="stat-label">з товаром у кошику</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" data-stat="carts_amount">₴0</span>
+            <span class="stat-label">у кошиках</span>
+        </div>
     </div>
 
     <div class="filters-bar" style="display:flex;gap:12px;margin-bottom:15px;flex-wrap:wrap;align-items:end;">
@@ -49,6 +63,7 @@
                 <option value="">Всі користувачі</option>
                 <option value="with_orders">З замовленнями</option>
                 <option value="without_orders">Без замовлень</option>
+                <option value="with_cart">🛒 З товарами в кошику</option>
             </select>
         </div>
         <div>

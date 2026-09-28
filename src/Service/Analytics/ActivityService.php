@@ -125,6 +125,27 @@ final class ActivityService
     }
 
     /**
+     * Зареєстрований покупець поклав товар у кошик — миттєво, прямо з бекенду.
+     *
+     * Людина, яка вже вибрала товар, — найтепліший контакт: менеджер бачить,
+     * хто це, що саме й на яку суму, і може зателефонувати, поки інтерес свіжий.
+     * Гостьові кошики живуть у браузері й сюди не доходять — вони лишаються
+     * лічильником у погодинному дайджесті.
+     */
+    public function addedToCart(string $customer, string $product, int $quantity, ?float $amount, ?string $adminUrl = null): void
+    {
+        $lines = ['🛒 <b>Додали в кошик</b>', '👤 '.TelegramNotifier::esc($customer)];
+        $lines[] = '📦 '.TelegramNotifier::esc($product).' × '.$quantity;
+        if (null !== $amount && $amount > 0) {
+            $lines[] = '💰 ₴'.number_format($amount, 0, ',', ' ');
+        }
+        if (null !== $adminUrl) {
+            $lines[] = '🔗 '.TelegramNotifier::esc($adminUrl);
+        }
+        $this->notifier->send(implode("\n", $lines));
+    }
+
+    /**
      * Миттєве сповіщення про підтверджену оплату замовлення.
      * $extraHtml — готовий HTML-хвіст (сума/промокод/клієнт/лінк), ескейпиться на місці виклику.
      */

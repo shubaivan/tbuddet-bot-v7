@@ -43,7 +43,14 @@ document.addEventListener("DOMContentLoaded", function () {
             const totalCount = row.orders_total_count || 0;
             const pendingCount = Math.max(0, totalCount - paidCount);
 
-            if (!totalCount) return '<span class="muted">немає</span>';
+            // Кошик — поклали, але ще не замовили: найтепліший контакт для менеджера.
+            const cart = (row.cart_count || 0) > 0
+                ? '<div class="cart-line" title="' + escapeHtml(row.cart_items || '') + '">' +
+                    '<span class="orders-chip cart">🛒 ' + row.cart_count + ' поз. • ₴' + formatMoney(row.cart_amount || 0) + '</span>' +
+                    '<div class="cart-items">' + escapeHtml(row.cart_items || '') + '</div></div>'
+                : '';
+
+            if (!totalCount) return (cart ? '' : '<span class="muted">немає</span>') + cart;
             const paidChip = paidCount > 0
                 ? '<span class="orders-chip paid" title="Оплачені">' + paidCount + ' • ₴' + formatMoney(paidAmount) + '</span>'
                 : '';
@@ -52,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 : '';
             return '<button type="button" class="orders-summary-btn" data-source="' + row.source + '" data-origin-id="' + row.origin_id + '">' +
                 (paidChip || '<span class="orders-chip empty">0</span>') + pendingChip +
-                '</button>';
+                '</button>' + cart;
         },
     });
 
@@ -193,6 +200,8 @@ document.addEventListener("DOMContentLoaded", function () {
         $bar.find('[data-stat="web_count"]').text(stats.web_count || 0);
         $bar.find('[data-stat="paid_orders_count"]').text(stats.paid_orders_count || 0);
         $bar.find('[data-stat="paid_orders_amount"]').text('₴' + formatMoney(stats.paid_orders_amount || 0));
+        $bar.find('[data-stat="carts_count"]').text(stats.carts_count || 0);
+        $bar.find('[data-stat="carts_amount"]').text('₴' + formatMoney(stats.carts_amount || 0));
         $bar.prop('hidden', false);
     }
 

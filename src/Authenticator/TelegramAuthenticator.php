@@ -36,6 +36,11 @@ class TelegramAuthenticator extends AbstractAuthenticator implements Authenticat
 
     public function supports(Request $request): ?bool
     {
+        // Вхід віджетом вимкнено, коли є CRM: вхід один — посиланням із бота в CRM.
+        if ($this->crmUrl !== '') {
+            return false;
+        }
+
         $route = $request->attributes->get('_route');
 
         return $route === $this->guardRoute;

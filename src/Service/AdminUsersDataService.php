@@ -20,6 +20,12 @@ use Doctrine\DBAL\Connection;
  *   orders_total_count  int
  *   orders_paid_count   int
  *   orders_paid_amount  float
+ *   cart_count          int — позицій у кошику (ще не в замовленні)
+ *   cart_amount         float — їх сума за цінами сайту (з доплатами за властивості)
+ *   cart_items          string|null — «Вазон "Лонг" ×4; Вазон "Хілс" ×2»
+ *
+ * Кошик показуємо, бо людина, яка поклала товар і не оформила, — найтепліший
+ * контакт для менеджера: вона вже вибрала, що хоче.
  */
 class AdminUsersDataService
 {
@@ -61,9 +67,28 @@ class AdminUsersDataService
                 tu.updated_at AS last_visit,
                 COUNT(o.id) AS orders_total_count,
                 COUNT(o.id) FILTER (WHERE o.liq_pay_status = \'success\') AS orders_paid_count,
-                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount
+                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount,
+                COALESCE(MAX(c.cnt), 0) AS cart_count,
+                COALESCE(MAX(c.amount), 0) AS cart_amount,
+                MAX(c.items) AS cart_items
             FROM telegram_user tu
             LEFT JOIN user_order o ON o.telegram_user_id = tu.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    COUNT(pp.id) AS cnt,
+                    SUM(pp.quantity * (
+                        COALESCE(NULLIF(p.price::jsonb->>\'ua\', \'\')::numeric, 0)
+                        + COALESCE((
+                            SELECT SUM(COALESCE(NULLIF(e->>\'property_price_impact\', \'\')::numeric, 0))
+                            FROM jsonb_array_elements(CASE WHEN jsonb_typeof(pp.product_properties::jsonb) = \'array\' THEN pp.product_properties::jsonb ELSE \'[]\'::jsonb END) e
+                        ), 0)
+                    )) AS amount,
+                    STRING_AGG(COALESCE(p.product_name::jsonb->>\'ua\', \'товар #\' || pp.product_id) || \' ×\' || pp.quantity, \'; \' ORDER BY pp.id) AS items
+                FROM shopping_cart sc
+                JOIN purchase_product pp ON pp.shopping_cart_id = sc.id AND pp.user_order_id IS NULL
+                LEFT JOIN product p ON p.id = pp.product_id
+                WHERE sc.telegram_user_id = tu.id
+            ) c ON true
             GROUP BY tu.id
 
             UNION ALL
@@ -78,9 +103,28 @@ class AdminUsersDataService
                 cu.updated_at AS last_visit,
                 COUNT(o.id) AS orders_total_count,
                 COUNT(o.id) FILTER (WHERE o.liq_pay_status = \'success\') AS orders_paid_count,
-                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount
+                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount,
+                COALESCE(MAX(c.cnt), 0) AS cart_count,
+                COALESCE(MAX(c.amount), 0) AS cart_amount,
+                MAX(c.items) AS cart_items
             FROM client_user cu
             LEFT JOIN user_order o ON o.client_user_id = cu.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    COUNT(pp.id) AS cnt,
+                    SUM(pp.quantity * (
+                        COALESCE(NULLIF(p.price::jsonb->>\'ua\', \'\')::numeric, 0)
+                        + COALESCE((
+                            SELECT SUM(COALESCE(NULLIF(e->>\'property_price_impact\', \'\')::numeric, 0))
+                            FROM jsonb_array_elements(CASE WHEN jsonb_typeof(pp.product_properties::jsonb) = \'array\' THEN pp.product_properties::jsonb ELSE \'[]\'::jsonb END) e
+                        ), 0)
+                    )) AS amount,
+                    STRING_AGG(COALESCE(p.product_name::jsonb->>\'ua\', \'товар #\' || pp.product_id) || \' ×\' || pp.quantity, \'; \' ORDER BY pp.id) AS items
+                FROM shopping_cart sc
+                JOIN purchase_product pp ON pp.shopping_cart_id = sc.id AND pp.user_order_id IS NULL
+                LEFT JOIN product p ON p.id = pp.product_id
+                WHERE sc.user_id = cu.id
+            ) c ON true
             GROUP BY cu.id
         ';
 
@@ -106,6 +150,8 @@ class AdminUsersDataService
             $wheres[] = 'orders_total_count > 0';
         } elseif ($filterOrders === 'without_orders') {
             $wheres[] = 'orders_total_count = 0';
+        } elseif ($filterOrders === 'with_cart') {
+            $wheres[] = 'cart_count > 0';
         }
 
         $whereSql = $wheres ? ' WHERE ' . implode(' AND ', $wheres) : '';
@@ -122,7 +168,9 @@ class AdminUsersDataService
                 COUNT(*) FILTER (WHERE source = \'tg\')  AS tg_count,
                 COUNT(*) FILTER (WHERE source = \'web\') AS web_count,
                 COALESCE(SUM(orders_paid_count), 0)  AS paid_orders_count,
-                COALESCE(SUM(orders_paid_amount), 0) AS paid_orders_amount
+                COALESCE(SUM(orders_paid_amount), 0) AS paid_orders_amount,
+                COUNT(*) FILTER (WHERE cart_count > 0) AS carts_count,
+                COALESCE(SUM(cart_amount), 0) AS carts_amount
             FROM (' . $totalSql . ') AS u' . $whereSql;
         $stats = $this->db->fetchAssociative($statsSql, $binds) ?: [];
         $stats = [
@@ -131,6 +179,8 @@ class AdminUsersDataService
             'web_count'           => (int)   ($stats['web_count']          ?? 0),
             'paid_orders_count'   => (int)   ($stats['paid_orders_count']  ?? 0),
             'paid_orders_amount'  => (float) ($stats['paid_orders_amount'] ?? 0),
+            'carts_count'         => (int)   ($stats['carts_count']        ?? 0),
+            'carts_amount'        => (float) ($stats['carts_amount']       ?? 0),
         ];
 
         // NULLS LAST for phone, display_name, handle so empty values don't
@@ -159,6 +209,9 @@ class AdminUsersDataService
                 'orders_total_count'  => (int) $r['orders_total_count'],
                 'orders_paid_count'   => (int) $r['orders_paid_count'],
                 'orders_paid_amount'  => (float) $r['orders_paid_amount'],
+                'cart_count'          => (int) $r['cart_count'],
+                'cart_amount'         => (float) $r['cart_amount'],
+                'cart_items'          => $r['cart_items'],
             ];
         }, $rows);
 
@@ -168,6 +221,42 @@ class AdminUsersDataService
             'data'            => $data,
             'stats'           => $stats,
         ];
+    }
+
+    /**
+     * Що зараз лежить у кошику людини (ще не в замовленні) — для картки покупця.
+     *
+     * @return list<array{name: string, quantity: int, unit_price: float, amount: float, added: ?string}>
+     */
+    public function cartOf(string $source, int $id): array
+    {
+        $column = $source === 'tg' ? 'telegram_user_id' : 'user_id';
+
+        $rows = $this->db->fetchAllAssociative(
+            "SELECT
+                COALESCE(p.product_name::jsonb->>'ua', 'товар #' || pp.product_id) AS name,
+                pp.quantity,
+                COALESCE(NULLIF(p.price::jsonb->>'ua', '')::numeric, 0)
+                    + COALESCE((
+                        SELECT SUM(COALESCE(NULLIF(e->>'property_price_impact', '')::numeric, 0))
+                        FROM jsonb_array_elements(CASE WHEN jsonb_typeof(pp.product_properties::jsonb) = 'array' THEN pp.product_properties::jsonb ELSE '[]'::jsonb END) e
+                    ), 0) AS unit_price,
+                sc.updated_at
+            FROM shopping_cart sc
+            JOIN purchase_product pp ON pp.shopping_cart_id = sc.id AND pp.user_order_id IS NULL
+            LEFT JOIN product p ON p.id = pp.product_id
+            WHERE sc.$column = :id
+            ORDER BY pp.id",
+            ['id' => $id],
+        );
+
+        return array_map(fn (array $r) => [
+            'name' => (string) $r['name'],
+            'quantity' => (int) $r['quantity'],
+            'unit_price' => (float) $r['unit_price'],
+            'amount' => (float) $r['unit_price'] * (int) $r['quantity'],
+            'added' => $this->fmt($r['updated_at'] ?? null),
+        ], $rows);
     }
 
     private function fmt($v): ?string

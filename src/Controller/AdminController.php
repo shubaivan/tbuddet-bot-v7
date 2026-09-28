@@ -102,7 +102,7 @@ class AdminController extends AbstractController
     }
 
     #[Route('/admin/users/{source}/{id}', name: 'app_admin_user_detail', methods: ['GET'], requirements: ['source' => 'tg|web', 'id' => '\d+'])]
-    public function userDetail(string $source, int $id, EntityManagerInterface $em): Response
+    public function userDetail(string $source, int $id, EntityManagerInterface $em, \App\Service\AdminUsersDataService $users): Response
     {
         $orders = [];
         if ($source === 'tg') {
@@ -149,6 +149,7 @@ class AdminController extends AbstractController
         }
 
         return $this->render('admin/user-detail.html.twig', [
+            'cart'       => $users->cartOf($source, $id),
             'profile'    => $profile,
             'orders'     => $orders,
             'paidCount'  => $paidCount,

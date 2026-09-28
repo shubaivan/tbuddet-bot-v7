@@ -7,6 +7,7 @@ use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -14,8 +15,14 @@ use Symfony\Component\Routing\Annotation\Route;
 class SiteController extends AbstractController
 {
     #[Route(path: '/', name: 'public')]
-    public function publicAction(): Response
+    public function publicAction(#[Autowire('%env(CRM_URL)%')] string $crmUrl = ''): Response
     {
+        // Вхід один — через CRM. Стара сторінка входу віджетом лишається лише
+        // для локальної розробки (порожній CRM_URL).
+        if ($crmUrl !== '' && ! $this->isGranted('ROLE_MANAGER')) {
+            return $this->redirect(rtrim($crmUrl, '/') . '/vhid');
+        }
+
         if ($this->isGranted('ROLE_MANAGER')) {
             return $this->redirectToRoute('app_admin');
         }

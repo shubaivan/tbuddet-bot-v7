@@ -18,6 +18,7 @@ use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\Analytics\ActivityService;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
@@ -54,7 +55,8 @@ class ShoppingCartController extends AbstractController
         #[MapRequestPayload] PurchaseProduct $inputPurchaseProduct,
         #[CurrentUser] User $user,
         EntityManagerInterface $em,
-        ObjectHandler $objectHandler
+        ObjectHandler $objectHandler,
+        ActivityService $activity,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -78,6 +80,27 @@ class ShoppingCartController extends AbstractController
         $shoppingCart->addPurchaseProduct($entityPurchaseProduct);
 
         $em->flush();
+
+        // Менеджерам — одразу: хто, що й на скільки. Сповіщення не має ламати кошик.
+        try {
+            $unit = (float) ($product->getPrice(UserLanguageEnum::UA) ?: 0);
+            foreach ($entityPurchaseProduct->getProductProperties() as $property) {
+                $unit += (float) (is_array($property) ? ($property['property_price_impact'] ?? 0) : 0);
+            }
+            $name = $product->getProductName(UserLanguageEnum::UA);
+            $activity->addedToCart(
+                trim(implode(' · ', array_filter([
+                    trim(($user->getFirstName() ?? '').' '.($user->getLastName() ?? '')),
+                    $user->getPhone(),
+                    $user->getEmail(),
+                ]))),
+                is_string($name) ? $name : 'товар #'.$product->getId(),
+                $entityPurchaseProduct->getQuantity(),
+                $unit * $entityPurchaseProduct->getQuantity(),
+                $this->generateUrl('app_admin_user_detail', ['source' => 'web', 'id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            );
+        } catch (\Throwable) {
+        }
 
         return $this->json($entityPurchaseProduct, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [EntityPurchaseProduct::GROUP_VIEW],
