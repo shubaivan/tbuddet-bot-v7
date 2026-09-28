@@ -1,5 +1,8 @@
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        # CRM — єдина точка входу; шапка адмінки веде в її розділи.
+        crm_url: '%env(CRM_URL)%'
 
 when@test:
     twig:

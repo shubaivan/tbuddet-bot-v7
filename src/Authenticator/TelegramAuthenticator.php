@@ -2,6 +2,7 @@
 
 namespace App\Authenticator;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,7 +28,9 @@ class TelegramAuthenticator extends AbstractAuthenticator implements Authenticat
         private UrlGeneratorInterface $urlGenerator,
         private string $guardRoute,
         private string $defaultTargetRoute,
-        private ?string $loginRoute = null
+        private ?string $loginRoute = null,
+        #[Autowire('%env(CRM_URL)%')]
+        private string $crmUrl = '',
     ) {
     }
 
@@ -76,8 +79,21 @@ class TelegramAuthenticator extends AbstractAuthenticator implements Authenticat
         return null;
     }
 
+    /**
+     * Без сесії — у CRM: вхід один на всі частини адмінки (посилання з бота).
+     * CRM після входу поверне сюди ж, на ту сторінку, куди людина йшла.
+     * Без CRM_URL (локальна розробка) — стара сторінка входу віджетом.
+     */
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
+        if ($this->crmUrl !== '') {
+            $path = $request->getPathInfo();
+
+            return new RedirectResponse(rtrim($this->crmUrl, '/') . '/shop?to=' . rawurlencode(
+                preg_match('#^/admin(/[A-Za-z0-9/_-]*)?$#', $path) ? $path : '/admin/orders',
+            ));
+        }
+
         return new RedirectResponse($this->urlGenerator->generate('login_public'));
     }
 }

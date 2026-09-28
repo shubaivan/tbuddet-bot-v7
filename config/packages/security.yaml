@@ -55,10 +55,13 @@ security:
             provider: telegram
             custom_authenticators:
                 - App\Authenticator\TelegramAuthenticator
+                # Вхід із CRM (zayavky.artbeton.market) — єдиної точки входу.
+                - App\Authenticator\CrmSsoAuthenticator
             entry_point: App\Authenticator\TelegramAuthenticator
             access_denied_handler: App\Security\AdminAccessDeniedHandler
             logout:
                 path: login_app_logout
+                target: admin_signed_out
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
@@ -87,6 +90,7 @@ security:
         - { path: ^/api/v1/event, roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/guide, roles: PUBLIC_ACCESS }
+        - { path: ^/admin/signed-out, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_MANAGER }
         # - { path: ^/profile, roles: ROLE_USER }
 

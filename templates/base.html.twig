@@ -11,6 +11,46 @@
 </head>
 <body>
 {% block body %}
+    {#
+        Одна адмінка на все: верхній ряд розділів той самий, що в CRM заявок і на складі
+        (zayavky.artbeton.market). Магазин — лише один із розділів; вхід і вихід — через CRM.
+        Без crm_url (локальна розробка) — стара шапка.
+    #}
+    {% if crm_url and is_granted('ROLE_MANAGER') %}
+        {% set route = app.request.attributes.get('_route') %}
+        {% set crm = crm_url|trim('/', 'right') %}
+        <style>
+            .adm-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; max-width: 1240px; margin: 0 auto; padding: 14px 16px 12px; border-bottom: 1px solid #e3e6ea; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            .adm-sections, .adm-sub { display: flex; flex-wrap: wrap; gap: 4px; }
+            .adm-sections a { padding: 7px 14px; border-radius: 999px; color: #6a7280; font-weight: 600; white-space: nowrap; text-decoration: none; }
+            .adm-sections a:hover { color: #1b1f24; background: #e8f0fc; text-decoration: none; }
+            .adm-sections a.on { background: #2f6fd0; color: #fff; }
+            .adm-sub { max-width: 1240px; margin: 0 auto 12px; padding: 10px 16px 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            .adm-sub a { padding: 6px 12px; border-radius: 8px; color: #6a7280; white-space: nowrap; text-decoration: none; }
+            .adm-sub a.on { background: #e8f0fc; color: #2f6fd0; }
+            .adm-who { color: #6a7280; font-size: 13px; }
+            @media (max-width: 640px) {
+                .adm-sections, .adm-sub { flex-wrap: nowrap; overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
+                .adm-sections a, .adm-sub a { padding: 10px 14px; }
+            }
+        </style>
+        <header class="adm-top">
+            <nav class="adm-sections">
+                <a href="{{ crm }}/crm/">📦 Заявки</a>
+                <a href="{{ crm }}/crm/schedule">🚗 Автопарк</a>
+                <a href="{{ crm }}/sklad">🏗 Склад</a>
+                <a class="on" href="{{ path('app_admin_orders') }}">🛒 Магазин</a>
+            </nav>
+            <span class="adm-who">{{ app.user.firstName ?? app.user.userIdentifier }} · <a href="{{ path('login_app_logout') }}">вийти</a></span>
+        </header>
+        <nav class="adm-sub">
+            <a href="{{ path('app_admin_orders') }}" class="{{ route starts with 'app_admin_order' ? 'on' }}">Замовлення</a>
+            <a href="{{ path('app_admin_products') }}" class="{{ route starts with 'app_admin_product' or route starts with 'admin-product' ? 'on' }}">Товари</a>
+            <a href="{{ path('app_admin_categories') }}" class="{{ route starts with 'app_admin_categor' or route starts with 'admin-category' ? 'on' }}">Категорії</a>
+            <a href="{{ path('app_admin_users') }}" class="{{ route starts with 'app_admin_user' ? 'on' }}">Покупці</a>
+            <a href="{{ path('app_admin_promocodes') }}" class="{{ route starts with 'app_admin_promocode' ? 'on' }}">Промокоди</a>
+        </nav>
+    {% else %}
     <header>
         <div class="collapse bg-dark" id="navbarHeader">
             <div class="container">
@@ -59,6 +99,7 @@
             </div>
         </div>
     </header>
+    {% endif %}
 
     {# read and display all flash messages #}
     {#    {{ dump(app.flashes) }}#}
