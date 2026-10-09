@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Analytics;
 
+use App\Entity\User;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 
 /**
  * Сповіщення менеджерам про активність на сайті artbeton.market.
- * - Значущі кліки (телефон / Telegram / онлайн-консультант) → одразу в групу «Заявки ArtBeton»
+ * - Значущі кліки (телефон / Telegram / онлайн-консультант) → одразу в тему «Магазин» групи менеджерів
  *   (з throttle per-IP+тип, щоб один активний відвідувач не флудив).
  * - Візити та решта подій → агрегуються й шлються дайджестом (команда app:activity:digest, cron щогодини).
  */
@@ -104,7 +105,7 @@ final class ActivityService
             }
         }
 
-        return $this->notifier->send(implode("\n", $lines));
+        return $this->notifier->send(implode("\n", $lines), TelegramNotifier::TOPIC_ANALYTICS);
     }
 
     /**
@@ -143,6 +144,41 @@ final class ActivityService
             $lines[] = '🔗 '.TelegramNotifier::esc($adminUrl);
         }
         $this->notifier->send(implode("\n", $lines));
+    }
+
+    /**
+     * Покупець зареєструвався або увійшов на сайті — миттєво, у тему «Магазин».
+     *
+     * Вхід — такий самий теплий сигнал, як кошик: людина повернулась, і
+     * менеджер бачить, хто саме. Оновлення токена входом не вважається.
+     *
+     * @param string $via «email» або «Telegram»
+     */
+    public function customerSignedIn(User $user, bool $registered, string $via, ?string $adminUrl = null): void
+    {
+        $lines = [
+            $registered ? '🆕 <b>Нова реєстрація</b> ('.$via.')' : '🔑 <b>Вхід на сайт</b> ('.$via.')',
+            '👤 '.TelegramNotifier::esc(self::customerLabel($user)),
+        ];
+        if (null !== $adminUrl) {
+            $lines[] = '🔗 '.TelegramNotifier::esc($adminUrl);
+        }
+        $this->notifier->send(implode("\n", $lines));
+    }
+
+    /** Ім'я · телефон · пошта; технічна tg-…@telegram.local людям нічого не скаже. */
+    public static function customerLabel(User $user): string
+    {
+        $email = $user->getEmail();
+        if (str_ends_with($email, '@telegram.local')) {
+            $email = '';
+        }
+
+        return trim(implode(' · ', array_filter([
+            trim(($user->getFirstName() ?? '').' '.($user->getLastName() ?? '')),
+            $user->getPhone(),
+            $email,
+        ]))) ?: 'покупець #'.$user->getId();
     }
 
     /**

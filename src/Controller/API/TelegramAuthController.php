@@ -14,6 +14,7 @@ use App\Repository\RoleRepository;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserMergeRepository;
 use App\Repository\UserRepository;
+use App\Service\Analytics\ActivityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -21,6 +22,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 #[Route(path: '/api/v1/auth')]
 class TelegramAuthController extends AbstractController
@@ -38,6 +40,7 @@ class TelegramAuthController extends AbstractController
         RefreshTokenManagerInterface $refreshTokenManager,
         int $jwtTtl,
         int $jwtRefreshTtl,
+        ActivityService $activity,
     ): Response {
         $payload = json_decode($request->getContent(), true) ?? [];
 
@@ -93,6 +96,7 @@ class TelegramAuthController extends AbstractController
             }
         }
 
+        $registered = !$user;
         if (!$user) {
             $user = new User();
             $user
@@ -123,6 +127,16 @@ class TelegramAuthController extends AbstractController
         }
 
         $token = $jwtManager->create($user);
+
+        try {
+            $activity->customerSignedIn(
+                $user,
+                $registered,
+                'Telegram',
+                $this->generateUrl('app_admin_user_detail', ['source' => 'web', 'id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            );
+        } catch (\Throwable) {
+        }
 
         $refreshToken = $refreshTokenManager->create();
         $refreshToken->setUsername($user->getUserIdentifier());

@@ -54,11 +54,15 @@ services:
             $dailyBudgetUah: '%env(float:AI_DAILY_BUDGET_UAH)%'
             $usdUahRate: '%env(float:USD_UAH_RATE)%'
             $supportChatCache: '@app.cache.support_chat'
-            # Manager activity bot → group «Заявки ArtBeton». Reuses the admin
-            # bot token (@artbeton_admin_bot, already an admin in the group and
-            # not sitting on a webhook). Chat id is the group's negative id.
+            # Manager notifications → group «АртБетон • Робоча» (forum topics).
+            # Sent by the requests bot (TELEGRAM_MANAGER_BOT_TOKEN, an admin of
+            # the group); empty falls back to the admin bot token. Chat id is the
+            # group's negative id; topic ids come from createForumTopic.
             $managerBotToken: '%env(TELEGRAM_ADMIN_TOKEN)%'
             $managerChatId: '%env(TELEGRAM_MANAGER_CHAT_ID)%'
+            $groupBotToken: '%env(TELEGRAM_MANAGER_BOT_TOKEN)%'
+            $shopTopicId: '%env(TELEGRAM_MANAGER_TOPIC_SHOP)%'
+            $analyticsTopicId: '%env(TELEGRAM_MANAGER_TOPIC_ANALYTICS)%'
 
     # Nutgram conversation/user/global state cache. Not tagged as cache.pool —
     # we don't want it cleared by `cache:clear` or wiped by the deploy step

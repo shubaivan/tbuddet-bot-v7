@@ -14,6 +14,7 @@ use App\Exception\Enum\AuthExceptionEnum;
 use App\Exception\RegistrationException;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
+use App\Service\Analytics\ActivityService;
 use App\Service\EmailService;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,6 +25,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
@@ -39,7 +41,8 @@ class SecurityController extends AbstractController
         ValidatorInterface $validator,
         RoleRepository $roleRepository,
         EntityManagerInterface $entityManager,
-        EmailService $emailService
+        EmailService $emailService,
+        ActivityService $activity,
     ): Response {
         /** @var RegistrationUserDto $registrationUserDto */
         $registrationUserDto = $objectHandler->handleRequestByObject(
@@ -86,6 +89,16 @@ class SecurityController extends AbstractController
         $emailService->sendConfirmationEmail($user);
 
         $entityManager->flush();
+
+        try {
+            $activity->customerSignedIn(
+                $user,
+                true,
+                'email',
+                $this->generateUrl('app_admin_user_detail', ['source' => 'web', 'id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            );
+        } catch (\Throwable) {
+        }
 
         return $this->json([
             'message' => [
