@@ -11,7 +11,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Відправка повідомлень у Telegram-групу менеджерів.
  *
  * Група — «АртБетон • Робоча» з темами: події магазину йдуть у тему «Магазин»,
- * погодинний дайджест — в «Аналітика». Тема не задана — повідомлення падає в
+ * погодинний дайджест — в «Аналітика», усе про ІІ-консультанта (збої, бюджет,
+ * запити оператора з чату) — у «Консультант». Тема не задана — повідомлення падає в
  * General, як було до тем.
  *
  * Пише бот заявок (@artbeton_zayavky_bot, TELEGRAM_MANAGER_BOT_TOKEN): він уже
@@ -22,6 +23,7 @@ final class TelegramNotifier
 {
     public const TOPIC_SHOP = 'shop';
     public const TOPIC_ANALYTICS = 'analytics';
+    public const TOPIC_CONSULTANT = 'consultant';
 
     private readonly string $managerBotToken;
 
@@ -33,6 +35,7 @@ final class TelegramNotifier
         #[\SensitiveParameter] string $groupBotToken = '',
         private readonly string $shopTopicId = '',
         private readonly string $analyticsTopicId = '',
+        private readonly string $consultantTopicId = '',
     ) {
         $this->managerBotToken = '' !== $groupBotToken ? $groupBotToken : $managerBotToken;
     }
@@ -44,7 +47,7 @@ final class TelegramNotifier
 
     /**
      * @param string $htmlText готовий HTML (parse_mode=HTML). Динамічні дані ескейпити через self::esc()
-     * @param string $topic    self::TOPIC_SHOP або self::TOPIC_ANALYTICS
+     * @param string $topic    self::TOPIC_SHOP, self::TOPIC_ANALYTICS або self::TOPIC_CONSULTANT
      */
     public function send(string $htmlText, string $topic = self::TOPIC_SHOP): bool
     {
@@ -82,7 +85,11 @@ final class TelegramNotifier
     /** null — General: Telegram відкидає повідомлення з неіснуючою темою, тож сміття не передаємо. */
     private function topicId(string $topic): ?int
     {
-        $id = self::TOPIC_ANALYTICS === $topic ? $this->analyticsTopicId : $this->shopTopicId;
+        $id = match ($topic) {
+            self::TOPIC_ANALYTICS => $this->analyticsTopicId,
+            self::TOPIC_CONSULTANT => $this->consultantTopicId,
+            default => $this->shopTopicId,
+        };
 
         return ctype_digit($id) && (int) $id > 0 ? (int) $id : null;
     }

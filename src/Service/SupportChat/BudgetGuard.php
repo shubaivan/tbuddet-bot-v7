@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\SupportChat;
 
-use App\Service\Analytics\TelegramNotifier;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**
  * Global daily spend ceiling for the AI consultant (in UAH). When the day's
  * spend exceeds the cap, the consultant is temporarily disabled so we don't
  * "burn" the client's budget, and the managers get a one-time Telegram alert
- * in the «Заявки ArtBeton» group.
+ * in the «Консультант» topic (ConsultantAlert).
  *
  * Accumulation lives in a persistent cache pool (survives deploy/cache:clear),
  * bucketed by calendar day.
@@ -21,7 +20,7 @@ final class BudgetGuard
     public function __construct(
         private readonly CacheItemPoolInterface $supportChatCache,
         private readonly float $dailyBudgetUah,
-        private readonly TelegramNotifier $notifier,
+        private readonly ConsultantAlert $alert,
     ) {
     }
 
@@ -33,18 +32,7 @@ final class BudgetGuard
     /** One-time (per day) manager alert that the ceiling was reached. */
     public function notifyExceededOnce(): void
     {
-        $flag = $this->supportChatCache->getItem('budget_notified_'.date('Ymd'));
-        if ($flag->isHit()) {
-            return;
-        }
-        $flag->set(1)->expiresAfter(172800);
-        $this->supportChatCache->save($flag);
-
-        $limit = number_format($this->dailyBudgetUah, 0, '.', ' ');
-        $this->notifier->send(
-            '⚠️ Досягнуто денну стелю витрат на ІІ-консультанта ('.TelegramNotifier::esc($limit).' грн).'
-            ."\nКонсультант тимчасово вимкнено до завтра. Заявки та дзвінки працюють як звичайно."
-        );
+        $this->alert->budgetExceeded(number_format($this->dailyBudgetUah, 0, '.', ' '));
     }
 
     private function key(): string

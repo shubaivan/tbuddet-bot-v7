@@ -63,6 +63,8 @@ services:
             $groupBotToken: '%env(TELEGRAM_MANAGER_BOT_TOKEN)%'
             $shopTopicId: '%env(TELEGRAM_MANAGER_TOPIC_SHOP)%'
             $analyticsTopicId: '%env(TELEGRAM_MANAGER_TOPIC_ANALYTICS)%'
+            $consultantTopicId: '%env(TELEGRAM_MANAGER_TOPIC_CONSULTANT)%'
+            $alertMention: '%env(TELEGRAM_MANAGER_ALERT_MENTION)%'
             # Search Console (read-only) for the monthly SEO report. The service
             # account must be a user of the artbeton.market property.
             $gscKeyFile: '%env(GSC_SERVICE_ACCOUNT_FILE)%'

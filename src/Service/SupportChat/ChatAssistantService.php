@@ -21,7 +21,11 @@ class ChatAssistantService
     /** Sentinel the model appends when it wants to hand off to a human. */
     private const OPERATOR_SENTINEL = '[[OPERATOR]]';
 
-    private const FAQ_RELATIVE_PATH = 'config/support_chat/faq.uk.md';
+    /** Бази знань по черзі: власна Art Beton Market, потім завод «Буддеталь» (рішення Івана 09.10.2026 — одна спільна база). */
+    private const FAQ_RELATIVE_PATHS = [
+        'config/support_chat/faq.uk.md',
+        'config/support_chat/faq.buddetal.uk.md',
+    ];
 
     private const MAX_TOKENS = 700;
     private const MAX_HISTORY = 20;   // last N messages kept in context
@@ -34,6 +38,7 @@ class ChatAssistantService
         private readonly string $supportChatModel,
         private readonly string $projectDir,
         private readonly LoggerInterface $logger,
+        private readonly ConsultantAlert $alert,
     ) {
         $this->client = new Client(apiKey: $this->anthropicApiKey);
     }
@@ -67,13 +72,17 @@ class ChatAssistantService
                 maxTokens: self::MAX_TOKENS,
                 messages: $messages,
                 model: $this->supportChatModel,
-                system: $this->buildSystemPrompt(),
+                // Промпт із двома базами — ~20 тис. токенів: кешуємо, інакше кожне
+                // питання коштувало б повну ціну всієї бази. Тому промпт має бути
+                // байт-в-байт стабільним (жодних дат чи лічильників).
+                system: [['type' => 'text', 'text' => $this->buildSystemPrompt(), 'cache_control' => ['type' => 'ephemeral']]],
             );
 
             $text = $this->extractText($message->content);
             $usage = $this->usage($message);
         } catch (\Throwable $e) {
             $this->logger->error('Support chat: Anthropic call failed.', ['exception' => $e]);
+            $this->alert->failed($e);
 
             return $this->operatorFallback();
         }
@@ -141,7 +150,13 @@ class ChatAssistantService
             - Ти консультуєш ВИКЛЮЧНО з питань магазину Art Beton Market: наша продукція (декоративні
               вироби з високоміцного бетону — вази, вазони, лавки, урни, плитка тощо), характеристики,
               наявність, ціни, доставка, оплата, оформлення й статус замовлення, контакти.
+            - Також консультуєш щодо продукції заводу «Буддеталь» (ЗБВ, товарний бетон і розчини,
+              конструктив, металоконструкції, будматеріали) — другий розділ бази знань. Це окремий
+              виробник: його товари не продаються в кошику artbeton.market, ціни — з прайсу заводу
+              без доставки, а замовлення й прорахунок — через менеджерів заводу (контакти в розділі).
+              Не змішуй: не приписуй заводу вироби Art Beton і навпаки.
             - Відповідай ТІЛЬКИ на основі бази знань нижче. Не вигадуй фактів, цін, термінів чи характеристик.
+              Позиція є в прайсі — називай ціну прямо. Немає — чесно скажи, що ціна за запитом/за кресленням.
             - На запити НЕ по темі (загальні знання, історія/погода/новини, інші компанії, програмування,
               тексти/вірші/переклади, домашні завдання, медичні/юридичні/фінансові поради, політика, розваги)
               — НЕ відповідай по суті. Ввічливо (1 речення) поверни до теми магазину.
@@ -168,16 +183,21 @@ class ChatAssistantService
 
     private function loadFaq(): string
     {
-        $path = rtrim($this->projectDir, '/').'/'.self::FAQ_RELATIVE_PATH;
-        $faq = is_file($path) ? file_get_contents($path) : '';
+        $parts = [];
+        foreach (self::FAQ_RELATIVE_PATHS as $relative) {
+            $path = rtrim($this->projectDir, '/').'/'.$relative;
+            $faq = is_file($path) ? file_get_contents($path) : '';
 
-        if (false === $faq || '' === trim((string) $faq)) {
-            $this->logger->error('Support chat: FAQ file missing or empty.', ['path' => $path]);
+            if (false === $faq || '' === trim((string) $faq)) {
+                $this->logger->error('Support chat: FAQ file missing or empty.', ['path' => $path]);
 
-            return '(База знань тимчасово недоступна.)';
+                continue;
+            }
+
+            $parts[] = trim((string) $faq);
         }
 
-        return $faq;
+        return [] === $parts ? '(База знань тимчасово недоступна.)' : implode("\n\n", $parts);
     }
 
     /**
@@ -244,7 +264,10 @@ class ChatAssistantService
         $u = $message->usage ?? null;
         $in = (int) (($u->inputTokens ?? null) ?? 0);
         $out = (int) (($u->outputTokens ?? null) ?? 0);
-        $in += (int) ($u->cacheReadInputTokens ?? 0) + (int) ($u->cacheCreationInputTokens ?? 0);
+        // Кеш тарифікується інакше: запис — ×1,25, читання — ×0,1 від звичайного вводу.
+        // Зводимо до «еквівалентних» вхідних токенів, щоб бюджет і щоденна сводка
+        // показували реальні гроші, а не в десять разів більше.
+        $in += (int) round(1.25 * (int) ($u->cacheCreationInputTokens ?? 0) + 0.1 * (int) ($u->cacheReadInputTokens ?? 0));
 
         return ['input' => $in, 'output' => $out];
     }

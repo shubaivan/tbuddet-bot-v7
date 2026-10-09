@@ -7,6 +7,7 @@ use App\Controller\API\Request\ChatOperatorRequest;
 use App\Service\Analytics\TelegramNotifier;
 use App\Service\SupportChat\BudgetGuard;
 use App\Service\SupportChat\ChatAssistantService;
+use App\Service\SupportChat\ConsultantUsage;
 use App\Service\SupportChat\PricingService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -32,6 +33,7 @@ class ChatController extends AbstractController
         RateLimiterFactory $chatDailyLimiter,
         BudgetGuard $budget,
         PricingService $pricing,
+        ConsultantUsage $usage,
         LoggerInterface $logger,
     ): JsonResponse {
         $ip = $request->getClientIp() ?? 'anon';
@@ -68,13 +70,16 @@ class ChatController extends AbstractController
 
         $result = $assistant->reply($payload->messages);
         $budget->add($pricing->costUah($result['usage']['input'], $result['usage']['output']));
+        if ($result['usage']['input'] > 0) {
+            $usage->reply($result['usage']['input'], $result['usage']['output']);
+        }
 
         return $this->json($result);
     }
 
     /**
      * "Connect an operator" handoff. Body: {"name","phone","messages":[...]}.
-     * Summarizes the conversation and posts the lead to the «Заявки ArtBeton» group.
+     * Summarizes the conversation and posts the lead to the «Консультант» topic of the managers group.
      */
     #[Route('/operator', name: 'public_chat_operator', methods: [Request::METHOD_POST])]
     public function operator(
@@ -85,6 +90,7 @@ class ChatController extends AbstractController
         BudgetGuard $budget,
         PricingService $pricing,
         TelegramNotifier $notifier,
+        ConsultantUsage $usage,
         LoggerInterface $logger,
     ): JsonResponse {
         $ip = $request->getClientIp() ?? 'anon';
@@ -103,7 +109,11 @@ class ChatController extends AbstractController
             $res = $assistant->summarize($payload->messages);
             $summary = trim($res['summary']);
             $budget->add($pricing->costUah($res['usage']['input'], $res['usage']['output']));
+            if ($res['usage']['input'] > 0) {
+                $usage->reply($res['usage']['input'], $res['usage']['output']);
+            }
         }
+        $usage->operatorRequest();
 
         $text = "🟢 <b>Запит на оператора з чату (artbeton.market)</b>\n"
             .'👤 '.TelegramNotifier::esc($payload->name)."\n"
@@ -112,7 +122,7 @@ class ChatController extends AbstractController
             $text .= "\n\n📝 ".TelegramNotifier::esc($summary);
         }
 
-        $sent = $notifier->send($text);
+        $sent = $notifier->send($text, TelegramNotifier::TOPIC_CONSULTANT);
         if (!$sent) {
             $logger->error('Support chat: operator handoff notify failed.', ['name' => $payload->name]);
         }
