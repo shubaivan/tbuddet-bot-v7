@@ -63,6 +63,11 @@ services:
             $groupBotToken: '%env(TELEGRAM_MANAGER_BOT_TOKEN)%'
             $shopTopicId: '%env(TELEGRAM_MANAGER_TOPIC_SHOP)%'
             $analyticsTopicId: '%env(TELEGRAM_MANAGER_TOPIC_ANALYTICS)%'
+            # Search Console (read-only) for the monthly SEO report. The service
+            # account must be a user of the artbeton.market property.
+            $gscKeyFile: '%env(GSC_SERVICE_ACCOUNT_FILE)%'
+            $gscSiteUrl: '%env(GSC_SITE_URL)%'
+            $ga4PropertyId: '%env(GA4_PROPERTY_ID)%'
 
     # Nutgram conversation/user/global state cache. Not tagged as cache.pool —
     # we don't want it cleared by `cache:clear` or wiped by the deploy step
