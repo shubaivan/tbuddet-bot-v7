@@ -8,7 +8,7 @@ use App\Service\Analytics\ActivityService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Attribute\Route;
 class EventController extends AbstractController
 {
     #[Route('', name: 'public_activity_event', methods: [Request::METHOD_POST])]
-    public function event(Request $request, ActivityService $activity, RateLimiterFactory $eventLimiter): JsonResponse
+    public function event(Request $request, ActivityService $activity, RateLimiterFactoryInterface $eventLimiter): JsonResponse
     {
         $ip = $request->getClientIp() ?? 'anon';
         if (!$eventLimiter->create($ip)->consume(1)->isAccepted()) {

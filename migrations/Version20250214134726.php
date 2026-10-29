@@ -55,7 +55,7 @@ final class Version20250214134726 extends AbstractMigration implements Migration
         $this->addSql('ALTER TABLE product ALTER price TYPE INT DEFAULT NULL');
     }
 
-    public function setContainer(ContainerInterface $container = null): void
+    public function setContainer(?ContainerInterface $container = null): void
     {
         $this->container = $container;
     }

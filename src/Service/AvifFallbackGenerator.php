@@ -57,7 +57,7 @@ class AvifFallbackGenerator
         ob_start();
         $ok = imagejpeg($image, null, self::FALLBACK_QUALITY);
         $jpegContents = ob_get_clean();
-        imagedestroy($image);
+        unset($image);
 
         if (!$ok || $jpegContents === false || $jpegContents === '') {
             $this->logger->warning('AvifFallback: imagejpeg returned empty', ['path' => $sourcePath]);

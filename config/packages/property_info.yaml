@@ -1,0 +1,4 @@
+framework:
+    property_info:
+        # false keeps the pre-7.3 behaviour (and silences the 7.3 deprecation); flip to true deliberately.
+        with_constructor_extractor: false
