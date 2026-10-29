@@ -14,7 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route(path: 'api/v1/chat')]
@@ -29,8 +29,8 @@ class ChatController extends AbstractController
         #[MapRequestPayload] ChatMessageRequest $payload,
         Request $request,
         ChatAssistantService $assistant,
-        RateLimiterFactory $chatLimiter,
-        RateLimiterFactory $chatDailyLimiter,
+        RateLimiterFactoryInterface $chatLimiter,
+        RateLimiterFactoryInterface $chatDailyLimiter,
         BudgetGuard $budget,
         PricingService $pricing,
         ConsultantUsage $usage,
@@ -86,7 +86,7 @@ class ChatController extends AbstractController
         #[MapRequestPayload] ChatOperatorRequest $payload,
         Request $request,
         ChatAssistantService $assistant,
-        RateLimiterFactory $chatLimiter,
+        RateLimiterFactoryInterface $chatLimiter,
         BudgetGuard $budget,
         PricingService $pricing,
         TelegramNotifier $notifier,

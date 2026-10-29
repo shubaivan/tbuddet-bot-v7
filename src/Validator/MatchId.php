@@ -17,7 +17,7 @@ class MatchId extends Constraint
         ?string $property = null,
         array $extraCriteria = [],
         mixed $options = null,
-        array $groups = null,
+        ?array $groups = null,
         mixed $payload = null,
         ?string $message = null
     ) {

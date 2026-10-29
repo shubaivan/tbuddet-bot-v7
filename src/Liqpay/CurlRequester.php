@@ -40,7 +40,7 @@ class CurlRequester
         $this->logger->info('_server_response_code', ['response' => $this->_server_response_code]);
         $this->curl_error = curl_error($ch);
         $this->logger->info('curl_error', ['curl_error' => $this->curl_error]);
-        curl_close($ch);
+        unset($ch);
         return $server_output;
     }
 

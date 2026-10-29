@@ -74,7 +74,7 @@ class FilePathUploadListener
                     ob_start();
                     imagejpeg($image, null, 88);
                     $converted = ob_get_clean();
-                    imagedestroy($image);
+                    unset($image);
                     if ($converted !== false && $converted !== '') {
                         $contents = $converted;
                         $ext = 'jpg';
