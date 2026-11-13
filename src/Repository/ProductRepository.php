@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\ProductListRequest;
 use App\Entity\Product;
+use App\Service\Search\ProductSearchQuery;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -22,7 +23,14 @@ class ProductRepository extends ServiceEntityRepository
 {
     use DataTablesApproachRepository;
 
+    private const SEARCH_ALL = 'all';
+    private const SEARCH_ANY = 'any';
+    private const SEARCH_TRGM = 'trgm';
+
     private LoggerInterface $logger;
+
+    /** @var array<string, string> */
+    private array $searchModeCache = [];
 
     public function __construct(ManagerRegistry $registry, LoggerInterface $logger)
     {
@@ -59,9 +67,8 @@ class ProductRepository extends ServiceEntityRepository
     ) {
         $connection = $this->getEntityManager()->getConnection();
 
-        if ($listRequest->getFullTextSearch()) {
-            $handleSearchValue = $this->handleSearchValue($listRequest->getFullTextSearch());
-        }
+        $search = new ProductSearchQuery($listRequest->getFullTextSearch());
+        $searchMode = $search->isEmpty() ? null : $this->resolveSearchMode($search);
 
         $from = 'from product as c';
         $select = 'select';
@@ -101,16 +108,20 @@ class ProductRepository extends ServiceEntityRepository
             $from .= ' left join public.product_category pc on c.id = pc.product_id';
         }
 
-        if ($listRequest->getFullTextSearch()) {
+        if ($searchMode === self::SEARCH_TRGM) {
             if (!$total && !$minPrice && !$maxPrice) {
-                $select .= ' ts_rank_cd(
-                   c.common_fts,
-                   to_tsquery(:search)) AS rank,
-                   c.*';
+                $select .= ' word_similarity(:search, lower(c.product_name::text)) AS rank, c.*';
                 $orderBy = 'order by rank desc, updated_at desc';
             }
-            $where[] = 'c.common_fts @@ to_tsquery(:search)';
-            $bind['search'] = $handleSearchValue;
+            $where[] = ':search <% lower(c.product_name::text)';
+            $bind['search'] = $search->plain();
+        } elseif ($searchMode !== null) {
+            if (!$total && !$minPrice && !$maxPrice) {
+                $select .= " ts_rank_cd(c.common_fts, to_tsquery('simple', :search)) AS rank, c.*";
+                $orderBy = 'order by rank desc, updated_at desc';
+            }
+            $where[] = "c.common_fts @@ to_tsquery('simple', :search)";
+            $bind['search'] = $searchMode === self::SEARCH_ALL ? $search->toTsQueryAll() : $search->toTsQueryAny();
         } else {
             $select .= ' DISTINCT c.* ';
         }
@@ -311,8 +322,8 @@ class ProductRepository extends ServiceEntityRepository
         $bindParams = [];
         $condition = ' WHERE ';
         $conditions = [];
-        if ($parameterBag->get('search') && !$total) {
-            $handleSearchValue = $this->handleSearchValue($parameterBag->get('search'));
+        $handleSearchValue = $parameterBag->get('search') ? $this->handleSearchValue($parameterBag->get('search')) : '';
+        if ($handleSearchValue !== '' && !$total) {
             $or[] = 'TSMATCH(o.common_fts, TO_TSQUERY(:var_search)) = TRUE';
 
             $bindParams['var_search'] = $handleSearchValue;
@@ -369,9 +380,37 @@ class ProductRepository extends ServiceEntityRepository
     public function handleSearchValue(
         $searchField
     ): string {
-        $result = preg_replace('!\s+!', ' ', $searchField);
-        $result = explode(' ', $result);
+        // Sanitised OR-of-prefixes; raw input here used to 500 on "вазон!".
+        return (new ProductSearchQuery((string) $searchField))->toTsQueryAny();
+    }
 
-        return implode(':*|', $result) . ':*';
+    /**
+     * Pick how to match a storefront query, once per query string:
+     * all terms (precise) -> any term (broader) -> trigram on the name (typos).
+     */
+    private function resolveSearchMode(ProductSearchQuery $search): string
+    {
+        $key = $search->plain();
+        if (isset($this->searchModeCache[$key])) {
+            return $this->searchModeCache[$key];
+        }
+
+        $connection = $this->getEntityManager()->getConnection();
+        $count = static fn (string $tsQuery): int => (int) $connection->fetchOne(
+            "SELECT COUNT(*) FROM product WHERE common_fts @@ to_tsquery('simple', :q)",
+            ['q' => $tsQuery]
+        );
+
+        if ($count($search->toTsQueryAll()) > 0) {
+            $mode = self::SEARCH_ALL;
+        } elseif (count($search->terms()) > 1 && $count($search->toTsQueryAny()) > 0) {
+            $mode = self::SEARCH_ANY;
+        } else {
+            // Session-level threshold for the <% operator (default 0.6 is too strict for short typos).
+            $connection->executeQuery("SELECT set_config('pg_trgm.word_similarity_threshold', '0.45', false)");
+            $mode = self::SEARCH_TRGM;
+        }
+
+        return $this->searchModeCache[$key] = $mode;
     }
 }
