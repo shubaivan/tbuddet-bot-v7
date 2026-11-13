@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
         render: (data, type) => {
             if (type !== 'display') return data;
             const map = {
+                'awaiting_invoice_payment': ['status-processing', 'Очікує оплати по рахунку'],
                 'new':        ['status-new',        'Нове'],
                 'processing': ['status-processing', 'В обробці'],
                 'shipped':    ['status-shipped',    'Відправлено'],
@@ -68,6 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
         render: (data, type) => {
             if (type !== 'display') return data;
             if (data === 'success') return '<span style="color:#2e7d32;font-weight:600;">Оплачено</span>';
+            if (data === 'invoice_wait') return '<span style="color:#b45309;font-weight:600;">Рахунок: очікує</span>';
             if (data) return '<span style="color:#c62828;">' + data + '</span>';
             return '<span style="color:#999;">Очікує</span>';
         },

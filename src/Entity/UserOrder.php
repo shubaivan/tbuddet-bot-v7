@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\EntityTrait\CreatedUpdatedAtAwareTrait;
 use App\Entity\Enum\OrderStatusEnum;
+use App\Entity\Enum\PaymentMethodEnum;
 use App\Repository\UserOrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -131,6 +132,47 @@ class UserOrder
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $nova_poshta_tracking_number = null;
+
+    /** card (LiqPay) | invoice (bank transfer by «Рахунок на оплату»). */
+    #[ORM\Column(name: 'payment_method', type: 'string', length: 20, options: ['default' => 'card'])]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private string $payment_method = 'card';
+
+    #[ORM\Column(name: 'invoice_number', type: 'string', length: 32, unique: true, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $invoice_number = null;
+
+    /**
+     * Payer («Платник») snapshot entered at checkout: name, tax_id, address,
+     * contact_person, phone, email, vat_ipn (only for VAT payers), iban.
+     * See App\Invoice\InvoicePayer.
+     */
+    #[ORM\Column(name: 'invoice_payer', type: 'json', nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?array $invoice_payer = null;
+
+    #[ORM\Column(name: 'invoice_issued_at', type: 'datetime_immutable', nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?\DateTimeImmutable $invoice_issued_at = null;
+
+    #[ORM\Column(name: 'invoice_due_date', type: 'date_immutable', nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?\DateTimeImmutable $invoice_due_date = null;
+
+    /**
+     * Snapshot of the invoice goods lines (name, unit, qty, price, sum) taken at
+     * checkout, so a re-rendered PDF never changes when catalogue prices do.
+     */
+    #[ORM\Column(name: 'invoice_lines', type: 'json', nullable: true)]
+    private ?array $invoice_lines = null;
+
+    /** Set when a manager confirms the bank transfer (invoice orders). */
+    #[ORM\Column(name: 'paid_at', type: 'datetime_immutable', nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?\DateTimeImmutable $paid_at = null;
+
+    #[ORM\Column(name: 'paid_by', type: 'string', length: 255, nullable: true)]
+    private ?string $paid_by = null;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\OneToMany(
@@ -413,6 +455,123 @@ class UserOrder
     public function setNovaPoshtaTrackingNumber(?string $nova_poshta_tracking_number): UserOrder
     {
         $this->nova_poshta_tracking_number = $nova_poshta_tracking_number;
+
+        return $this;
+    }
+
+    public function getPaymentMethod(): string
+    {
+        return $this->payment_method;
+    }
+
+    public function setPaymentMethod(string $payment_method): UserOrder
+    {
+        $this->payment_method = $payment_method;
+
+        return $this;
+    }
+
+    public function isInvoicePayment(): bool
+    {
+        return $this->payment_method === PaymentMethodEnum::INVOICE->value;
+    }
+
+    /**
+     * Single definition of "paid": a successful LiqPay callback, or a bank
+     * transfer confirmed by a manager. SQL mirrors this as UserOrderRepository::PAID_SQL.
+     */
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    public function isPaid(): bool
+    {
+        return $this->liq_pay_status === 'success' || $this->paid_at !== null;
+    }
+
+    public function getInvoiceNumber(): ?string
+    {
+        return $this->invoice_number;
+    }
+
+    public function setInvoiceNumber(?string $invoice_number): UserOrder
+    {
+        $this->invoice_number = $invoice_number;
+
+        return $this;
+    }
+
+    public function getInvoicePayer(): array
+    {
+        return $this->invoice_payer ?? [];
+    }
+
+    public function setInvoicePayer(?array $invoice_payer): UserOrder
+    {
+        $this->invoice_payer = $invoice_payer;
+
+        return $this;
+    }
+
+    /** Where the invoice PDF goes: the payer email, falling back to the account email. */
+    public function getInvoiceEmail(): ?string
+    {
+        return ($this->invoice_payer['email'] ?? null) ?: $this->client_user_id?->getEmail();
+    }
+
+    public function getInvoiceIssuedAt(): ?\DateTimeImmutable
+    {
+        return $this->invoice_issued_at;
+    }
+
+    public function setInvoiceIssuedAt(?\DateTimeImmutable $invoice_issued_at): UserOrder
+    {
+        $this->invoice_issued_at = $invoice_issued_at;
+
+        return $this;
+    }
+
+    public function getInvoiceDueDate(): ?\DateTimeImmutable
+    {
+        return $this->invoice_due_date;
+    }
+
+    public function setInvoiceDueDate(?\DateTimeImmutable $invoice_due_date): UserOrder
+    {
+        $this->invoice_due_date = $invoice_due_date;
+
+        return $this;
+    }
+
+    public function getInvoiceLines(): array
+    {
+        return $this->invoice_lines ?? [];
+    }
+
+    public function setInvoiceLines(?array $invoice_lines): UserOrder
+    {
+        $this->invoice_lines = $invoice_lines;
+
+        return $this;
+    }
+
+    public function getPaidAt(): ?\DateTimeImmutable
+    {
+        return $this->paid_at;
+    }
+
+    public function setPaidAt(?\DateTimeImmutable $paid_at): UserOrder
+    {
+        $this->paid_at = $paid_at;
+
+        return $this;
+    }
+
+    public function getPaidBy(): ?string
+    {
+        return $this->paid_by;
+    }
+
+    public function setPaidBy(?string $paid_by): UserOrder
+    {
+        $this->paid_by = $paid_by;
 
         return $this;
     }

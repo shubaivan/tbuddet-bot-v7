@@ -8,6 +8,11 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Constraints\Type;
 use App\Entity\PurchaseProduct;
+use App\Entity\Enum\PaymentMethodEnum;
+use App\Invoice\InvoicePayer;
+use Symfony\Component\Validator\Constraints\Callback;
+use Symfony\Component\Validator\Constraints\Choice;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[UserLanguage]
 class CheckoutRequest
@@ -33,6 +38,71 @@ class CheckoutRequest
     /** Optional promocode supplied by the buyer. Validated server-side before being applied. */
     #[Type('string')]
     private ?string $promocode = null;
+
+    /** card (LiqPay, default) | invoice («Рахунок на оплату» for legal entities). */
+    #[Choice(choices: ['card', 'invoice'])]
+    private string $paymentMethod = 'card';
+
+    /** Payer requisites, required for paymentMethod=invoice. Shape: see InvoicePayer::fromArray(). */
+    #[Type('array')]
+    private ?array $payer = null;
+
+    /** Save the payer requisites on the account to prefill the next invoice. */
+    #[Type('bool')]
+    private bool $rememberPayer = false;
+
+    #[Callback]
+    public function validatePayer(ExecutionContextInterface $context): void
+    {
+        if ($this->paymentMethod !== PaymentMethodEnum::INVOICE->value) {
+            return;
+        }
+
+        foreach (InvoicePayer::fromArray($this->payer ?? [])->validate() as $field => $message) {
+            $context->buildViolation($message)->atPath('payer.' . $field)->addViolation();
+        }
+    }
+
+    public function getPaymentMethod(): string
+    {
+        return $this->paymentMethod;
+    }
+
+    public function setPaymentMethod(string $paymentMethod): CheckoutRequest
+    {
+        $this->paymentMethod = $paymentMethod;
+
+        return $this;
+    }
+
+    public function isInvoice(): bool
+    {
+        return $this->paymentMethod === PaymentMethodEnum::INVOICE->value;
+    }
+
+    public function getPayer(): ?array
+    {
+        return $this->payer;
+    }
+
+    public function setPayer(?array $payer): CheckoutRequest
+    {
+        $this->payer = $payer;
+
+        return $this;
+    }
+
+    public function isRememberPayer(): bool
+    {
+        return $this->rememberPayer;
+    }
+
+    public function setRememberPayer(bool $rememberPayer): CheckoutRequest
+    {
+        $this->rememberPayer = $rememberPayer;
+
+        return $this;
+    }
 
     public function getPurchaseProductIds()
     {

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head><meta charset="UTF-8"><title>Рахунок на оплату № {{ order.invoiceNumber }}</title></head>
+<body style="font-family: Arial, Helvetica, sans-serif; background: #f4f4f4; margin: 0; padding: 24px; color: #1a1a1a;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="background: #fff; border-radius: 8px; max-width: 560px; padding: 32px;">
+    <tr><td>
+        <h1 style="color: #c08737; font-size: 22px; margin: 0 0 16px 0;">Рахунок на оплату № {{ order.invoiceNumber }}</h1>
+        <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
+            Дякуємо за замовлення #{{ order.id }}! Рахунок для <strong>{{ payer.name }}</strong> — у вкладенні (PDF).
+        </p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8f4ee; border: 1px solid #e8dcc4; border-radius: 6px; margin: 0 0 20px 0;">
+            <tr><td style="padding: 16px 20px; font-size: 14px; line-height: 1.7;">
+                <div><span style="color: #777;">Сума до сплати:</span> <strong>{{ order.totalAmount|number_format(2, ',', ' ') }} грн</strong></div>
+                {% if order.invoiceDueDate %}<div><span style="color: #777;">Сплатити до:</span> <strong>{{ order.invoiceDueDate|date('d.m.Y') }}</strong></div>{% endif %}
+                <div><span style="color: #777;">Призначення платежу:</span> Оплата згідно рахунку № {{ order.invoiceNumber }}</div>
+            </td></tr>
+        </table>
+        <p style="font-size: 14px; line-height: 1.6; margin: 0 0 12px 0;">
+            Ми відвантажимо товар, щойно кошти надійдуть на наш рахунок, і повідомимо вас листом.
+            Рахунок також можна завантажити у <a href="{{ profileUrl }}" style="color: #c08737;">профілі</a>.
+        </p>
+        <p style="font-size: 13px; color: #777; margin: 20px 0 0 0;">Арт Бетон Маркет · artbeton.market</p>
+    </td></tr>
+</table>
+</body>
+</html>

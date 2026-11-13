@@ -154,3 +154,20 @@ services:
     App\Migrations\Factory\MigrationFactoryDecorator:
         decorates: 'doctrine.migrations.migrations_factory'
         arguments: ['@.inner', '@service_container']
+
+    # Seller requisites for «Рахунок на оплату» — values live in INVOICE_* env vars (.env block).
+    App\Invoice\SellerRequisites:
+        arguments:
+            $name: '%env(string:INVOICE_SELLER_NAME)%'
+            $edrpou: '%env(string:INVOICE_SELLER_EDRPOU)%'
+            $iban: '%env(string:INVOICE_SELLER_IBAN)%'
+            $bank: '%env(string:INVOICE_SELLER_BANK)%'
+            $mfo: '%env(string:INVOICE_SELLER_MFO)%'
+            $vatStatus: '%env(string:INVOICE_SELLER_VAT_STATUS)%'
+            $vatIpn: '%env(string:INVOICE_SELLER_VAT_IPN)%'
+            $signatory: '%env(string:INVOICE_SELLER_SIGNATORY)%'
+            $phone: '%env(string:INVOICE_SELLER_PHONE)%'
+            $email: '%env(string:INVOICE_SELLER_EMAIL)%'
+            $address: '%env(string:INVOICE_SELLER_ADDRESS)%'
+            $paymentTermDays: '%env(string:INVOICE_PAYMENT_TERM_DAYS)%'
+            $numberPrefix: '%env(string:INVOICE_NUMBER_PREFIX)%'

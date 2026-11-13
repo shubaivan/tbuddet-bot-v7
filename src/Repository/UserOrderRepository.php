@@ -27,7 +27,7 @@ class UserOrderRepository extends ServiceEntityRepository
 
     /**
      * Count of orders the buyer has actually paid for — an order counts as paid
-     * when liq_pay_status = 'success' (the same definition used across the admin
+     * when liq_pay_status = 'success' or paid_at is set (the same definition used across the admin
      * panel and stats queries). Pending/unpaid/cancelled orders are ignored.
      *
      * Pass exactly one of $user / $telegramUser. Drives first-order-offer
@@ -41,7 +41,7 @@ class UserOrderRepository extends ServiceEntityRepository
 
         $qb = $this->createQueryBuilder('o')
             ->select('COUNT(o.id)')
-            ->where("o.liq_pay_status = 'success'");
+            ->where("(o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL)");
 
         if ($user !== null) {
             $qb->andWhere('o.client_user_id = :user')->setParameter('user', $user);
@@ -127,7 +127,9 @@ class UserOrderRepository extends ServiceEntityRepository
                 o.nova_poshta_tracking_number,
                 o.delivery_city,
                 o.delivery_department,
-                o.liq_pay_status,
+                CASE WHEN o.paid_at IS NOT NULL THEN \'success\'
+                     WHEN o.payment_method = \'invoice\' AND o.liq_pay_status IS NULL THEN \'invoice_wait\'
+                     ELSE o.liq_pay_status END AS liq_pay_status,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username) as t_user_info,
                 GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone, \' \', cui.email) as c_user_info,
                 IDENTITY(o.telegram_user_id) as t_user_id,
@@ -177,7 +179,9 @@ class UserOrderRepository extends ServiceEntityRepository
             }
             if (!empty($params['filter_payment'])) {
                 if ($params['filter_payment'] === 'pending') {
-                    $conditions[] = 'o.liq_pay_status IS NULL';
+                    $conditions[] = 'o.liq_pay_status IS NULL AND o.paid_at IS NULL';
+                } elseif ($params['filter_payment'] === 'success') {
+                    $conditions[] = "(o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL)";
                 } else {
                     $conditions[] = 'o.liq_pay_status = :filter_payment';
                     $bindParams['filter_payment'] = $params['filter_payment'];
@@ -192,9 +196,10 @@ class UserOrderRepository extends ServiceEntityRepository
                 $bindParams['filter_date_to'] = $params['filter_date_to'] . ' 23:59:59';
             }
             // Hide unpaid attempts (default-on for the admin order list).
-            // An order counts as "paid" when liq_pay_status is 'success'.
+            // "Paid" = LiqPay success OR a manager-confirmed bank transfer (paid_at).
+            // Invoice orders stay visible while awaiting payment: managers act on them.
             if (!empty($params['filter_hide_unpaid']) && $params['filter_hide_unpaid'] === '1') {
-                $conditions[] = "o.liq_pay_status = 'success'";
+                $conditions[] = "(o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL OR o.payment_method = 'invoice')";
             }
             if (!empty($params['filter_source'])) {
                 if ($params['filter_source'] === 'tg') {

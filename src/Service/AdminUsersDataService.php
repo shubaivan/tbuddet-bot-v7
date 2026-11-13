@@ -66,8 +66,8 @@ class AdminUsersDataService
                 tu.created_at,
                 tu.updated_at AS last_visit,
                 COUNT(o.id) AS orders_total_count,
-                COUNT(o.id) FILTER (WHERE o.liq_pay_status = \'success\') AS orders_paid_count,
-                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount,
+                COUNT(o.id) FILTER (WHERE (o.liq_pay_status = \'success\' OR o.paid_at IS NOT NULL)) AS orders_paid_count,
+                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE (o.liq_pay_status = \'success\' OR o.paid_at IS NOT NULL)), 0) AS orders_paid_amount,
                 COALESCE(MAX(c.cnt), 0) AS cart_count,
                 COALESCE(MAX(c.amount), 0) AS cart_amount,
                 MAX(c.items) AS cart_items
@@ -102,8 +102,8 @@ class AdminUsersDataService
                 cu.created_at,
                 cu.updated_at AS last_visit,
                 COUNT(o.id) AS orders_total_count,
-                COUNT(o.id) FILTER (WHERE o.liq_pay_status = \'success\') AS orders_paid_count,
-                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE o.liq_pay_status = \'success\'), 0) AS orders_paid_amount,
+                COUNT(o.id) FILTER (WHERE (o.liq_pay_status = \'success\' OR o.paid_at IS NOT NULL)) AS orders_paid_count,
+                COALESCE(SUM(NULLIF(o.total_amount, \'\')::numeric) FILTER (WHERE (o.liq_pay_status = \'success\' OR o.paid_at IS NOT NULL)), 0) AS orders_paid_amount,
                 COALESCE(MAX(c.cnt), 0) AS cart_count,
                 COALESCE(MAX(c.amount), 0) AS cart_amount,
                 MAX(c.items) AS cart_items
