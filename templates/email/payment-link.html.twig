@@ -31,7 +31,8 @@
                                 {{ order.description|nl2br }}
                             </div>
                         {% endif %}
-                        {% if order.deliveryCity %}
+                        {# Доставка по місту вже є рядком в описі замовлення (order.description). #}
+                        {% if order.deliveryCity and not order.cityDelivery %}
                             <div style="margin-bottom: 6px; padding-top: 10px; border-top: 1px solid #e8dcc4;">
                                 <span style="color: #777;">Доставка:</span>
                                 {{ order.deliveryCity }}{% if order.deliveryDepartment %}, {{ order.deliveryDepartment }}{% endif %}

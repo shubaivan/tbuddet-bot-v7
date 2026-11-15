@@ -126,7 +126,7 @@ class UserOrderRepository extends ServiceEntityRepository
                 MAX(CASE WHEN tu.id IS NOT NULL THEN \'tg\' ELSE \'web\' END) as purchase_source,
                 o.nova_poshta_tracking_number,
                 o.delivery_city,
-                o.delivery_department,
+                COALESCE(o.delivery_department, o.delivery_address) as delivery_department,
                 o.liq_pay_status,
                 GROUP_CONCAT(tu.phone_number, \' \', tu.first_name, \' \', tu.last_name, \' \', tu.username) as t_user_info,
                 GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone, \' \', cui.email) as c_user_info,
@@ -154,6 +154,7 @@ class UserOrderRepository extends ServiceEntityRepository
             $or[] = 'ILIKE(o.nova_poshta_tracking_number, :var_search) = TRUE';
             $or[] = 'ILIKE(o.delivery_city, :var_search) = TRUE';
             $or[] = 'ILIKE(o.delivery_department, :var_search) = TRUE';
+            $or[] = 'ILIKE(o.delivery_address, :var_search) = TRUE';
             $or[] = 'ILIKE(o.liq_pay_status, :var_search) = TRUE';
 
             $or[] = 'ILIKE(tu.phone_number, :var_search) = TRUE';

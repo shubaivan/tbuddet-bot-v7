@@ -34,6 +34,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Service\Delivery\CityDelivery;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 #[Route(path: 'api/v1/cart')]
@@ -232,6 +233,14 @@ class ShoppingCartController extends AbstractController
         ]);
     }
 
+    /** Способи доставки для checkout: ціна й місто доставки по місту — лише звідси (env). */
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/delivery/options', name: 'cart_delivery_options', methods: [Request::METHOD_GET])]
+    public function deliveryOptions(LocalizationService $localizationService, CityDelivery $cityDelivery): JsonResponse
+    {
+        return $this->json(['city_delivery' => $cityDelivery->options($localizationService->getLanguage())]);
+    }
+
     #[isGranted(RoleEnum::USER->value)]
     #[Route('checkout', name: 'checkout_action', methods: [Request::METHOD_POST])]
     public function checkoutAction(
@@ -242,11 +251,35 @@ class ShoppingCartController extends AbstractController
         LocalizationService $localizationService,
         CartTotalCalculator $cartTotalCalculator,
         PromocodeService $promocodeService,
-        ActivityService $activity
+        ActivityService $activity,
+        CityDelivery $cityDelivery,
     ): JsonResponse
     {
         $language = $localizationService->getLanguage();
         $purchaseProductIds = $checkoutRequest->getPurchaseProductIds();
+
+        // Спосіб доставки. Старий фронт його не шле — тоді НП, якщо є місто, інакше самовивіз.
+        $deliveryMethod = $checkoutRequest->getDeliveryMethod()
+            ?? ($checkoutRequest->getDeliveryCity() ? 'nova_poshta' : 'pickup');
+        $deliveryAmount = 0;
+        $deliveryAddress = null;
+        if (CityDelivery::METHOD === $deliveryMethod) {
+            if (!$cityDelivery->isAvailable($language)) {
+                return $this->json([
+                    'error' => 'delivery_unavailable',
+                    'error_message' => 'Доставка по місту зараз недоступна. Оберіть Нову Пошту або самовивіз.',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            $addressError = $cityDelivery->validateAddress($checkoutRequest->getDeliveryAddress());
+            if (null !== $addressError) {
+                return $this->json([
+                    'error' => 'delivery_address_invalid',
+                    'error_message' => $addressError,
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $deliveryAddress = $cityDelivery->normalizeAddress((string) $checkoutRequest->getDeliveryAddress());
+            $deliveryAmount = $cityDelivery->price();
+        }
 
         // Subtotal uses the shared calculator so the /promocode/validate preview
         // and this final apply step always agree on the number.
@@ -278,10 +311,17 @@ class ShoppingCartController extends AbstractController
 
         $userOrder = new UserOrder();
         $userOrder->setClientUserId($user);
-        $userOrder->setDeliveryCity($checkoutRequest->getDeliveryCity());
-        $userOrder->setDeliveryCityRef($checkoutRequest->getDeliveryCityRef());
-        $userOrder->setDeliveryDepartment($checkoutRequest->getDeliveryDepartment());
-        $userOrder->setDeliveryDepartmentRef($checkoutRequest->getDeliveryDepartmentRef());
+        $userOrder->setDeliveryMethod($deliveryMethod);
+        if ('nova_poshta' === $deliveryMethod) {
+            $userOrder->setDeliveryCity($checkoutRequest->getDeliveryCity());
+            $userOrder->setDeliveryCityRef($checkoutRequest->getDeliveryCityRef());
+            $userOrder->setDeliveryDepartment($checkoutRequest->getDeliveryDepartment());
+            $userOrder->setDeliveryDepartmentRef($checkoutRequest->getDeliveryDepartmentRef());
+        } elseif (CityDelivery::METHOD === $deliveryMethod) {
+            $userOrder->setDeliveryCity($cityDelivery->city());
+            $userOrder->setDeliveryAddress($deliveryAddress);
+            $userOrder->setDeliveryAmount($deliveryAmount);
+        }
         $em->persist($userOrder);
 
         $description = '';
@@ -321,7 +361,9 @@ class ShoppingCartController extends AbstractController
             }
         }
 
-        if ($checkoutRequest->getDeliveryCity()) {
+        if ($deliveryAmount > 0) {
+            $description .= sprintf('%s%s: %s — %d грн', PHP_EOL, $cityDelivery->label(), $deliveryAddress, $deliveryAmount);
+        } elseif ('nova_poshta' === $deliveryMethod && $checkoutRequest->getDeliveryCity()) {
             $description .= sprintf('%sДоставка: %s, %s',
                 PHP_EOL,
                 $checkoutRequest->getDeliveryCity(),
@@ -335,7 +377,8 @@ class ShoppingCartController extends AbstractController
             $description .= PHP_EOL . $appliedPromocode->describeDiscount($discount);
         }
 
-        $total_amount = $subtotal - $discount;
+        // Знижка промокоду — лише на товари; доставка окремим рядком поверх.
+        $total_amount = $subtotal - $discount + $deliveryAmount;
         $userOrder->setSubtotalAmount($subtotal);
         $userOrder->setDiscountAmount($discount);
         $userOrder->setTotalAmount($total_amount);
@@ -365,9 +408,14 @@ class ShoppingCartController extends AbstractController
         if ($user->getPhone()) {
             $customerName = trim($customerName . ', ' . $user->getPhone());
         }
+        $amountLine = sprintf('Сума: %s %s', $total_amount, $currencyLabel);
+        if ($deliveryAmount > 0) {
+            $amountLine .= sprintf(' (товари %s + доставка %s)', $total_amount - $deliveryAmount, $deliveryAmount)
+                ."\n🚚 ".$userOrder->getDeliverySummary();
+        }
         $activity->orderPlaced(
             $userOrder->getId(),
-            sprintf('Сума: %s %s', $total_amount, $currencyLabel),
+            $amountLine,
             $customerName !== '' ? $customerName : null,
             count($purchaseProductIds),
         );

@@ -155,6 +155,11 @@ services:
         decorates: 'doctrine.migrations.migrations_factory'
         arguments: ['@.inner', '@service_container']
 
+    App\Service\Delivery\CityDelivery:
+        arguments:
+            $cityDeliveryPriceUah: '%env(int:CITY_DELIVERY_PRICE_UAH)%'
+            $cityDeliveryCity: '%env(CITY_DELIVERY_CITY)%'
+
     # Chat-gate token signing (HMAC over the dialog id).
     App\Service\SupportChat\ChatDialogStore:
         arguments:

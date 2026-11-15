@@ -124,6 +124,21 @@ class UserOrder
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $delivery_department_ref = null;
 
+    /** Спосіб отримання: nova_poshta | pickup | city_courier. NULL — замовлення до 15.11.2026. */
+    #[ORM\Column(name: 'delivery_method', type: 'string', length: 20, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $delivery_method = null;
+
+    /** Адреса для доставки по місту (кур'єр). */
+    #[ORM\Column(name: 'delivery_address', type: 'string', length: 255, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $delivery_address = null;
+
+    /** Вартість доставки (UAH), окремим рядком і вже включена в total_amount. Знімок на момент замовлення. */
+    #[ORM\Column(name: 'delivery_amount', type: 'integer', nullable: false, options: ['default' => 0])]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private int $delivery_amount = 0;
+
     #[ORM\Column(type: 'string', length: 50, options: ['default' => 'new'])]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private string $order_status = 'new';
@@ -338,6 +353,61 @@ class UserOrder
         $this->purchaseProduct = $purchaseProduct;
 
         return $this;
+    }
+
+    public function getDeliveryMethod(): ?string
+    {
+        return $this->delivery_method;
+    }
+
+    public function setDeliveryMethod(?string $delivery_method): self
+    {
+        $this->delivery_method = $delivery_method;
+
+        return $this;
+    }
+
+    public function getDeliveryAddress(): ?string
+    {
+        return $this->delivery_address;
+    }
+
+    public function setDeliveryAddress(?string $delivery_address): self
+    {
+        $this->delivery_address = $delivery_address;
+
+        return $this;
+    }
+
+    public function getDeliveryAmount(): int
+    {
+        return $this->delivery_amount;
+    }
+
+    public function setDeliveryAmount(int $delivery_amount): self
+    {
+        $this->delivery_amount = $delivery_amount;
+
+        return $this;
+    }
+
+    public function isCityDelivery(): bool
+    {
+        return 'city_courier' === $this->delivery_method;
+    }
+
+    /** Людський опис доставки для листів/сповіщень/адмінки. */
+    public function getDeliverySummary(): string
+    {
+        if ($this->isCityDelivery()) {
+            return trim('Доставка по місту ('.($this->delivery_city ?? 'Черкаси').'): '.($this->delivery_address ?? ''), ': ')
+                .($this->delivery_amount > 0 ? ' — '.$this->delivery_amount.' грн' : '');
+        }
+        if (null !== $this->delivery_city && '' !== $this->delivery_city) {
+            return 'Нова Пошта: '.$this->delivery_city.($this->delivery_department ? ', '.$this->delivery_department : '');
+        }
+
+        return 'Самовивіз';
     }
 
     public function getDeliveryCity(): ?string

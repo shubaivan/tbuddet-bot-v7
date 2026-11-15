@@ -51,6 +51,12 @@
                     <label>Сума</label>
                     <div class="value"><strong>{{ order.totalAmount }} грн</strong></div>
                 </div>
+                {% if order.deliveryAmount > 0 %}
+                <div class="info-item">
+                    <label>У т.ч. доставка</label>
+                    <div class="value">{{ order.deliveryAmount }} грн (товари: {{ order.totalAmount - order.deliveryAmount }} грн)</div>
+                </div>
+                {% endif %}
                 <div class="info-item">
                     <label>Статус оплати</label>
                     <div class="value">
@@ -121,7 +127,21 @@
         </div>
 
         {# Delivery #}
-        {% if order.deliveryCity %}
+        {% if order.cityDelivery %}
+        <div class="section">
+            <div class="section-title">🚚 Доставка по місту ({{ order.deliveryCity ?? 'Черкаси' }})</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Адреса</label>
+                    <div class="value">{{ order.deliveryAddress ?? '---' }}</div>
+                </div>
+                <div class="info-item">
+                    <label>Вартість доставки</label>
+                    <div class="value"><strong>{{ order.deliveryAmount }} грн</strong></div>
+                </div>
+            </div>
+        </div>
+        {% elseif order.deliveryCity %}
         <div class="section">
             <div class="section-title">Доставка (Нова Пошта)</div>
             <div class="info-grid">
