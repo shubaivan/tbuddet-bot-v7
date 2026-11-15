@@ -42,6 +42,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Service\Delivery\CityDelivery;
+use App\Invoice\InvoicePublicLink;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 #[Route(path: 'api/v1/cart')]
@@ -263,6 +264,7 @@ class ShoppingCartController extends AbstractController
         InvoiceService $invoiceService,
         InvoiceNotifier $invoiceNotifier,
         EmailService $emailService,
+        InvoicePublicLink $invoiceLinks,
     ): JsonResponse
     {
         $language = $localizationService->getLanguage();
@@ -413,7 +415,11 @@ class ShoppingCartController extends AbstractController
             $userOrder->setPaymentMethod(PaymentMethodEnum::INVOICE->value);
             $userOrder->setOrderStatus(OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value);
             $userOrder->setInvoicePayer($payer->toArray());
-            $userOrder->setInvoiceLines($invoiceService->buildLines($orderedPurchaseProducts, UserLanguageEnum::UA));
+            $invoiceLines = $invoiceService->buildLines($orderedPurchaseProducts, UserLanguageEnum::UA);
+            if ($deliveryAmount > 0) {
+                $invoiceLines[] = InvoiceService::deliveryLine($cityDelivery->label().': '.$deliveryAddress, $deliveryAmount);
+            }
+            $userOrder->setInvoiceLines($invoiceLines);
             $invoiceService->issue($userOrder);
             if ($checkoutRequest->isRememberPayer()) {
                 $user->setInvoicePayerProfile($payer->toArray());
@@ -441,7 +447,8 @@ class ShoppingCartController extends AbstractController
         if ($user->getPhone()) {
             $customerName = trim($customerName . ', ' . $user->getPhone());
         }
-        $amountLine = sprintf('Сума: %s %s', $total_amount, $currencyLabel);
+        $amountLine = sprintf('Сума: %s %s', $total_amount, $currencyLabel)
+            .($userOrder->isInvoicePayment() ? ' · 🧾 оплата за рахунком № '.$userOrder->getInvoiceNumber() : '');
         if ($deliveryAmount > 0) {
             $amountLine .= sprintf(' (товари %s + доставка %s)', $total_amount - $deliveryAmount, $deliveryAmount)
                 ."\n🚚 ".$userOrder->getDeliverySummary();
@@ -454,7 +461,7 @@ class ShoppingCartController extends AbstractController
         );
 
         if ($userOrder->isInvoicePayment()) {
-            return $this->completeInvoiceCheckout($userOrder, $invoiceService, $invoiceNotifier, $emailService);
+            return $this->completeInvoiceCheckout($userOrder, $invoiceService, $invoiceNotifier, $emailService, $invoiceLinks);
         }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
@@ -522,8 +529,10 @@ class ShoppingCartController extends AbstractController
         InvoiceService $invoiceService,
         InvoiceNotifier $invoiceNotifier,
         EmailService $emailService,
+        InvoicePublicLink $invoiceLinks,
     ): JsonResponse {
         $sentTo = null;
+        $publicUrl = $invoiceLinks->url($userOrder);
         try {
             $sentTo = $emailService->sendInvoiceEmail($userOrder, $invoiceService->renderPdf($userOrder));
         } catch (\Throwable $e) {
@@ -534,6 +543,7 @@ class ShoppingCartController extends AbstractController
             $userOrder,
             $this->generateUrl('app_admin_order_detail', ['id' => $userOrder->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
             $sentTo !== null,
+            $publicUrl,
         );
 
         return $this->json([
@@ -543,6 +553,8 @@ class ShoppingCartController extends AbstractController
                 'due_date' => $userOrder->getInvoiceDueDate()?->format('Y-m-d'),
                 'email' => $userOrder->getInvoiceEmail(),
                 'emailed' => $sentTo !== null,
+                'public_url' => $publicUrl,
+                'total' => $userOrder->getTotalAmount(),
             ],
         ], Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
@@ -560,6 +572,29 @@ class ShoppingCartController extends AbstractController
         return $this->json([
             'available' => $invoiceService->isAvailable(),
             'saved_payer' => $user->getInvoicePayerProfile(),
+        ]);
+    }
+
+    /** Публічне посилання на PDF рахунку власного замовлення (для «Поділитися» в профілі / після перезавантаження). */
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/order/{id}/invoice/link', name: 'order_invoice_link', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
+    public function invoiceLink(
+        string $id,
+        #[CurrentUser] User $user,
+        UserOrderRepository $orderRepository,
+        InvoicePublicLink $invoiceLinks,
+    ): JsonResponse {
+        $order = $orderRepository->find((int) $id);
+        if ($order === null || $order->getClientUserId()?->getId() !== $user->getId() || !$order->getInvoiceNumber()) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'number' => $order->getInvoiceNumber(),
+            'public_url' => $invoiceLinks->url($order),
+            'total' => $order->getTotalAmount(),
+            'due_date' => $order->getInvoiceDueDate()?->format('Y-m-d'),
+            'email' => $order->getInvoiceEmail(),
         ]);
     }
 

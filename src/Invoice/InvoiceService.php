@@ -73,6 +73,12 @@ class InvoiceService
         return $lines;
     }
 
+    /** Рядок доставки в рахунку (послуга, 1 × сума). */
+    public static function deliveryLine(string $name, int $amount): array
+    {
+        return ['name' => $name, 'unit' => 'послуга', 'qty' => 1, 'price' => $amount, 'sum' => $amount];
+    }
+
     /**
      * Assigns the number and dates. Call once, right after the order is persisted.
      *

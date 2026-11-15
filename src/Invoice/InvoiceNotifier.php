@@ -26,7 +26,7 @@ class InvoiceNotifier
     ) {
     }
 
-    public function invoiceIssued(UserOrder $order, string $adminOrderUrl, bool $emailed): void
+    public function invoiceIssued(UserOrder $order, string $adminOrderUrl, bool $emailed, ?string $publicPdfUrl = null): void
     {
         $payer = $order->getInvoicePayer();
         $esc = static fn (?string $s): string => TelegramNotifier::esc((string) $s);
@@ -46,6 +46,14 @@ class InvoiceNotifier
             $emailed ? '✉️ PDF надіслано платнику на email.' : '⚠️ PDF НЕ надіслано на email — надішліть вручну з адмінки.',
             $adminOrderUrl,
         );
+
+        $text = str_replace("\nСума: ", "\n💳 Оплата: <b>за рахунком</b>\nСума: ", $text);
+        if ($order->getDeliveryAmount() > 0) {
+            $text = str_replace("\nСума: ", "\n🚚 ".$esc($order->getDeliverySummary())."\nСума: ", $text);
+        }
+        if (null !== $publicPdfUrl) {
+            $text .= "\n📄 Рахунок (PDF): ".$esc($publicPdfUrl);
+        }
 
         $this->toManagers($text);
         $this->toGroup($text);
