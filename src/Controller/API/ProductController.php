@@ -25,6 +25,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\Delivery\CityDelivery;
+use App\Service\Analytics\ActivityService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -314,13 +316,37 @@ class ProductController extends AbstractController
         #[MapRequestPayload] PurchaseProduct $purchaseProduct,
         #[CurrentUser] User $user,
         LocalizationService $localizationService,
-        PromocodeService $promocodeService
+        PromocodeService $promocodeService,
+        CityDelivery $cityDelivery,
+        ActivityService $activity,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
         $product->checkInputProp($purchaseProduct->getProductProperties());
+
+        // Ті самі правила доставки по місту, що й у кошику (ShoppingCartController::checkoutAction).
+        $deliveryMethod = $purchaseProduct->getDeliveryMethod() ?? 'pickup';
+        if (!\in_array($deliveryMethod, CityDelivery::METHODS, true)) {
+            return $this->json(['error' => 'delivery_method_invalid', 'error_message' => 'Невідомий спосіб доставки.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $deliveryAmount = 0;
+        $deliveryAddress = null;
+        if (CityDelivery::METHOD === $deliveryMethod) {
+            if (!$cityDelivery->isAvailable($localizationService->getLanguage())) {
+                return $this->json([
+                    'error' => 'delivery_unavailable',
+                    'error_message' => 'Доставка по місту зараз недоступна. Оберіть Нову Пошту або самовивіз.',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            $addressError = $cityDelivery->validateAddress($purchaseProduct->getDeliveryAddress());
+            if (null !== $addressError) {
+                return $this->json(['error' => 'delivery_address_invalid', 'error_message' => $addressError], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $deliveryAddress = $cityDelivery->normalizeAddress((string) $purchaseProduct->getDeliveryAddress());
+            $deliveryAmount = $cityDelivery->price();
+        }
 
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
@@ -330,6 +356,12 @@ class ProductController extends AbstractController
 
         // Quick-buy delivery info: only persist NP fields when method is nova_poshta.
         // Pickup orders leave city/department null which the FE renders as "Самовивіз".
+        $userOrder->setDeliveryMethod($deliveryMethod);
+        if (CityDelivery::METHOD === $deliveryMethod) {
+            $userOrder->setDeliveryCity($cityDelivery->city());
+            $userOrder->setDeliveryAddress($deliveryAddress);
+            $userOrder->setDeliveryAmount($deliveryAmount);
+        }
         if ($purchaseProduct->getDeliveryMethod() === 'nova_poshta') {
             $userOrder->setDeliveryCity($purchaseProduct->getDeliveryCity());
             $userOrder->setDeliveryCityRef($purchaseProduct->getDeliveryCityRef());
@@ -381,7 +413,8 @@ class ProductController extends AbstractController
             $discount = $validation->discount;
         }
 
-        $total_amount = $subtotal - $discount;
+        // Знижка — лише на товар; доставка окремим рядком поверх.
+        $total_amount = $subtotal - $discount + $deliveryAmount;
 
         $userOrder->setSubtotalAmount($subtotal);
         $userOrder->setDiscountAmount($discount);
@@ -402,6 +435,10 @@ class ProductController extends AbstractController
             $description .= PHP_EOL . $appliedPromocode->describeDiscount($discount);
         }
 
+        if ($deliveryAmount > 0) {
+            $description .= PHP_EOL . sprintf('%s: %s — %d грн', $cityDelivery->label(), $deliveryAddress, $deliveryAmount);
+        }
+
         $userOrder->setDescription($description);
 
         $this->em->persist($userOrder);
@@ -412,6 +449,17 @@ class ProductController extends AbstractController
         // consistent even if the ledger insert is a retried duplicate.
         if ($appliedPromocode !== null) {
             $promocodeService->redeem($appliedPromocode, $userOrder, $user, null, null, $discount);
+        }
+
+        // Доставка по місту з «Купити зараз» — одразу в «Магазин», щоб менеджер побачив адресу ще до оплати.
+        if ($deliveryAmount > 0) {
+            $activity->orderPlaced(
+                $userOrder->getId(),
+                sprintf('Сума: %s грн (товар %s + доставка %s)', $total_amount, $total_amount - $deliveryAmount, $deliveryAmount)
+                    ."\n🚚 ".$userOrder->getDeliverySummary(),
+                ActivityService::customerLabel($user),
+                1,
+            );
         }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());

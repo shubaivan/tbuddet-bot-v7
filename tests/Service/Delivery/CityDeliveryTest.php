@@ -58,4 +58,20 @@ class CityDeliveryTest extends TestCase
 
         self::assertSame('Самовивіз', (new UserOrder())->setDeliveryMethod('pickup')->getDeliverySummary());
     }
+
+    /** «Купити зараз»: серіалізатор має заповнювати поля доставки (раніше губились мовчки). */
+    public function testQuickBuyPayloadFieldsAreWritable(): void
+    {
+        $acc = \Symfony\Component\PropertyAccess\PropertyAccess::createPropertyAccessor();
+        $dto = new \App\Controller\API\Request\Purchase\PurchaseProduct();
+        foreach (['delivery_method' => 'city_courier', 'delivery_address' => 'вул. Гоголя, 7', 'delivery_city' => 'Київ',
+            'delivery_city_ref' => 'r', 'delivery_department' => 'd', 'delivery_department_ref' => 'dr',
+            'contact_phone' => '0501112233', 'promocode' => 'X'] as $field => $value) {
+            self::assertTrue($acc->isWritable($dto, $field), $field);
+            $acc->setValue($dto, $field, $value);
+        }
+        self::assertSame('city_courier', $dto->getDeliveryMethod());
+        self::assertSame('вул. Гоголя, 7', $dto->getDeliveryAddress());
+        self::assertSame('0501112233', $dto->getContactPhone());
+    }
 }

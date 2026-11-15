@@ -38,6 +38,10 @@ class PurchaseProduct
     #[Type('string')]
     protected ?string $delivery_department_ref = null;
 
+    /** Адреса для доставки по місту (delivery_method = city_courier). */
+    #[Type('string')]
+    protected ?string $delivery_address = null;
+
     #[Type('string')]
     protected ?string $contact_phone = null;
 
@@ -82,6 +86,18 @@ class PurchaseProduct
         return $this->delivery_department_ref;
     }
 
+    public function getDeliveryAddress(): ?string
+    {
+        return $this->delivery_address;
+    }
+
+    public function setDeliveryAddress(?string $delivery_address): self
+    {
+        $this->delivery_address = $delivery_address;
+
+        return $this;
+    }
+
     public function getContactPhone(): ?string
     {
         return $this->contact_phone;
@@ -118,6 +134,51 @@ class PurchaseProduct
     public function setProductProperties(array $product_properties): PurchaseProduct
     {
         $this->product_properties = $product_properties;
+
+        return $this;
+    }
+
+    // Сетери потрібні серіалізатору: без них поля «Купити зараз» (доставка НП, телефон, промокод)
+    // мовчки губились — protected-властивості він не заповнює (знайдено 15.11.2026).
+    public function setDeliveryMethod(?string $delivery_method): self
+    {
+        $this->delivery_method = $delivery_method;
+
+        return $this;
+    }
+    public function setDeliveryCity(?string $delivery_city): self
+    {
+        $this->delivery_city = $delivery_city;
+
+        return $this;
+    }
+    public function setDeliveryCityRef(?string $delivery_city_ref): self
+    {
+        $this->delivery_city_ref = $delivery_city_ref;
+
+        return $this;
+    }
+    public function setDeliveryDepartment(?string $delivery_department): self
+    {
+        $this->delivery_department = $delivery_department;
+
+        return $this;
+    }
+    public function setDeliveryDepartmentRef(?string $delivery_department_ref): self
+    {
+        $this->delivery_department_ref = $delivery_department_ref;
+
+        return $this;
+    }
+    public function setContactPhone(?string $contact_phone): self
+    {
+        $this->contact_phone = $contact_phone;
+
+        return $this;
+    }
+    public function setPromocode(?string $promocode): self
+    {
+        $this->promocode = $promocode;
 
         return $this;
     }
