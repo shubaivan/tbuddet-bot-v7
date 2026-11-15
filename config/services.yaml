@@ -154,3 +154,8 @@ services:
     App\Migrations\Factory\MigrationFactoryDecorator:
         decorates: 'doctrine.migrations.migrations_factory'
         arguments: ['@.inner', '@service_container']
+
+    # Chat-gate token signing (HMAC over the dialog id).
+    App\Service\SupportChat\ChatDialogStore:
+        arguments:
+            $appSecret: '%kernel.secret%'
