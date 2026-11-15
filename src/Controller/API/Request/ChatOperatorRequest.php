@@ -11,13 +11,16 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 class ChatOperatorRequest
 {
-    #[Assert\NotBlank(message: 'Вкажіть, будь ласка, імʼя.')]
+    /** Порожні імʼя/телефон — беремо з діалогу за токеном (клієнт уже лишив номер на вході в чат). */
     #[Assert\Length(max: 120)]
     public string $name = '';
 
-    #[Assert\NotBlank(message: 'Вкажіть, будь ласка, номер телефону.')]
     #[Assert\Length(max: 40)]
     public string $phone = '';
+
+    /** Токен діалогу з /chat/start. */
+    #[Assert\Length(max: 200)]
+    public ?string $token = null;
 
     /**
      * Optional conversation context: [{role, content}, ...].

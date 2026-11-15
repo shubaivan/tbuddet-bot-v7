@@ -16,4 +16,8 @@ class ChatMessageRequest
     #[Assert\Count(min: 1, minMessage: 'Повідомлення не може бути порожнім.')]
     #[Assert\Count(max: 100, maxMessage: 'Забагато повідомлень в історії.')]
     public array $messages = [];
+
+    /** Токен діалогу з /chat/start (або заголовок X-Chat-Token). */
+    #[Assert\Length(max: 200)]
+    public ?string $token = null;
 }
