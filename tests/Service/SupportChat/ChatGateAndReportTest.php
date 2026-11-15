@@ -139,4 +139,16 @@ class ChatGateAndReportTest extends TestCase
         $short = "• A — https://artbeton.market/uk/product/view/1\nЗамовити";
         self::assertSame($short, ChatAssistantService::capProductLines($short));
     }
+
+    public function testCapDropsOrphanedSubheader(): void
+    {
+        $items = [];
+        for ($i = 1; $i <= 8; ++$i) {
+            $items[] = '• Товар '.$i.' — https://artbeton.market/uk/product/view/'.$i;
+        }
+        $reply = implode("\n", $items)."\n\nЄ також сфери «Верона»:\n• Сфера — https://artbeton.market/uk/product/view/99\n\nУсі моделі: https://artbeton.market/uk/product/category/traffic-barriers\n\nЗамовити: 📞 068 517 00 77";
+        $capped = ChatAssistantService::capProductLines($reply);
+        self::assertStringNotContainsString('Верона', $capped);
+        self::assertStringContainsString('Усі моделі:', $capped);
+    }
 }
