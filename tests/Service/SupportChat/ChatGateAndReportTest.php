@@ -85,7 +85,13 @@ class ChatGateAndReportTest extends TestCase
         foreach (glob(__DIR__.'/../../../config/support_chat/*.md') ?: [] as $file) {
             self::assertDoesNotMatchRegularExpression('/буддетал|buddetal|zavodbuddetal|instagram\.com\/zavod/iu', (string) file_get_contents($file), basename($file));
         }
-        self::assertStringContainsString('068 517 00 77', (string) file_get_contents(__DIR__.'/../../../config/support_chat/faq.buddetal.uk.md'));
+        foreach (['faq.uk.md', 'faq.buddetal.uk.md'] as $f) {
+            $kb = (string) file_get_contents(__DIR__.'/../../../config/support_chat/'.$f);
+            foreach (['068 517 00 77', '068 372 70 07', '063 302 26 66'] as $phone) {
+                self::assertStringContainsString($phone, $kb, $f);
+            }
+        }
+        self::assertSame('📞 Лена 068 517 00 77 · Олег 068 372 70 07 · Іван 063 302 26 66', ChatAssistantService::MANAGERS_CTA);
         foreach (glob(__DIR__.'/../../../config/support_chat/*.md') ?: [] as $file) {
             self::assertStringNotContainsString('444 55 01', (string) file_get_contents($file));
             self::assertStringNotContainsString('160 км', (string) file_get_contents($file));
