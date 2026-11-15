@@ -7,13 +7,20 @@ use App\Controller\API\Request\Purchase\CheckoutRequest;
 use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
 use App\Entity\Enum\CurrencyEnum;
+use App\Entity\Enum\OrderStatusEnum;
+use App\Entity\Enum\PaymentMethodEnum;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\PurchaseProduct as EntityPurchaseProduct;
 use App\Entity\ShoppingCart;
 use App\Entity\User;
 use App\Entity\UserOrder;
+use App\Invoice\InvoiceNotifier;
+use App\Invoice\InvoicePayer;
+use App\Invoice\InvoiceRequisitesMissingException;
+use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
+use App\Service\EmailService;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Repository\UserOrderRepository;
@@ -253,10 +260,22 @@ class ShoppingCartController extends AbstractController
         PromocodeService $promocodeService,
         ActivityService $activity,
         CityDelivery $cityDelivery,
+        InvoiceService $invoiceService,
+        InvoiceNotifier $invoiceNotifier,
+        EmailService $emailService,
     ): JsonResponse
     {
         $language = $localizationService->getLanguage();
         $purchaseProductIds = $checkoutRequest->getPurchaseProductIds();
+
+        // Pay-by-invoice is offered only once the seller requisites are filled in;
+        // the FE hides the option, this guards direct API calls.
+        if ($checkoutRequest->isInvoice() && !$invoiceService->isAvailable()) {
+            return $this->json([
+                'error' => 'invoice_unavailable',
+                'error_message' => 'Оплата за рахунком тимчасово недоступна. Оберіть оплату карткою або зверніться до менеджера.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         // Спосіб доставки. Старий фронт його не шле — тоді НП, якщо є місто, інакше самовивіз.
         $deliveryMethod = $checkoutRequest->getDeliveryMethod()
@@ -325,11 +344,13 @@ class ShoppingCartController extends AbstractController
         $em->persist($userOrder);
 
         $description = '';
+        $orderedPurchaseProducts = [];
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
 
         foreach ($purchaseProductIds as $purchaseProductId) {
             $purchaseProduct = $purchaseProductRepository->find($purchaseProductId);
             $purchaseProduct->setUserOrder($userOrder);
+            $orderedPurchaseProducts[] = $purchaseProduct;
 
             $product = $purchaseProduct->getProduct();
 
@@ -387,6 +408,18 @@ class ShoppingCartController extends AbstractController
             $userOrder->setPromocodeCodeUsed($appliedPromocode->getCode());
         }
 
+        if ($checkoutRequest->isInvoice()) {
+            $payer = InvoicePayer::fromArray($checkoutRequest->getPayer() ?? []);
+            $userOrder->setPaymentMethod(PaymentMethodEnum::INVOICE->value);
+            $userOrder->setOrderStatus(OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value);
+            $userOrder->setInvoicePayer($payer->toArray());
+            $userOrder->setInvoiceLines($invoiceService->buildLines($orderedPurchaseProducts, UserLanguageEnum::UA));
+            $invoiceService->issue($userOrder);
+            if ($checkoutRequest->isRememberPayer()) {
+                $user->setInvoicePayerProfile($payer->toArray());
+            }
+        }
+
         $em->flush();
 
         if ($appliedPromocode !== null) {
@@ -419,6 +452,10 @@ class ShoppingCartController extends AbstractController
             $customerName !== '' ? $customerName : null,
             count($purchaseProductIds),
         );
+
+        if ($userOrder->isInvoicePayment()) {
+            return $this->completeInvoiceCheckout($userOrder, $invoiceService, $invoiceNotifier, $emailService);
+        }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
 
@@ -472,6 +509,88 @@ class ShoppingCartController extends AbstractController
             'link' => $link
         ], Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    /**
+     * Invoice branch of checkout: render the PDF, email it to the payer, tell the
+     * managers. The order already exists — a mail/Telegram failure is reported in
+     * the response and to the managers instead of failing the purchase.
+     */
+    private function completeInvoiceCheckout(
+        UserOrder $userOrder,
+        InvoiceService $invoiceService,
+        InvoiceNotifier $invoiceNotifier,
+        EmailService $emailService,
+    ): JsonResponse {
+        $sentTo = null;
+        try {
+            $sentTo = $emailService->sendInvoiceEmail($userOrder, $invoiceService->renderPdf($userOrder));
+        } catch (\Throwable $e) {
+            $this->logger->error('Invoice email failed', ['order' => $userOrder->getId(), 'error' => $e->getMessage()]);
+        }
+
+        $invoiceNotifier->invoiceIssued(
+            $userOrder,
+            $this->generateUrl('app_admin_order_detail', ['id' => $userOrder->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            $sentTo !== null,
+        );
+
+        return $this->json([
+            'order' => $userOrder,
+            'invoice' => [
+                'number' => $userOrder->getInvoiceNumber(),
+                'due_date' => $userOrder->getInvoiceDueDate()?->format('Y-m-d'),
+                'email' => $userOrder->getInvoiceEmail(),
+                'emailed' => $sentTo !== null,
+            ],
+        ], Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    /**
+     * Whether pay-by-invoice is offered right now, plus the payer requisites the
+     * customer chose to remember last time (to prefill the checkout form).
+     */
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/invoice/options', name: 'checkout_invoice_options', methods: [Request::METHOD_GET])]
+    public function invoiceOptions(#[CurrentUser] User $user, InvoiceService $invoiceService): JsonResponse
+    {
+        return $this->json([
+            'available' => $invoiceService->isAvailable(),
+            'saved_payer' => $user->getInvoicePayerProfile(),
+        ]);
+    }
+
+    /** The buyer downloads the invoice PDF of their own order. */
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/order/{id}/invoice', name: 'order_invoice_pdf', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
+    public function downloadInvoice(
+        string $id,
+        #[CurrentUser] User $user,
+        UserOrderRepository $orderRepository,
+        InvoiceService $invoiceService,
+    ): Response {
+        $order = $orderRepository->find((int) $id);
+        if ($order === null || $order->getClientUserId()?->getId() !== $user->getId() || !$order->getInvoiceNumber()) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $pdf = $invoiceService->renderPdf($order);
+        } catch (InvoiceRequisitesMissingException $e) {
+            $this->logger->error('Invoice PDF blocked: seller requisites incomplete', ['order' => $order->getId()]);
+
+            return $this->json([
+                'error' => 'invoice_unavailable',
+                'error_message' => 'Рахунок тимчасово недоступний. Зверніться до менеджера.',
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        return new Response($pdf, Response::HTTP_OK, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => sprintf('attachment; filename="Rahunok-%s.pdf"', $order->getInvoiceNumber()),
         ]);
     }
 

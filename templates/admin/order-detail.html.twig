@@ -60,8 +60,11 @@
                 <div class="info-item">
                     <label>Статус оплати</label>
                     <div class="value">
-                        {% if order.liqPayStatus == 'success' %}
+                        {% if order.paid %}
                             <span style="color: #2e7d32; font-weight: 600;">Оплачено</span>
+                            {% if order.paidAt %}<span style="color:#777;">(за рахунком, {{ order.paidAt|date('d.m.Y H:i', 'Europe/Kyiv') }})</span>{% endif %}
+                        {% elseif order.invoicePayment %}
+                            <span style="color: #b45309; font-weight: 600;">Очікує оплати по рахунку</span>
                         {% elseif order.liqPayStatus %}
                             {{ order.liqPayStatus }}
                         {% else %}
@@ -246,6 +249,51 @@
         </div>
         {% endif %}
 
+        {% if order.invoicePayment %}
+        {# Pay-by-invoice (legal entities) #}
+        <div class="section" id="invoice">
+            <div class="section-title">Оплата за рахунком (безготівково)</div>
+            {% if invoiceProblems %}
+                <div style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px 14px;border-radius:6px;margin-bottom:14px;">
+                    <strong>PDF рахунку не формується:</strong> реквізити продавця не заповнені або некоректні.
+                    Клієнту нічого не надсилається, доки їх не заповнять.
+                    <ul style="margin:8px 0 0 18px;">{% for p in invoiceProblems %}<li>{{ p }}</li>{% endfor %}</ul>
+                    <div style="margin-top:6px;font-size:12px;">Де заповнити: INVOICE_* у .env.local на сервері → <code>composer dump-env prod</code>.</div>
+                </div>
+            {% endif %}
+            {% set payer = order.invoicePayer %}
+            <div class="info-grid">
+                <div class="info-item"><label>Рахунок №</label><div class="value"><strong>{{ order.invoiceNumber ?? '—' }}</strong></div></div>
+                <div class="info-item"><label>Виставлено</label><div class="value">{{ order.invoiceIssuedAt ? order.invoiceIssuedAt|date('d.m.Y H:i', 'Europe/Kyiv') : '—' }}</div></div>
+                <div class="info-item"><label>Сплатити до</label><div class="value">{{ order.invoiceDueDate ? order.invoiceDueDate|date('d.m.Y') : '—' }}</div></div>
+                <div class="info-item"><label>Платник</label><div class="value"><strong>{{ payer.name ?? '—' }}</strong></div></div>
+                <div class="info-item"><label>{{ (payer.tax_id ?? '')|length == 10 ? 'РНОКПП (ФОП)' : 'ЄДРПОУ' }}</label><div class="value">{{ payer.tax_id ?? '—' }}</div></div>
+                <div class="info-item"><label>Платник ПДВ</label><div class="value">{{ payer.vat_payer ?? false ? 'так, ІПН ' ~ payer.vat_ipn : 'ні' }}</div></div>
+                <div class="info-item"><label>Юридична адреса</label><div class="value">{{ payer.address ?? '—' }}</div></div>
+                <div class="info-item"><label>IBAN платника</label><div class="value">{{ payer.iban ?? '—' }}</div></div>
+                <div class="info-item"><label>Контактна особа</label><div class="value">{{ payer.contact_person ?? '—' }}, +{{ payer.phone ?? '' }}</div></div>
+                <div class="info-item"><label>Email для рахунку</label><div class="value">{{ payer.email ?? '—' }}</div></div>
+                {% if order.paidAt %}
+                <div class="info-item"><label>Оплату підтвердив</label><div class="value">{{ order.paidBy ?? '—' }}, {{ order.paidAt|date('d.m.Y H:i', 'Europe/Kyiv') }}</div></div>
+                {% endif %}
+            </div>
+            <div class="actions-bar" style="gap:10px;flex-wrap:wrap;justify-content:flex-start;">
+                {% if not invoiceProblems %}
+                    <a class="btn-back" href="{{ path('app_admin_order_invoice_pdf', {id: order.id}) }}">Завантажити PDF</a>
+                    <form method="post" action="{{ path('app_admin_order_invoice_resend', {id: order.id}) }}" style="margin:0;">
+                        <button type="submit" class="btn-back">Надіслати рахунок повторно</button>
+                    </form>
+                {% endif %}
+                {% if not order.paid %}
+                    <form method="post" action="{{ path('app_admin_order_mark_paid', {id: order.id}) }}" style="margin:0;"
+                          onsubmit="return confirm('Кошти за рахунком {{ order.invoiceNumber }} ({{ order.totalAmount }} грн) надійшли на рахунок? Клієнт отримає лист «Оплату отримано», замовлення перейде в «Нове».');">
+                        <button type="submit" class="btn-save">Позначити оплаченим</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {# Status & Tracking Management #}
         <div class="section">
             <div class="section-title">Управління замовленням</div>
@@ -288,7 +336,7 @@
         <div class="section">
             <div class="section-title">Оплата клієнтом</div>
 
-            {% if order.liqPayStatus == 'success' %}
+            {% if order.paid %}
                 <p style="color: #6c757d; margin: 0;">Замовлення вже оплачено — посилання не потрібне.</p>
             {% else %}
                 <p style="color: #555; margin: 0 0 12px;">

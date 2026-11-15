@@ -96,6 +96,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'reset_password_token_expires_at', type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $resetPasswordTokenExpiresAt = null;
 
+    /**
+     * Payer requisites the customer chose to remember for the next «Рахунок на оплату».
+     * Same shape as UserOrder::$invoice_payer.
+     */
+    #[ORM\Column(name: 'invoice_payer_profile', type: 'json', nullable: true)]
+    private ?array $invoice_payer_profile = null;
+
     #[ORM\Column(name: 'telegram_chat_id', type: 'bigint', nullable: true)]
     private ?int $telegramChatId = null;
 
@@ -430,6 +437,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setMerge(?UserMerge $merge): User
     {
         $this->merge = $merge;
+
+        return $this;
+    }
+
+    public function getInvoicePayerProfile(): ?array
+    {
+        return $this->invoice_payer_profile;
+    }
+
+    public function setInvoicePayerProfile(?array $invoice_payer_profile): self
+    {
+        $this->invoice_payer_profile = $invoice_payer_profile;
 
         return $this;
     }

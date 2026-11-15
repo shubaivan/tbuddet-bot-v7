@@ -64,7 +64,7 @@
         {% else %}
             <div class="uo-list" style="display:flex;flex-direction:column;gap:6px;">
                 {% for o in orders %}
-                    {% set isPaid = o.liqPayStatus == 'success' %}
+                    {% set isPaid = o.paid %}
                     <a class="uo-row" href="{{ path('app_admin_order_detail', {id: o.id}) }}" target="_blank"
                        style="display:grid;grid-template-columns:60px 110px auto auto auto 1fr;gap:12px;align-items:center;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;color:inherit;background:#fff;">
                         <span class="uo-id" style="font-family:ui-monospace,monospace;font-weight:600;color:#475569;">#{{ o.id }}</span>

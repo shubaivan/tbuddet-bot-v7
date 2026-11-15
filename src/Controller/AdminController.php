@@ -12,6 +12,9 @@ use App\Entity\ProductCategory;
 use App\Entity\PurchaseProduct;
 use App\Entity\TelegramUser;
 use App\Entity\UserOrder;
+use App\Invoice\InvoiceNotifier;
+use App\Invoice\InvoiceRequisitesMissingException;
+use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
@@ -34,6 +37,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
@@ -142,7 +146,7 @@ class AdminController extends AbstractController
         $paidCount = 0;
         $paidSum   = 0.0;
         foreach ($orders as $o) {
-            if ($o->getLiqPayStatus() === 'success') {
+            if ($o->isPaid()) {
                 $paidCount++;
                 $paidSum += (float) $o->getTotalAmount();
             }
@@ -190,7 +194,7 @@ class AdminController extends AbstractController
             'total_amount' => $order->getTotalAmount(),
             'status'       => $order->getOrderStatus()?->value,
             'liq_pay'      => $order->getLiqPayStatus(),
-            'is_paid'      => $order->getLiqPayStatus() === 'success',
+            'is_paid'      => $order->isPaid(),
             'created_at'   => $order->getCreatedAt()?->format('Y-m-d H:i'),
             'detail_url'   => $this->generateUrl('app_admin_order_detail', ['id' => $order->getId()]),
         ], $orders);
@@ -294,7 +298,9 @@ class AdminController extends AbstractController
         }
         if (!empty($params['filter_payment'])) {
             if ($params['filter_payment'] === 'pending') {
-                $where[] = 'o.liq_pay_status IS NULL';
+                $where[] = 'o.liq_pay_status IS NULL AND o.paid_at IS NULL';
+            } elseif ($params['filter_payment'] === 'success') {
+                $where[] = "(o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL)";
             } else {
                 $where[] = 'o.liq_pay_status = :payment';
                 $binds['payment'] = $params['filter_payment'];
@@ -309,7 +315,8 @@ class AdminController extends AbstractController
             $binds['dto'] = $params['filter_date_to'] . ' 23:59:59';
         }
         if (!empty($params['filter_hide_unpaid']) && $params['filter_hide_unpaid'] === '1') {
-            $where[] = "o.liq_pay_status = 'success'";
+            // Invoice orders stay visible while awaiting payment: managers act on them.
+            $where[] = "(o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL OR o.payment_method = 'invoice')";
         }
         if (!empty($params['filter_source'])) {
             if ($params['filter_source'] === 'tg') {
@@ -326,16 +333,16 @@ class AdminController extends AbstractController
         $sql = "
             SELECT
                 COUNT(*)                                                                                AS total_count,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success')                                    AS paid_count,
-                COUNT(*) FILTER (WHERE o.liq_pay_status IS NULL OR o.liq_pay_status <> 'success')       AS unpaid_count,
-                COALESCE(SUM(NULLIF(o.total_amount,'')::numeric) FILTER (WHERE o.liq_pay_status = 'success'), 0) AS paid_amount,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'new')         AS status_new,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'processing')  AS status_processing,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'shipped')     AS status_shipped,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'delivered')   AS status_delivered,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.order_status = 'cancelled')   AS status_cancelled,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.telegram_user_id IS NOT NULL) AS source_tg,
-                COUNT(*) FILTER (WHERE o.liq_pay_status = 'success' AND o.telegram_user_id IS NULL)     AS source_web
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL))                                    AS paid_count,
+                COUNT(*) FILTER (WHERE NOT (COALESCE(o.liq_pay_status, '') = 'success' OR o.paid_at IS NOT NULL)) AS unpaid_count,
+                COALESCE(SUM(NULLIF(o.total_amount,'')::numeric) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL)), 0) AS paid_amount,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.order_status = 'new')         AS status_new,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.order_status = 'processing')  AS status_processing,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.order_status = 'shipped')     AS status_shipped,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.order_status = 'delivered')   AS status_delivered,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.order_status = 'cancelled')   AS status_cancelled,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.telegram_user_id IS NOT NULL) AS source_tg,
+                COUNT(*) FILTER (WHERE (o.liq_pay_status = 'success' OR o.paid_at IS NOT NULL) AND o.telegram_user_id IS NULL)     AS source_web
             FROM user_order o
         " . $whereSql;
 
@@ -371,6 +378,7 @@ class AdminController extends AbstractController
     #[Route('/admin/orders/{id}', name: 'app_admin_order_detail', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
     public function orderDetail(
         #[MapEntity(id: 'id')] UserOrder $order,
+        InvoiceService $invoiceService,
     ): Response
     {
         $liqPayResponseFormatted = null;
@@ -387,7 +395,121 @@ class AdminController extends AbstractController
             'order' => $order,
             'statuses' => OrderStatusEnum::cases(),
             'liqPayResponseFormatted' => $liqPayResponseFormatted,
+            'invoiceProblems' => $order->isInvoicePayment() ? $invoiceService->requisitesProblems() : [],
         ]);
+    }
+
+    #[Route('/admin/orders/{id}/invoice.pdf', name: 'app_admin_order_invoice_pdf', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
+    public function orderInvoicePdf(
+        #[MapEntity(id: 'id')] UserOrder $order,
+        InvoiceService $invoiceService,
+    ): Response {
+        if (!$order->getInvoiceNumber()) {
+            $this->addFlash('warning', 'Це замовлення не оплачується за рахунком.');
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+
+        try {
+            $pdf = $invoiceService->renderPdf($order);
+        } catch (InvoiceRequisitesMissingException $e) {
+            $this->addFlash('warning', $e->getMessage());
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+
+        return new Response($pdf, Response::HTTP_OK, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => sprintf('inline; filename="Rahunok-%s.pdf"', $order->getInvoiceNumber()),
+        ]);
+    }
+
+    #[Route('/admin/orders/{id}/invoice/resend', name: 'app_admin_order_invoice_resend', methods: [Request::METHOD_POST], requirements: ['id' => '\d+'])]
+    public function orderInvoiceResend(
+        #[MapEntity(id: 'id')] UserOrder $order,
+        InvoiceService $invoiceService,
+        EmailService $emailService,
+    ): Response {
+        try {
+            $sentTo = $order->getInvoiceNumber()
+                ? $emailService->sendInvoiceEmail($order, $invoiceService->renderPdf($order))
+                : null;
+            $sentTo
+                ? $this->addFlash('notice', sprintf('Рахунок № %s надіслано на %s', $order->getInvoiceNumber(), $sentTo))
+                : $this->addFlash('warning', 'Немає email платника або номера рахунку — рахунок не надіслано.');
+        } catch (InvoiceRequisitesMissingException $e) {
+            $this->addFlash('warning', $e->getMessage());
+        } catch (\Throwable $e) {
+            $this->logger->error('Invoice resend failed', ['order' => $order->getId(), 'error' => $e->getMessage()]);
+            $this->addFlash('warning', 'Не вдалося надіслати рахунок: ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId(), '_fragment' => 'invoice']);
+    }
+
+    /**
+     * Manager confirms the bank transfer arrived: stamps paid_at/paid_by, moves the
+     * order from «Очікує оплати по рахунку» to «Нове» (the normal fulfilment queue)
+     * and tells the buyer (email + Telegram if linked) and the managers.
+     */
+    #[Route('/admin/orders/{id}/mark-paid', name: 'app_admin_order_mark_paid', methods: [Request::METHOD_POST], requirements: ['id' => '\d+'])]
+    public function orderMarkPaid(
+        #[MapEntity(id: 'id')] UserOrder $order,
+        EntityManagerInterface $em,
+        EmailService $emailService,
+        InvoiceNotifier $invoiceNotifier,
+    ): Response {
+        if (!$order->isInvoicePayment()) {
+            $this->addFlash('warning', 'Вручну позначати оплаченими можна лише замовлення з оплатою за рахунком.');
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+        if ($order->isPaid()) {
+            $this->addFlash('warning', 'Замовлення вже позначене оплаченим.');
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+
+        $paidBy = self::adminLabel($this->getUser());
+        $order->setPaidAt(new \DateTimeImmutable());
+        $order->setPaidBy($paidBy);
+        if ($order->getOrderStatus() === OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value) {
+            $order->setOrderStatus(OrderStatusEnum::NEW->value);
+        }
+        $em->flush();
+
+        try {
+            $sentTo = $emailService->sendInvoicePaidEmail($order);
+        } catch (\Throwable $e) {
+            $this->logger->error('Invoice paid email failed', ['order' => $order->getId(), 'error' => $e->getMessage()]);
+            $sentTo = null;
+        }
+
+        $invoiceNotifier->invoicePaid(
+            $order,
+            $paidBy,
+            $this->generateUrl('app_admin_order_detail', ['id' => $order->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+        );
+
+        $this->addFlash('notice', $sentTo
+            ? sprintf('Оплату підтверджено. Клієнту надіслано лист на %s.', $sentTo)
+            : 'Оплату підтверджено. Email клієнту не надіслано (немає адреси або помилка) — повідомте вручну.');
+
+        return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+    }
+
+    private static function adminLabel(?object $user): string
+    {
+        if ($user === null) {
+            return 'невідомий';
+        }
+        $name = method_exists($user, 'getFirstName') ? trim((string) $user->getFirstName()) : '';
+        if (method_exists($user, 'getLastName')) {
+            $name = trim($name . ' ' . (string) $user->getLastName());
+        }
+        $id = method_exists($user, 'getUserIdentifier') ? $user->getUserIdentifier() : '';
+
+        return trim($name !== '' ? sprintf('%s (%s)', $name, $id) : $id) ?: 'невідомий';
     }
 
     /**
@@ -402,7 +524,7 @@ class AdminController extends AbstractController
         EntityManagerInterface $em,
         EmailService $emailService,
     ): Response {
-        if ($order->getLiqPayStatus() === 'success') {
+        if ($order->isPaid()) {
             $this->addFlash('warning', 'Замовлення вже оплачено — посилання не сформовано.');
 
             return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);

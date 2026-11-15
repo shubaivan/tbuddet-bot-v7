@@ -104,8 +104,8 @@ class TelegramUserRepository extends ServiceEntityRepository
                 b.last_name,
                 b.username,
                 COUNT(DISTINCT o.id) as orders_total_count,
-                SUM(CASE WHEN o.liq_pay_status = \'success\' THEN 1 ELSE 0 END) as orders_paid_count,
-                SUM(CASE WHEN o.liq_pay_status = \'success\' THEN o.total_amount ELSE 0 END) as orders_paid_amount,
+                SUM(CASE WHEN (o.liq_pay_status = \'success\' OR o.paid_at IS NOT NULL) THEN 1 ELSE 0 END) as orders_paid_count,
+                SUM(CASE WHEN (o.liq_pay_status = \'success\' OR o.paid_at IS NOT NULL) THEN o.total_amount ELSE 0 END) as orders_paid_amount,
                 date_format(b.created_at, \'%Y-%m-%d %H:%i:%s\') as start,
                 date_format(b.updated_at, \'%Y-%m-%d %H:%i:%s\') as last_visit
                 FROM App\Entity\TelegramUser b

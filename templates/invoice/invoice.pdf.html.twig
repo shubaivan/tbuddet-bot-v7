@@ -1,0 +1,95 @@
+{# «Рахунок на оплату» — rendered by App\Invoice\InvoiceService via dompdf (DejaVu Sans for Cyrillic). #}
+{% macro money(v) %}{{ v|number_format(2, ',', ' ') }}{% endmacro %}
+{% import _self as m %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Рахунок на оплату № {{ number }}</title>
+<style>
+    @page { margin: 18mm 14mm 16mm 14mm; }
+    body { font-family: "DejaVu Sans", sans-serif; font-size: 9.5pt; color: #111; }
+    h1 { font-size: 14pt; margin: 6px 0 2px; }
+    .muted { color: #555; }
+    table { border-collapse: collapse; width: 100%; }
+    .req td { padding: 3px 4px; vertical-align: top; }
+    .req td.label { width: 22%; color: #555; }
+    .goods th, .goods td { border: 1px solid #333; padding: 4px 5px; }
+    .goods th { background: #eee; font-weight: bold; text-align: center; }
+    .num { text-align: right; white-space: nowrap; }
+    .center { text-align: center; }
+    .totals td { padding: 2px 5px; }
+    .totals td.label { text-align: right; width: 80%; }
+    .box { border: 1px solid #333; padding: 6px 8px; margin: 8px 0; }
+    .watermark { position: fixed; top: 38%; left: 4%; width: 100%; text-align: center;
+                 font-size: 110pt; color: rgba(200, 0, 0, 0.16); transform: rotate(-30deg); font-weight: bold; }
+    .sample-banner { background: #c00; color: #fff; text-align: center; font-weight: bold; padding: 4px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+{% if sample %}
+    <div class="watermark">ЗРАЗОК</div>
+    <div class="sample-banner">ЗРАЗОК — тестові дані, не є рахунком до сплати</div>
+{% endif %}
+
+<table class="req">
+    <tr><td class="label">Постачальник</td><td><b>{{ seller.name }}</b></td></tr>
+    <tr><td class="label">Код ЄДРПОУ</td><td>{{ seller.edrpou }}</td></tr>
+    <tr><td class="label">IBAN</td><td>{{ seller.iban }}</td></tr>
+    <tr><td class="label">Банк</td><td>{{ seller.bank }}, МФО {{ seller.mfo }}</td></tr>
+    <tr><td class="label">Адреса</td><td>{{ seller.address }}</td></tr>
+    <tr><td class="label">Контакти</td><td>{{ seller.phone }}, {{ seller.email }}</td></tr>
+    <tr><td class="label">Статус ПДВ</td><td>{% if seller.vatPayer %}Платник ПДВ, ІПН {{ seller.vatIpn }}{% else %}Не є платником ПДВ{% endif %}</td></tr>
+</table>
+
+<h1>Рахунок на оплату № {{ number }} від {{ issuedAt|date('d.m.Y') }}</h1>
+{% if orderId %}<div class="muted">Замовлення № {{ orderId }} на artbeton.market</div>{% endif %}
+
+<div class="box">
+    <table class="req">
+        <tr><td class="label">Платник</td><td><b>{{ payer.name }}</b></td></tr>
+        <tr><td class="label">{% if payer.tax_id|length == 10 %}РНОКПП (ІПН){% else %}Код ЄДРПОУ{% endif %}</td><td>{{ payer.tax_id }}</td></tr>
+        {% if payer.vat_payer and payer.vat_ipn %}<tr><td class="label">ІПН платника ПДВ</td><td>{{ payer.vat_ipn }}</td></tr>{% endif %}
+        <tr><td class="label">Юридична адреса</td><td>{{ payer.address }}</td></tr>
+        {% if payer.iban %}<tr><td class="label">IBAN</td><td>{{ payer.iban }}</td></tr>{% endif %}
+        <tr><td class="label">Контактна особа</td><td>{{ payer.contact_person }}, +{{ payer.phone }}, {{ payer.email }}</td></tr>
+    </table>
+</div>
+
+<table class="goods">
+    <thead>
+        <tr><th style="width:5%">№</th><th>Найменування товару</th><th style="width:8%">Од.</th><th style="width:8%">К-сть</th><th style="width:14%">Ціна, грн</th><th style="width:15%">Сума, грн</th></tr>
+    </thead>
+    <tbody>
+    {% for line in lines %}
+        <tr>
+            <td class="center">{{ loop.index }}</td>
+            <td>{{ line.name }}</td>
+            <td class="center">{{ line.unit }}</td>
+            <td class="center">{{ line.qty }}</td>
+            <td class="num">{{ m.money(line.price) }}</td>
+            <td class="num">{{ m.money(line.sum) }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<table class="totals" style="margin-top:4px">
+    {% if discount > 0 %}
+        <tr><td class="label">Разом без знижки:</td><td class="num">{{ m.money(subtotal) }}</td></tr>
+        <tr><td class="label">Знижка{% if promocode %} (промокод {{ promocode }}){% endif %}:</td><td class="num">−{{ m.money(discount) }}</td></tr>
+    {% endif %}
+    <tr><td class="label"><b>Всього до сплати:</b></td><td class="num"><b>{{ m.money(total) }}</b></td></tr>
+    <tr><td class="label">{% if vat is not null %}У тому числі ПДВ {{ vatRate }}%:{% else %}Без ПДВ{% endif %}</td><td class="num">{% if vat is not null %}{{ m.money(vat) }}{% else %}—{% endif %}</td></tr>
+</table>
+
+<p>Всього найменувань {{ lines|length }}, на суму {{ m.money(total) }} грн.<br>
+<b>{{ totalInWords }}</b>{% if vat is not null %}, у т.ч. ПДВ {{ m.money(vat) }} грн{% else %}, без ПДВ{% endif %}.</p>
+
+<p>Рахунок дійсний до сплати до <b>{{ dueDate ? dueDate|date('d.m.Y') : '—' }}</b>.
+У призначенні платежу обовʼязково вкажіть: «Оплата згідно рахунку № {{ number }}».<br>
+Товар відвантажується після надходження коштів на рахунок постачальника.</p>
+
+<p style="margin-top:28px">Виписав(ла): ____________________ {{ seller.signatory }}</p>
+</body>
+</html>
