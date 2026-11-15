@@ -116,10 +116,12 @@ class EmailService
             default                     => sprintf('Оновлення замовлення #%d', $order->getId()),
         };
 
-        $deliveryAddress = trim(implode(', ', array_filter([
-            $order->getDeliveryCity(),
-            $order->getDeliveryDepartment(),
-        ])));
+        $deliveryAddress = $order->isCityDelivery()
+            ? $order->getDeliverySummary()
+            : trim(implode(', ', array_filter([
+                $order->getDeliveryCity(),
+                $order->getDeliveryDepartment(),
+            ])));
 
         try {
             $email = (new TemplatedEmail())

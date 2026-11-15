@@ -143,6 +143,9 @@ class LiqPayController extends AbstractController
             } else {
                 $amountInfo = sprintf("Сума: %s грн\n", $userOrder->getTotalAmount());
             }
+            if ($userOrder->getDeliveryAmount() > 0) {
+                $amountInfo .= sprintf("У т.ч. доставка: %s грн\n🚚 %s\n", $userOrder->getDeliveryAmount(), htmlspecialchars((string) $userOrder->getDeliveryAddress(), ENT_QUOTES));
+            }
 
             $managerMsg = sprintf(
                 "<b>Нове замовлення #%d</b>\n%s%s%sКлієнт: %s\n\n<a href=\"%s\">Відкрити замовлення</a>",

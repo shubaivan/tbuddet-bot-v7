@@ -30,6 +30,15 @@ class CheckoutRequest
     #[Type('string')]
     private ?string $deliveryDepartmentRef = null;
 
+    /** nova_poshta | pickup | city_courier. NULL — старий фронт (визначаємо за наявністю міста НП). */
+    #[Type('string')]
+    #[\Symfony\Component\Validator\Constraints\Choice(choices: \App\Service\Delivery\CityDelivery::METHODS, message: 'Невідомий спосіб доставки.')]
+    private ?string $deliveryMethod = null;
+
+    /** Адреса для доставки по місту (обовʼязкова для city_courier, перевіряється в контролері). */
+    #[Type('string')]
+    private ?string $deliveryAddress = null;
+
     /** Optional promocode supplied by the buyer. Validated server-side before being applied. */
     #[Type('string')]
     private ?string $promocode = null;
@@ -102,6 +111,30 @@ class CheckoutRequest
     public function setPromocode(?string $promocode): CheckoutRequest
     {
         $this->promocode = $promocode;
+
+        return $this;
+    }
+
+    public function getDeliveryMethod(): ?string
+    {
+        return $this->deliveryMethod;
+    }
+
+    public function setDeliveryMethod(?string $deliveryMethod): self
+    {
+        $this->deliveryMethod = $deliveryMethod;
+
+        return $this;
+    }
+
+    public function getDeliveryAddress(): ?string
+    {
+        return $this->deliveryAddress;
+    }
+
+    public function setDeliveryAddress(?string $deliveryAddress): self
+    {
+        $this->deliveryAddress = $deliveryAddress;
 
         return $this;
     }
