@@ -157,4 +157,16 @@ class ChatGateAndReportTest extends TestCase
         self::assertStringNotContainsString('Верона', $capped);
         self::assertStringContainsString('Усі моделі:', $capped);
     }
+
+    public function testCapKeepsTrailingCtaBeforeContactsCard(): void
+    {
+        $items = [];
+        for ($i = 1; $i <= 10; ++$i) {
+            $items[] = '• Товар '.$i.' — https://artbeton.market/uk/product/view/'.$i;
+        }
+        $reply = implode("\n", $items)."\n\nУсі моделі: https://artbeton.market/uk/product/category/traffic-barriers\n\nЗамовити можна на сайті за посиланням вище або в менеджера:\n";
+        $capped = ChatAssistantService::capProductLines(trim($reply));
+        self::assertStringEndsWith('або в менеджера:', $capped);
+        self::assertSame(8, substr_count($capped, '/uk/product/view/'));
+    }
 }

@@ -21,6 +21,9 @@ class ChatAssistantService
     /** Sentinel the model appends when it wants to hand off to a human. */
     private const OPERATOR_SENTINEL = '[[OPERATOR]]';
 
+    /** Маркер «показати картку контактів менеджерів» (віджет малює її з посиланнями tel/Telegram/WhatsApp/Viber). */
+    public const CONTACTS_SENTINEL = '[[CONTACTS]]';
+
     /** Бази знань по черзі: власна Art Beton Market, потім завод «Буддеталь» (рішення Івана 09.10.2026 — одна спільна база). */
     private const FAQ_RELATIVE_PATHS = [
         'config/support_chat/faq.uk.md',
@@ -51,7 +54,7 @@ class ChatAssistantService
      * @param list<mixed>                    $rawMessages [{role:'user'|'assistant', content:string}, ...]
      * @param array{name?:string, phone?:string} $client  хто пройшов «вхід» у чат (телефон уже маємо)
      *
-     * @return array{reply:string, suggestOperator:bool, usage:array{input:int,output:int}, links:list<string>}
+     * @return array{reply:string, suggestOperator:bool, usage:array{input:int,output:int}, links:list<string>, contacts?:bool}
      */
     public function reply(array $rawMessages, array $client = []): array
     {
@@ -101,7 +104,8 @@ class ChatAssistantService
         }
 
         $suggestOperator = str_contains($text, self::OPERATOR_SENTINEL);
-        $reply = self::capProductLines(self::stripCompetitors($this->stripMarkdown(str_replace(self::OPERATOR_SENTINEL, '', $text))));
+        $contacts = str_contains($text, self::CONTACTS_SENTINEL);
+        $reply = self::capProductLines(self::stripCompetitors($this->stripMarkdown(str_replace([self::OPERATOR_SENTINEL, self::CONTACTS_SENTINEL], '', $text))));
 
         if ('' === $reply) {
             $fallback = $this->operatorFallback();
@@ -111,7 +115,7 @@ class ChatAssistantService
             return $fallback;
         }
 
-        return ['reply' => $reply, 'suggestOperator' => $suggestOperator, 'usage' => $usage, 'links' => self::extractLinks($reply)];
+        return ['reply' => $reply, 'suggestOperator' => $suggestOperator, 'usage' => $usage, 'links' => self::extractLinks($reply), 'contacts' => $contacts];
     }
 
     /**
@@ -158,7 +162,8 @@ class ChatAssistantService
                 for ($j = $i + 1; $j < \count($out) && '' === $next; ++$j) {
                     $next = trim($out[$j]);
                 }
-                if ('' === $next || !preg_match('/^(?:[•\-]|\d+[.)])/u', $next)) {
+                // Останній рядок із двокрапкою — заклик перед карткою контактів, його не чіпаємо.
+                if ('' !== $next && !preg_match('/^(?:[•\-]|\d+[.)])/u', $next)) {
                     continue;
                 }
             }
@@ -275,8 +280,11 @@ class ChatAssistantService
             Телефони менеджерів — ЛИШЕ ці: Лена 068 517 00 77, Олег 068 372 70 07, Іван 063 302 26 66. Інших номерів не називай.
             Не починай відповідь з «Привіт» — звертайся «Добрий день» лише в першій відповіді, далі без привітань.
             Кожна змістовна відповідь (зокрема про оплату, доставку, умови) закінчується коротким окремим рядком — закликом до дії:
-            - для товарів із каталогу сайту: «Замовити можна на сайті за посиланням вище або в менеджера: {$this->managersCta()}»;
-            - для продукції під замовлення (бетон, ЗБВ тощо): «Замовити й прорахувати доставку — у менеджера: {$this->managersCta()}».
+            - для товарів із каталогу сайту: «Замовити можна на сайті за посиланням вище або в менеджера:»;
+            - для продукції під замовлення (бетон, ЗБВ тощо): «Замовити й прорахувати доставку — у менеджера:».
+            Одразу після цього рядка — окремим рядком токен {$this->contactsSentinel()} (система покаже під ним картку
+            менеджерів з телефонами й кнопками Telegram / WhatsApp / Viber). Самі номери в заклику НЕ пиши.
+            Якщо клієнт прямо просить телефон чи контакти — назви імена й номери менеджерів і теж додай токен.
             На привітання, подяку чи коротке уточнювальне питання заклик не потрібен. Але якщо у відповіді є
             перелік товарів або ціни — заклик ОБОВʼЯЗКОВИЙ останнім рядком, навіть якщо перед ним ти щось уточнюєш. Заклик — ОДИН рядок саме в такому
             вигляді; не змішуй його з фразою «менеджер передзвонить на ваш номер» (номер 068… — це наш, а не клієнта).
@@ -300,16 +308,9 @@ class ChatAssistantService
     /** Контакти менеджерів для заклику (рішення Івана 15.11.2026). */
     public const MANAGERS_CTA = '📞 Лена 068 517 00 77 · Олег 068 372 70 07 · Іван 063 302 26 66';
 
-    private function managersCta(): string
+    private function contactsSentinel(): string
     {
-        return self::MANAGERS_CTA.$this->telegramCta();
-    }
-
-    private function telegramCta(): string
-    {
-        $bot = ltrim(trim($this->telegramBotName), '@');
-
-        return '' !== $bot && preg_match('/^[A-Za-z0-9_]{5,32}$/', $bot) ? ' або Telegram: https://t.me/'.$bot : '';
+        return self::CONTACTS_SENTINEL;
     }
 
     private function operatorSentinel(): string
@@ -435,10 +436,12 @@ class ChatAssistantService
     private function operatorFallback(): array
     {
         return [
-            'reply' => 'Вибачте, зараз не можу відповісти на це питання. Натисніть «Зв\'язатися з оператором» — ми допоможемо.',
+            'reply' => 'Вибачте, зараз не можу відповісти на це питання. Натисніть «Зв\'язатися з оператором» або напишіть чи зателефонуйте менеджеру:',
             'suggestOperator' => true,
             'usage' => ['input' => 0, 'output' => 0],
             'links' => [],
+            // Консультант недоступний — покупець усе одно бачить живі контакти менеджерів.
+            'contacts' => true,
         ];
     }
 }
