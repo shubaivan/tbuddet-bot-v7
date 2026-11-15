@@ -15,8 +15,11 @@ use Psr\Cache\CacheItemPoolInterface;
  * 09.10.2026 так і сталося: закінчився баланс, консультант мовчки відповідав
  * заглушкою на кожне питання.
  *
- * Не частіше разу на добу на кожен вид збою — консультант смикає API на кожне
- * повідомлення, і без цього група отримала б по тривозі на кожне питання.
+ * «Баланс» і «ключ» — однозначні збої: їх віддаємо в спільний стан
+ * ConsultantHealth, який пише лише на зміні стану (і сам повідомить «знову
+ * працює»). Інші помилки (можуть бути разовими чи специфічними для запиту) —
+ * як і раніше, не частіше разу на добу, і лише якщо health-check ще не
+ * повідомив про збій.
  */
 final class ConsultantAlert
 {
@@ -24,6 +27,7 @@ final class ConsultantAlert
         private readonly CacheItemPoolInterface $supportChatCache,
         private readonly TelegramNotifier $notifier,
         private readonly ConsultantUsage $usage,
+        private readonly ConsultantHealth $health,
         private readonly string $alertMention = '',
     ) {
     }
@@ -33,17 +37,19 @@ final class ConsultantAlert
         $this->usage->failure();
         $error = $e->getMessage();
 
-        [$kind, $text] = match (true) {
-            str_contains($error, 'credit balance') => ['balance', '⚠️ <b>ІІ-консультант не працює: закінчився баланс Anthropic.</b>'
-                ."\nПокупці бачать заглушку «зв'яжіться з оператором»."
-                ."\nПоповнити: https://console.anthropic.com/settings/billing"],
-            str_contains($error, 'authentication') || str_contains($error, 'invalid x-api-key') => ['auth', '⚠️ <b>ІІ-консультант не працює: ключ Anthropic недійсний.</b>'
-                ."\nПотрібен новий API-ключ: https://console.anthropic.com/settings/keys"],
-            default => ['other', '⚠️ <b>ІІ-консультант не відповідає</b> — помилка Anthropic:'
-                ."\n<i>".TelegramNotifier::esc(mb_substr($error, 0, 300)).'</i>'],
-        };
+        $kind = ConsultantHealthState::classify($e);
+        if (ConsultantHealthState::OTHER !== $kind) {
+            $this->health->observe($kind);
 
-        $this->onceADay('alert_'.$kind, $text);
+            return;
+        }
+
+        if ($this->health->isFailing()) {
+            return;
+        }
+
+        $this->onceADay('alert_other', '⚠️ <b>ІІ-консультант не відповідає</b> — помилка Anthropic:'
+            ."\n<i>".TelegramNotifier::esc(mb_substr($error, 0, 300)).'</i>');
     }
 
     /** Денна стеля витрат досягнута — консультанта вимкнено до завтра. */
