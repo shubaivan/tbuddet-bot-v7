@@ -96,10 +96,64 @@ class EmailService
         return $emailAddress;
     }
 
+    /**
+     * Sends the «Рахунок на оплату» PDF to the payer email. Returns the address
+     * it went to, or null when there is none.
+     */
+    public function sendInvoiceEmail(UserOrder $order, string $pdf): ?string
+    {
+        $to = $order->getInvoiceEmail();
+        if (!$to) {
+            return null;
+        }
+
+        $email = (new TemplatedEmail())
+            ->from(new Address($this->mailerFrom, 'Арт Бетон Маркет'))
+            ->to($to)
+            ->subject(sprintf('Рахунок на оплату № %s — Арт Бетон Маркет', $order->getInvoiceNumber()))
+            ->htmlTemplate('email/invoice.html.twig')
+            ->context([
+                'order' => $order,
+                'payer' => $order->getInvoicePayer(),
+                'profileUrl' => rtrim($this->frontendUrl, '/') . '/uk/profile',
+            ])
+            ->attach($pdf, sprintf('Rahunok-%s.pdf', $order->getInvoiceNumber()), 'application/pdf');
+
+        $this->mailer->send($email);
+
+        return $to;
+    }
+
+    /** «Оплату отримано» after a manager confirms the bank transfer. */
+    public function sendInvoicePaidEmail(UserOrder $order): ?string
+    {
+        $to = $order->getInvoiceEmail();
+        if (!$to) {
+            return null;
+        }
+
+        $email = (new TemplatedEmail())
+            ->from(new Address($this->mailerFrom, 'Арт Бетон Маркет'))
+            ->to($to)
+            ->subject(sprintf('Оплату за рахунком № %s отримано — Арт Бетон Маркет', $order->getInvoiceNumber()))
+            ->htmlTemplate('email/invoice-paid.html.twig')
+            ->context([
+                'order' => $order,
+                'profileUrl' => rtrim($this->frontendUrl, '/') . '/uk/profile',
+            ]);
+
+        $this->mailer->send($email);
+
+        return $to;
+    }
+
     public function sendOrderStatusChangeEmail(UserOrder $order, string $newStatus): void
     {
         $statusEnum = OrderStatusEnum::tryFrom($newStatus);
-        if ($statusEnum === null || $statusEnum === OrderStatusEnum::NEW) {
+        if ($statusEnum === null
+            || $statusEnum === OrderStatusEnum::NEW
+            || $statusEnum === OrderStatusEnum::AWAITING_INVOICE_PAYMENT
+        ) {
             return;
         }
 

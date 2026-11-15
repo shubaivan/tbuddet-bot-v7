@@ -25,6 +25,8 @@ doctrine:
             jsonb[]: MartinGeorgiev\Doctrine\DBAL\Types\JsonbArray
             tsvector: App\Doctrine\DBAL\Types\TsVector
         url: '%env(resolve:DATABASE_URL)%'
+        # Invoice numbers come from a plain sequence Doctrine doesn't map.
+        schema_filter: ~^(?!invoice_number_seq$)~
 
         # IMPORTANT: You MUST configure your server version,
         # either here or in the DATABASE_URL env var (see .env file)

@@ -160,7 +160,29 @@ services:
             $cityDeliveryPriceUah: '%env(int:CITY_DELIVERY_PRICE_UAH)%'
             $cityDeliveryCity: '%env(CITY_DELIVERY_CITY)%'
 
+    App\Invoice\InvoicePublicLink:
+        arguments:
+            $appSecret: '%kernel.secret%'
+            $apiBaseUrl: '%env(INVOICE_PUBLIC_BASE_URL)%'
+
     # Chat-gate token signing (HMAC over the dialog id).
     App\Service\SupportChat\ChatDialogStore:
         arguments:
             $appSecret: '%kernel.secret%'
+
+    # Seller requisites for «Рахунок на оплату» — values live in INVOICE_* env vars (.env block).
+    App\Invoice\SellerRequisites:
+        arguments:
+            $name: '%env(string:INVOICE_SELLER_NAME)%'
+            $edrpou: '%env(string:INVOICE_SELLER_EDRPOU)%'
+            $iban: '%env(string:INVOICE_SELLER_IBAN)%'
+            $bank: '%env(string:INVOICE_SELLER_BANK)%'
+            $mfo: '%env(string:INVOICE_SELLER_MFO)%'
+            $vatStatus: '%env(string:INVOICE_SELLER_VAT_STATUS)%'
+            $vatIpn: '%env(string:INVOICE_SELLER_VAT_IPN)%'
+            $signatory: '%env(string:INVOICE_SELLER_SIGNATORY)%'
+            $phone: '%env(string:INVOICE_SELLER_PHONE)%'
+            $email: '%env(string:INVOICE_SELLER_EMAIL)%'
+            $address: '%env(string:INVOICE_SELLER_ADDRESS)%'
+            $paymentTermDays: '%env(string:INVOICE_PAYMENT_TERM_DAYS)%'
+            $numberPrefix: '%env(string:INVOICE_NUMBER_PREFIX)%'
