@@ -101,7 +101,7 @@ class ChatAssistantService
         }
 
         $suggestOperator = str_contains($text, self::OPERATOR_SENTINEL);
-        $reply = self::stripCompetitors($this->stripMarkdown(str_replace(self::OPERATOR_SENTINEL, '', $text)));
+        $reply = self::capProductLines(self::stripCompetitors($this->stripMarkdown(str_replace(self::OPERATOR_SENTINEL, '', $text))));
 
         if ('' === $reply) {
             $fallback = $this->operatorFallback();
@@ -125,6 +125,41 @@ class ChatAssistantService
         $kept = array_filter($lines, static fn (string $l): bool => !preg_match('/буддетал|buddetal|zavodbuddetal|zavod_buddetal/iu', $l));
 
         return trim((string) preg_replace("/\n{3,}/u", "\n\n", implode("\n", $kept)));
+    }
+
+    /**
+     * Не більше $max рядків із картками товарів (рішення Івана 15.11.2026). Зайві
+     * рядки прибираються; якщо посилання на всю категорію/пошук у відповіді немає —
+     * додається «Усі моделі» на каталог.
+     */
+    public static function capProductLines(string $text, int $max = 8, string $catalogUrl = 'https://artbeton.market/uk/product'): string
+    {
+        $lines = preg_split('/\R/u', $text) ?: [];
+        $seen = 0;
+        $dropped = false;
+        $out = [];
+        foreach ($lines as $l) {
+            if (str_contains($l, '/uk/product/view/')) {
+                if (++$seen > $max) {
+                    $dropped = true;
+                    continue;
+                }
+            }
+            $out[] = $l;
+        }
+        if (!$dropped) {
+            return $text;
+        }
+        $hasAll = (bool) preg_grep('~/uk/product(?:/category/|\?full_text_search=)~u', $out);
+        if (!$hasAll) {
+            // Перед закликом (останній рядок), якщо він є.
+            $last = array_pop($out);
+            $out[] = 'Усі моделі: '.$catalogUrl;
+            $out[] = '';
+            $out[] = (string) $last;
+        }
+
+        return trim((string) preg_replace("/\n{3,}/u", "\n\n", implode("\n", $out)));
     }
 
     /**
@@ -209,8 +244,9 @@ class ChatAssistantService
               це актуальні дані з сайту. Якщо ціна в базі знань відрізняється — правильна та, що в каталозі.
             - Коли клієнт питає про групу товарів — дай КОНКРЕТНИЙ перелік, кожна позиція окремим рядком:
               «• Назва, розмір — ціна грн — посилання». Посилання на картку товару ОБОВʼЯЗКОВЕ в КОЖНОМУ
-              рядку. Не більше 8 позицій; якщо в групі більше — покажи найрелевантніші (різні моделі/розміри)
-              й додай рядок «Усі моделі: <посилання на категорію з каталогу>».
+              рядку. СУВОРО не більше 8 рядків-товарів на всю відповідь (порахуй перед відповіддю). Якщо
+              підходящих позицій більше — обери 8 найрелевантніших (різні моделі/розміри) і ОБОВʼЯЗКОВО додай
+              рядок «Усі моделі: <посилання на категорію з каталогу>».
               Не пиши розмитого «куби й інші моделі» — або назви позицію з ціною, або не згадуй.
             - Посилання — ТІЛЬКИ ті URL, що дослівно є в каталозі чи базі знань. Ніколи не складай і не
               вгадуй адреси сторінок. Пиши URL звичайним текстом (без Markdown, без [текст](url)).
@@ -219,6 +255,9 @@ class ChatAssistantService
               прайсу в базі знань і контакти менеджерів Art Beton Market.
 
             # ЗАВЕРШЕННЯ ВІДПОВІДІ
+            Пиши грамотною українською без русизмів (моделі, а не «модели»; під, а не «под»; перевір орфографію).
+            Не обіцяй власного транспорту чи радіусу доставки — доставку й вартість узгодить менеджер.
+            Єдиний телефон для клієнтів — 068 517 00 77; інших номерів не називай.
             Не починай відповідь з «Привіт» — звертайся «Добрий день» лише в першій відповіді, далі без привітань.
             Кожна змістовна відповідь (зокрема про оплату, доставку, умови) закінчується коротким окремим рядком — закликом до дії:
             - для товарів із каталогу сайту: «Замовити можна на сайті за посиланням вище або в менеджера: 📞 068 517 00 77{$this->telegramCta()}»;

@@ -86,6 +86,10 @@ class ChatGateAndReportTest extends TestCase
             self::assertDoesNotMatchRegularExpression('/буддетал|buddetal|zavodbuddetal|instagram\.com\/zavod/iu', (string) file_get_contents($file), basename($file));
         }
         self::assertStringContainsString('068 517 00 77', (string) file_get_contents(__DIR__.'/../../../config/support_chat/faq.buddetal.uk.md'));
+        foreach (glob(__DIR__.'/../../../config/support_chat/*.md') ?: [] as $file) {
+            self::assertStringNotContainsString('444 55 01', (string) file_get_contents($file));
+            self::assertStringNotContainsString('160 км', (string) file_get_contents($file));
+        }
     }
 
     public function testExtractLinks(): void
@@ -112,5 +116,27 @@ class ChatGateAndReportTest extends TestCase
         self::assertStringContainsString('https://artbeton.market/uk/product/view/119', $text);
         self::assertStringContainsString('так, просив', $text);
         self::assertStringContainsString('0,42 грн ($0.010)', $text);
+    }
+
+    public function testCapsProductLinesAtEight(): void
+    {
+        $items = [];
+        for ($i = 1; $i <= 11; ++$i) {
+            $items[] = '• Товар '.$i.' — 100 грн — https://artbeton.market/uk/product/view/'.$i;
+        }
+        $reply = "Ось що є:\n\n".implode("\n", \array_slice($items, 0, 8))."\n\nТакож:\n".implode("\n", \array_slice($items, 8))
+            ."\n\nУсі моделі: https://artbeton.market/uk/product/category/traffic-barriers\n\nЗамовити: 📞 068 517 00 77";
+        $capped = ChatAssistantService::capProductLines($reply);
+        self::assertSame(8, substr_count($capped, '/uk/product/view/'));
+        self::assertStringContainsString('Усі моделі: https://artbeton.market/uk/product/category/traffic-barriers', $capped);
+        self::assertStringEndsWith('📞 068 517 00 77', $capped);
+
+        $noAll = implode("\n", $items)."\n\nЗамовити: 📞 068 517 00 77";
+        $capped = ChatAssistantService::capProductLines($noAll);
+        self::assertSame(8, substr_count($capped, '/uk/product/view/'));
+        self::assertStringContainsString("Усі моделі: https://artbeton.market/uk/product\n\nЗамовити", $capped);
+
+        $short = "• A — https://artbeton.market/uk/product/view/1\nЗамовити";
+        self::assertSame($short, ChatAssistantService::capProductLines($short));
     }
 }
