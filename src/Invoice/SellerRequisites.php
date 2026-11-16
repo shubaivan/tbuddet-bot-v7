@@ -35,6 +35,7 @@ final class SellerRequisites
         private readonly string $address,
         private readonly string $paymentTermDays,
         private readonly string $numberPrefix = 'ABM',
+        private readonly string $signatoryPosition = '',
     ) {
     }
 
@@ -57,7 +58,7 @@ final class SellerRequisites
             'INVOICE_SELLER_PHONE (телефон)' => $this->phone,
             'INVOICE_SELLER_EMAIL (email)' => $this->email,
             'INVOICE_SELLER_ADDRESS (адреса)' => $this->address,
-            'INVOICE_PAYMENT_TERM_DAYS (строк оплати, днів)' => $this->paymentTermDays,
+            'INVOICE_PAYMENT_TERM_DAYS (строк оплати, банківських днів)' => $this->paymentTermDays,
         ];
         foreach ($required as $label => $value) {
             if (self::isPlaceholder($value)) {
@@ -124,10 +125,29 @@ final class SellerRequisites
     public function isVatPayer(): bool { return $this->vatStatus === self::VAT_PAYER; }
     public function vatIpn(): string { return $this->vatIpn; }
     public function signatory(): string { return $this->signatory; }
+    /** Optional, e.g. «Директор»; empty → only the name is printed. */
+    public function signatoryPosition(): string { return trim($this->signatoryPosition); }
     public function phone(): string { return $this->phone; }
     public function email(): string { return $this->email; }
     public function address(): string { return $this->address; }
+    /** Payment term in BANK (working) days, Mon–Fri. */
     public function paymentTermDays(): int { return (int) $this->paymentTermDays; }
+
+    /** «3 банківські дні», «5 банківських днів», «1 банківський день». */
+    public function paymentTermLabel(): string
+    {
+        $n = $this->paymentTermDays();
+        $mod10 = $n % 10;
+        $mod100 = $n % 100;
+        if ($mod10 === 1 && $mod100 !== 11) {
+            return $n . ' банківський день';
+        }
+        if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+            return $n . ' банківські дні';
+        }
+
+        return $n . ' банківських днів';
+    }
     public function numberPrefix(): string { return $this->numberPrefix !== '' ? $this->numberPrefix : 'ABM'; }
 
     /** Dummy requisites for the «ЗРАЗОК» sample PDF only. Never used for a real order. */
@@ -146,6 +166,7 @@ final class SellerRequisites
             email: 'sample@example.com',
             address: '00000, м. Зразкове, вул. Зразкова, 1',
             paymentTermDays: '5',
+            signatoryPosition: 'Директор',
         );
     }
 

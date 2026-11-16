@@ -115,6 +115,25 @@ class InvoicePayerAndRequisitesTest extends TestCase
         self::assertStringContainsString('PAYMENT_TERM_DAYS', $text);
     }
 
+    public function testPaymentTermIsInBankDays(): void
+    {
+        $make = static fn (string $days): SellerRequisites => new SellerRequisites(
+            'ТОВ «X»', '', '', '', '', '', '', 'X', '', '', '', $days,
+        );
+
+        self::assertSame('1 банківський день', $make('1')->paymentTermLabel());
+        self::assertSame('3 банківські дні', $make('3')->paymentTermLabel());
+        self::assertSame('5 банківських днів', $make('5')->paymentTermLabel());
+        self::assertSame('12 банківських днів', $make('12')->paymentTermLabel());
+        self::assertSame('22 банківські дні', $make('22')->paymentTermLabel());
+        $kyiv = new \DateTimeZone('Europe/Kyiv');
+        // Friday + 3 bank days = Wednesday; Monday + 3 = Thursday
+        self::assertSame('2026-11-18', InvoiceService::dueDate(new \DateTimeImmutable('2026-11-13 15:00', $kyiv), 3)->format('Y-m-d'));
+        self::assertSame('2026-11-19', InvoiceService::dueDate(new \DateTimeImmutable('2026-11-16 00:30', $kyiv), 3)->format('Y-m-d'));
+        // printed in the default timezone, no shift to the previous day
+        self::assertSame('00:00', InvoiceService::dueDate(new \DateTimeImmutable('2026-11-16 10:00', $kyiv), 3)->format('H:i'));
+    }
+
     public function testSampleRequisitesAreComplete(): void
     {
         self::assertSame([], SellerRequisites::sample()->problems());

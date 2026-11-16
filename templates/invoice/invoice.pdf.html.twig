@@ -86,10 +86,15 @@
 <p>Всього найменувань {{ lines|length }}, на суму {{ m.money(total) }} грн.<br>
 <b>{{ totalInWords }}</b>{% if vat is not null %}, у т.ч. ПДВ {{ m.money(vat) }} грн{% else %}, без ПДВ{% endif %}.</p>
 
-<p>Рахунок дійсний до сплати до <b>{{ dueDate ? dueDate|date('d.m.Y') : '—' }}</b>.
+<p>Рахунок дійсний до сплати до <b>{{ dueDate ? dueDate|date('d.m.Y') : '—' }}</b>{% if not sample and seller.paymentTermDays > 0 %} ({{ seller.paymentTermLabel }}){% endif %}.
 У призначенні платежу обовʼязково вкажіть: «Оплата згідно рахунку № {{ number }}».<br>
 Товар відвантажується після надходження коштів на рахунок постачальника.</p>
 
-<p style="margin-top:28px">Виписав(ла): ____________________ {{ seller.signatory }}</p>
+<table style="margin-top:28px; width:100%">
+    <tr>
+        <td style="width:62%">{{ seller.signatoryPosition ?: 'Виписав(ла)' }}: ____________________ {{ seller.signatory }}</td>
+        <td style="text-align:center; color:#555">М. П.</td>
+    </tr>
+</table>
 </body>
 </html>
