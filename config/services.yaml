@@ -186,3 +186,4 @@ services:
             $address: '%env(string:INVOICE_SELLER_ADDRESS)%'
             $paymentTermDays: '%env(string:INVOICE_PAYMENT_TERM_DAYS)%'
             $numberPrefix: '%env(string:INVOICE_NUMBER_PREFIX)%'
+            $signatoryPosition: '%env(string:INVOICE_SELLER_SIGNATORY_POSITION)%'

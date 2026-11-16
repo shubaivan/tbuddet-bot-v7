@@ -96,7 +96,20 @@ class InvoiceService
 
         $order->setInvoiceNumber(self::formatNumber($this->seller->numberPrefix(), (int) $now->format('Y'), $seq));
         $order->setInvoiceIssuedAt($now);
-        $order->setInvoiceDueDate($now->setTime(0, 0)->modify(sprintf('+%d days', $this->seller->paymentTermDays())));
+        $order->setInvoiceDueDate(self::dueDate($now, $this->seller->paymentTermDays()));
+    }
+
+    /**
+     * Kyiv calendar date + N bank days (Mon–Fri), as a plain date at midnight in the
+     * default timezone — the same value Doctrine's date_immutable gives on reload, so
+     * Twig's |date never shifts it a day back (a Kyiv-midnight object is 22:00 UTC of
+     * the previous day).
+     */
+    public static function dueDate(\DateTimeImmutable $issuedAt, int $bankDays): \DateTimeImmutable
+    {
+        $kyiv = $issuedAt->setTimezone(new \DateTimeZone(self::TZ))->setTime(0, 0)->modify(sprintf('+%d weekdays', $bankDays));
+
+        return new \DateTimeImmutable($kyiv->format('Y-m-d'));
     }
 
     public static function formatNumber(string $prefix, int $year, int $seq): string
@@ -136,7 +149,7 @@ class InvoiceService
             seller: SellerRequisites::sample(),
             number: self::formatNumber('ЗРАЗОК', (int) $issued->format('Y'), 1),
             issuedAt: $issued,
-            dueDate: $issued->setTime(0, 0)->modify('+5 days'),
+            dueDate: self::dueDate($issued, 5),
             payer: [
                 'name' => 'ОСББ «ЗРАЗОК»',
                 'tax_id' => '00032129',
