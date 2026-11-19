@@ -72,6 +72,15 @@
                         {% endif %}
                     </div>
                 </div>
+                {% if order.campaign %}
+                <div class="info-item">
+                    <label>QR-кампанія</label>
+                    <div class="value">
+                        <a href="{{ path('app_admin_campaigns_show', {id: order.campaign.id}) }}">{{ order.campaign.slug }}</a>
+                        <span style="color:#777;">({{ order.campaignSource == 'qr' ? 'прийшов через QR' : 'лише промокод' }})</span>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="info-item">
                     <label>Дата створення</label>
                     <div class="value">{{ order.createdAt|date('d.m.Y H:i') }}</div>

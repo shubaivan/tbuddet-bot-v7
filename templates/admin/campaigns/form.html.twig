@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ campaign.id ? 'Редагувати' : 'Нова' }} QR-кампанія{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="container" style="margin-top: 24px; max-width: 720px;">
+        <h2>{{ campaign.id ? 'Кампанія ' ~ campaign.slug : '+ Нова QR-кампанія' }}</h2>
+
+        {% for e in errors %}
+            <div class="alert alert-warning">{{ e }}</div>
+        {% endfor %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Ідентифікатор (у QR-посиланні):</label>
+                {% if campaign.id %}
+                    <div><code>{{ qrBase }}/q/{{ campaign.slug }}</code></div>
+                    <small class="text-muted">Не змінюється: він уже надрукований на QR.</small>
+                {% else %}
+                    <div class="input-group">
+                        <span class="input-group-text">{{ qrBase }}/q/</span>
+                        <input type="text" name="slug" class="form-control" required maxlength="32" pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}" placeholder="ch27">
+                    </div>
+                    <small class="text-muted">Коротко, латиницею: чим коротше посилання, тим простіший і надійніший QR.</small>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label>Назва (для себе):</label>
+                <input type="text" name="name" class="form-control" maxlength="120" value="{{ campaign.name }}" placeholder="Черкаси, бізнес-подія 27–28.11">
+            </div>
+
+            <div class="form-group">
+                <label>Промокод для відвідувачів з QR:</label>
+                <select name="promocode_id" class="form-control">
+                    <option value="0">— без промокоду —</option>
+                    {% for p in promocodes %}
+                        <option value="{{ p.id }}" {{ campaign.promocode and campaign.promocode.id == p.id ? 'selected' }}>
+                            {{ p.code }} — {{ p.value }}{{ p.discountType.value == 'percent' ? '%' : ' ' ~ p.currency.label }}{{ p.active ? '' : ' (вимкнений)' }}{{ p.validTo ? ', до ' ~ p.validTo|date('d.m.Y') : '' }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Показується у вікні на сайті й підставляється в оформлення замовлення. Сам код створюється в «Промокоди».</small>
+            </div>
+
+            <div class="form-group">
+                <label>Куди веде QR (сторінка сайту):</label>
+                <input type="text" name="target_path" class="form-control" value="{{ campaign.targetPath }}" placeholder="/uk/">
+                <small class="text-muted">Шлях на {{ qrBase }}, наприклад <code>/uk/</code> або <code>/uk/product</code>.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Вікно атрибуції, днів:</label>
+                <input type="number" name="attribution_days" class="form-control" min="1" max="365" value="{{ campaign.attributionDays }}">
+                <small class="text-muted">Реєстрації, кошик і замовлення протягом цього часу після першого скану зараховуються кампанії.</small>
+            </div>
+
+            <div class="form-check" style="margin: 12px 0;">
+                <input type="checkbox" name="is_active" value="1" class="form-check-input" id="is_active" {{ campaign.active ? 'checked' }}>
+                <label for="is_active" class="form-check-label">Активна (вимкнена: QR веде на головну без промокоду, скани далі пишуться)</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Зберегти</button>
+            <a href="{{ path('app_admin_campaigns') }}" class="btn btn-link">Скасувати</a>
+        </form>
+    </div>
+{% endblock %}

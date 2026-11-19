@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}QR-кампанії — Адмін{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    <div class="container-fluid" style="margin-top: 24px; max-width: 1400px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h2>📲 QR-кампанії</h2>
+            <a href="{{ path('app_admin_campaigns_new') }}" class="btn btn-primary">+ Нова кампанія</a>
+        </div>
+        <p class="text-muted" style="margin-bottom: 16px;">
+            QR на листівці веде на <code>{{ qrBase }}/q/&lt;ідентифікатор&gt;</code>. Кожен скан записується (час, IP, браузер),
+            людина отримує анонімний ідентифікатор на 60 днів (налаштовується) — і далі видно, чи вона зареєструвалась, поклала в кошик, замовила й оплатила.
+            Боти й прев'ю посилань у месенджерах у воронку не потрапляють.
+        </p>
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'warning' }}">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        <div class="table-responsive">
+        <table class="table table-hover" style="font-size: 14px;">
+            <thead>
+            <tr>
+                <th>Кампанія</th>
+                <th>Промокод</th>
+                <th title="Скани людей (у дужках — боти/прев'ю, не рахуються)">Скани</th>
+                <th title="Унікальні пристрої, що відсканували">Унік.</th>
+                <th title="Сайт справді відкрився (спрацював JS)">На сайті</th>
+                <th title="Зареєструвались / увійшли (унікальні)">Реєстр. / вхід</th>
+                <th title="Поклали товар у кошик (унікальні)">Кошик</th>
+                <th title="Замовлення: через QR + лише промокодом без скану">Замовлення</th>
+                <th>Оплачено</th>
+                <th title="Усі використання промокоду кампанії, будь-яким шляхом">Код викор.</th>
+                <th>Статус</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for c in campaigns %}
+                {% set f = funnel[c.id] %}
+                <tr>
+                    <td>
+                        <a href="{{ path('app_admin_campaigns_show', {id: c.id}) }}"><strong>{{ c.slug }}</strong></a><br>
+                        <small class="text-muted">{{ c.name }}</small>
+                    </td>
+                    <td>{% if c.promocode %}<code>{{ c.promocode.code }}</code> −{{ c.promocode.value }}{{ c.promocode.discountType.value == 'percent' ? '%' : ' ' ~ c.promocode.currency.label }}{% else %}—{% endif %}</td>
+                    <td><strong>{{ f.scans }}</strong> <small class="text-muted">({{ f.scans_bot }})</small></td>
+                    <td>{{ f.visitors }}</td>
+                    <td>{{ f.landed }}</td>
+                    <td>{{ f.registered }} / {{ f.logged_in }}</td>
+                    <td>{{ f.carted }}</td>
+                    <td>{{ f.orders }} <small class="text-muted">({{ f.orders_qr }} QR + {{ f.orders_promocode }} код)</small></td>
+                    <td><strong>{{ f.paid }}</strong>{% if f.paid_sum > 0 %} <small>· {{ f.paid_sum|number_format(0, '.', ' ') }} грн</small>{% endif %}</td>
+                    <td>{{ f.code_uses }}</td>
+                    <td>
+                        <form method="POST" action="{{ path('app_admin_campaigns_toggle', {id: c.id}) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm {{ c.active ? 'btn-success' : 'btn-outline-secondary' }}"
+                                    onclick="return confirm('{{ c.active ? 'Вимкнути' : 'Увімкнути' }} кампанію {{ c.slug }}?');">
+                                {{ c.active ? '✓ Активна' : '✗ Вимкнена' }}
+                            </button>
+                        </form>
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <a href="{{ path('app_admin_campaigns_show', {id: c.id}) }}" class="btn btn-sm btn-outline-info" title="Звіт">📊</a>
+                        <a href="{{ path('app_admin_campaigns_edit', {id: c.id}) }}" class="btn btn-sm btn-outline-secondary" title="Редагувати">✏️</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="12" class="text-center">Кампаній ще немає</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+{% endblock %}

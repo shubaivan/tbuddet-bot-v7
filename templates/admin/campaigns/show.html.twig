@@ -1,0 +1,116 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ campaign.slug }} — QR-кампанія{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+    {% set stepLabels = {landing: 'на сайті', register: 'реєстрація', login: 'вхід', add_to_cart: 'кошик', order: 'замовлення'} %}
+    <div class="container-fluid" style="margin-top: 24px; max-width: 1400px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>📲 {{ campaign.slug }} <small class="text-muted" style="font-size: 60%;">{{ campaign.name }}</small></h2>
+            <div>
+                <a href="{{ path('app_admin_campaigns_edit', {id: campaign.id}) }}" class="btn btn-outline-secondary">✏️ Редагувати</a>
+                <a href="{{ path('app_admin_campaigns') }}" class="btn btn-link">&larr; Усі кампанії</a>
+            </div>
+        </div>
+        <p>
+            QR: <code>{{ qrBase }}/q/{{ campaign.slug }}</code>
+            · промокод: {% if campaign.promocode %}<code>{{ campaign.promocode.code }}</code>{% else %}—{% endif %}
+            · вікно {{ campaign.attributionDays }} дн.
+            · {{ campaign.active ? '<span style="color:#2e7d32">активна</span>' : '<span style="color:#999">вимкнена</span>' }}
+        </p>
+
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'warning' }}">{{ message }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        <h4 style="margin-top: 16px;">Воронка</h4>
+        <table class="table table-sm" style="max-width: 760px;">
+            <tbody>
+            <tr><td>Скани людьми</td><td><strong>{{ funnel.scans }}</strong> <small class="text-muted">(з них повторних {{ funnel.repeat_scans }}; ще {{ funnel.scans_bot }} — боти/прев'ю, не рахуються)</small></td></tr>
+            <tr><td>Унікальні пристрої</td><td><strong>{{ funnel.visitors }}</strong></td></tr>
+            <tr><td>Сайт відкрився (спрацював JS)</td><td><strong>{{ funnel.landed }}</strong></td></tr>
+            <tr><td>Зареєструвались</td><td><strong>{{ funnel.registered }}</strong></td></tr>
+            <tr><td>Увійшли в наявний акаунт</td><td><strong>{{ funnel.logged_in }}</strong></td></tr>
+            <tr><td>Поклали в кошик</td><td><strong>{{ funnel.carted }}</strong></td></tr>
+            <tr><td>Замовлення</td><td><strong>{{ funnel.orders }}</strong> <small class="text-muted">({{ funnel.orders_qr }} після QR + {{ funnel.orders_promocode }} лише з промокодом)</small></td></tr>
+            <tr><td>Оплачено</td><td><strong>{{ funnel.paid }}</strong>{% if funnel.paid_sum > 0 %} на {{ funnel.paid_sum|number_format(0, '.', ' ') }} грн{% endif %}</td></tr>
+            <tr><td>Промокод використано (усього)</td><td><strong>{{ funnel.code_uses }}</strong>{% if funnel.code_discount > 0 %} · знижок на {{ funnel.code_discount|number_format(0, '.', ' ') }} грн{% endif %}</td></tr>
+            </tbody>
+        </table>
+
+        {% if daily %}
+            <h4>По днях (Київ)</h4>
+            <table class="table table-sm" style="max-width: 520px;">
+                <thead><tr><th>День</th><th>Скани</th><th>Нові пристрої</th><th>На сайті</th></tr></thead>
+                <tbody>
+                {% for d in daily %}
+                    <tr><td>{{ d.day }}</td><td>{{ d.scans }}</td><td>{{ d.visitors }}</td><td>{{ d.landed }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        <h4>Замовлення кампанії ({{ orders|length }})</h4>
+        {% if orders %}
+            <table class="table table-sm table-hover">
+                <thead><tr><th>#</th><th>Дата (Київ)</th><th>Клієнт</th><th>Сума</th><th>Знижка / код</th><th>Джерело</th><th>Оплата</th></tr></thead>
+                <tbody>
+                {% for o in orders %}
+                    <tr>
+                        <td><a href="{{ path('app_admin_order_detail', {id: o.id}) }}" target="_blank">{{ o.id }}</a></td>
+                        <td>{{ o.created_at|date('d.m.Y H:i', 'Europe/Kyiv') }}</td>
+                        <td>
+                            {% if o.client_user_id %}
+                                <a href="{{ path('app_admin_user_detail', {source: 'web', id: o.client_user_id}) }}" target="_blank">{{ o.first_name }} {{ o.last_name }}</a> {{ o.phone }}
+                            {% else %}гість {{ o.guest_phone }}{% endif %}
+                        </td>
+                        <td>{{ o.total_amount }} грн</td>
+                        <td>{% if o.discount_amount %}−{{ o.discount_amount }} грн{% endif %} {% if o.promocode_code_used %}<code>{{ o.promocode_code_used }}</code>{% endif %}</td>
+                        <td>{{ o.campaign_source == 'qr' ? 'QR' : 'лише промокод' }}</td>
+                        <td>{{ o.is_paid ? '✅ оплачено' : '⏳ ні' }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">Поки немає.</p>
+        {% endif %}
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <h4>Скани (останні {{ scans|length }})</h4>
+            <a href="{{ path('app_admin_campaigns_show', {id: campaign.id, bots: withBots ? 0 : 1}) }}">{{ withBots ? 'сховати ботів' : "показати й ботів/прев'ю" }}</a>
+        </div>
+        <div class="table-responsive">
+        <table class="table table-sm" style="font-size: 13px;">
+            <thead><tr><th>Час (Київ)</th><th>IP</th><th>Браузер / пристрій</th><th>Мова</th><th>Пристрій</th><th>Що далі</th><th>Акаунт</th></tr></thead>
+            <tbody>
+            {% for s in scans %}
+                <tr style="{{ s.is_bot ? 'color:#999;' : '' }}">
+                    <td style="white-space: nowrap;">{{ s.scanned_at|date('d.m.Y H:i:s', 'Europe/Kyiv') }}</td>
+                    <td>{{ s.ip ?? '—' }}{% if s.ip_anonymized %} <small title="знеособлено після строку зберігання">🔒</small>{% endif %}</td>
+                    <td style="max-width: 420px; word-break: break-word;">{{ s.user_agent }}{% if s.is_bot %} <span class="badge bg-secondary">бот: {{ s.bot_reason }}</span>{% endif %}</td>
+                    <td>{{ s.accept_language ? s.accept_language|split(',')|first : '' }}</td>
+                    <td>{% if s.visitor_id %}<code title="{{ s.visitor_id }}">{{ s.visitor_id[:8] }}</code>{% if s.is_repeat %} <small>повторно</small>{% endif %}{% else %}—{% endif %}</td>
+                    <td>
+                        {% if s.steps %}{% for st in s.steps|split(',') %}{{ stepLabels[st] ?? st }}{{ not loop.last ? ' · ' }}{% endfor %}{% endif %}
+                        {% if s.paid > 0 %} · <strong>оплачено</strong>{% endif %}
+                    </td>
+                    <td>
+                        {% if s.user_id %}
+                            <a href="{{ path('app_admin_user_detail', {source: 'web', id: s.user_id}) }}" target="_blank">{{ s.first_name }} {{ s.last_name }}</a>
+                            <small>{{ s.phone }}</small>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center text-muted">Сканів ще немає</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <p class="text-muted"><small>IP зберігаються повністю 90 днів, далі знеособлюються (останній октет / хвіст IPv6 обнуляється).</small></p>
+    </div>
+{% endblock %}
