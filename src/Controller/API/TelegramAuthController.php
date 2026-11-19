@@ -15,6 +15,7 @@ use App\Repository\TelegramUserRepository;
 use App\Repository\UserMergeRepository;
 use App\Repository\UserRepository;
 use App\Service\Analytics\ActivityService;
+use App\Service\Campaign\CampaignTracker;
 use Doctrine\ORM\EntityManagerInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -41,6 +42,7 @@ class TelegramAuthController extends AbstractController
         int $jwtTtl,
         int $jwtRefreshTtl,
         ActivityService $activity,
+        CampaignTracker $campaignTracker,
     ): Response {
         $payload = json_decode($request->getContent(), true) ?? [];
 
@@ -127,6 +129,8 @@ class TelegramAuthController extends AbstractController
         }
 
         $token = $jwtManager->create($user);
+
+        $registered ? $campaignTracker->registered($user) : $campaignTracker->loggedIn($user);
 
         try {
             $activity->customerSignedIn(

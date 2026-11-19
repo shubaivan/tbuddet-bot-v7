@@ -6,6 +6,7 @@ namespace App\EventListener;
 
 use App\Entity\User;
 use App\Service\Analytics\ActivityService;
+use App\Service\Campaign\CampaignTracker;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Authenticator\JsonLoginAuthenticator;
@@ -24,6 +25,7 @@ final class CustomerLoginListener
     public function __construct(
         private readonly ActivityService $activity,
         private readonly UrlGeneratorInterface $urls,
+        private readonly CampaignTracker $campaignTracker,
     ) {
     }
 
@@ -33,6 +35,8 @@ final class CustomerLoginListener
         if (!$event->getAuthenticator() instanceof JsonLoginAuthenticator || !$user instanceof User) {
             return;
         }
+
+        $this->campaignTracker->loggedIn($user);
 
         try {
             $this->activity->customerSignedIn(

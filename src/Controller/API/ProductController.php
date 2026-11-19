@@ -27,6 +27,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use App\Service\Delivery\CityDelivery;
 use App\Service\Analytics\ActivityService;
+use App\Service\Campaign\CampaignTracker;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -319,6 +320,7 @@ class ProductController extends AbstractController
         PromocodeService $promocodeService,
         CityDelivery $cityDelivery,
         ActivityService $activity,
+        CampaignTracker $campaignTracker,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -451,6 +453,8 @@ class ProductController extends AbstractController
             $promocodeService->redeem($appliedPromocode, $userOrder, $user, null, null, $discount);
         }
 
+        $campaignTracker->attributeOrder($userOrder, $user);
+
         // Доставка по місту з «Купити зараз» — одразу в «Магазин», щоб менеджер побачив адресу ще до оплати.
         if ($deliveryAmount > 0) {
             $activity->orderPlaced(
@@ -516,7 +520,8 @@ class ProductController extends AbstractController
         ProductRepository $repository,
         ObjectHandler $objectHandler,
         #[MapRequestPayload] PublicPurchaseProduct $publicPurchaseProduct,
-        LocalizationService $localizationService
+        LocalizationService $localizationService,
+        CampaignTracker $campaignTracker,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -559,6 +564,8 @@ class ProductController extends AbstractController
 
         $this->em->persist($userOrder);
         $this->em->flush();
+
+        $campaignTracker->attributeOrder($userOrder, null);
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
 

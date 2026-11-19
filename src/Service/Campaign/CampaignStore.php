@@ -83,6 +83,102 @@ class CampaignStore
     }
 
     /**
+     * The visitor's campaign if the first touch is still inside the campaign's
+     * attribution window.
+     *
+     * @return array{visitor_id: string, campaign_id: int, user_id: ?int}|null
+     */
+    public function findAttributableVisitor(string $visitorId, \DateTimeImmutable $now): ?array
+    {
+        $row = $this->db->fetchAssociative(
+            "SELECT v.visitor_id, v.campaign_id, v.user_id
+               FROM campaign_visitor v JOIN campaign c ON c.id = v.campaign_id
+              WHERE v.visitor_id = :v
+                AND v.first_seen_at >= CAST(:now AS timestamp) - make_interval(days => c.attribution_days)",
+            ['v' => $visitorId, 'now' => $now->format('Y-m-d H:i:s')],
+        );
+
+        return false === $row ? null : self::visitorRow($row);
+    }
+
+    /**
+     * Latest in-window visitor already linked to this account — attributes the
+     * user's later actions from another device / after the header was lost.
+     *
+     * @return array{visitor_id: string, campaign_id: int, user_id: ?int}|null
+     */
+    public function findAttributableVisitorForUser(int $userId, \DateTimeImmutable $now): ?array
+    {
+        $row = $this->db->fetchAssociative(
+            "SELECT v.visitor_id, v.campaign_id, v.user_id
+               FROM campaign_visitor v JOIN campaign c ON c.id = v.campaign_id
+              WHERE v.user_id = :u
+                AND v.first_seen_at >= CAST(:now AS timestamp) - make_interval(days => c.attribution_days)
+              ORDER BY v.first_seen_at ASC
+              LIMIT 1",
+            ['u' => $userId, 'now' => $now->format('Y-m-d H:i:s')],
+        );
+
+        return false === $row ? null : self::visitorRow($row);
+    }
+
+    /** First account wins: a shared phone never re-links a visitor to someone else. */
+    public function linkVisitorToUser(string $visitorId, int $userId, \DateTimeImmutable $at): void
+    {
+        $this->db->executeStatement(
+            'UPDATE campaign_visitor SET user_id = :u, linked_at = :at, last_seen_at = :at WHERE visitor_id = :v AND user_id IS NULL',
+            ['u' => $userId, 'v' => $visitorId, 'at' => $at->format('Y-m-d H:i:s')],
+        );
+    }
+
+    /**
+     * @return bool false when the row was a duplicate (only "landing" is unique per visitor)
+     */
+    public function insertEvent(int $campaignId, ?string $visitorId, string $type, ?int $userId, ?int $orderId, \DateTimeImmutable $at): bool
+    {
+        return $this->db->executeStatement(
+            "INSERT INTO campaign_event (id, campaign_id, visitor_id, type, user_id, user_order_id, created_at)
+             VALUES (nextval('campaign_event_id_seq'), :c, :v, :t, :u, :o, :at)
+             ON CONFLICT DO NOTHING",
+            ['c' => $campaignId, 'v' => $visitorId, 't' => $type, 'u' => $userId, 'o' => $orderId, 'at' => $at->format('Y-m-d H:i:s')],
+        ) > 0;
+    }
+
+    /** Snapshot on the order — only if it has none yet (first attribution wins). */
+    public function setOrderCampaign(int $orderId, int $campaignId, ?string $visitorId, string $source): bool
+    {
+        return $this->db->executeStatement(
+            'UPDATE user_order SET campaign_id = :c, campaign_visitor_id = :v, campaign_source = :s WHERE id = :id AND campaign_id IS NULL',
+            ['c' => $campaignId, 'v' => $visitorId, 's' => $source, 'id' => $orderId],
+        ) > 0;
+    }
+
+    /** Campaign whose promocode is this code (case-insensitive), if any. */
+    public function findCampaignIdByPromocodeCode(string $code): ?int
+    {
+        $id = $this->db->fetchOne(
+            'SELECT c.id FROM campaign c JOIN promocode p ON p.id = c.promocode_id WHERE p.code = :code ORDER BY c.id LIMIT 1',
+            ['code' => strtoupper(trim($code))],
+        );
+
+        return false === $id || null === $id ? null : (int) $id;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     *
+     * @return array{visitor_id: string, campaign_id: int, user_id: ?int}
+     */
+    private static function visitorRow(array $row): array
+    {
+        return [
+            'visitor_id' => (string) $row['visitor_id'],
+            'campaign_id' => (int) $row['campaign_id'],
+            'user_id' => null !== $row['user_id'] ? (int) $row['user_id'] : null,
+        ];
+    }
+
+    /**
      * IP retention: zero the host part of IPs older than $before.
      *
      * @return int rows changed (or that would change, in dry-run)

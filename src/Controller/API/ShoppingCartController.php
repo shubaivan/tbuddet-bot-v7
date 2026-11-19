@@ -25,6 +25,7 @@ use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\Analytics\ActivityService;
+use App\Service\Campaign\CampaignTracker;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
@@ -66,6 +67,7 @@ class ShoppingCartController extends AbstractController
         EntityManagerInterface $em,
         ObjectHandler $objectHandler,
         ActivityService $activity,
+        CampaignTracker $campaignTracker,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, Product::class, 'id');
@@ -89,6 +91,8 @@ class ShoppingCartController extends AbstractController
         $shoppingCart->addPurchaseProduct($entityPurchaseProduct);
 
         $em->flush();
+
+        $campaignTracker->addedToCart($user);
 
         // Менеджерам — одразу: хто, що й на скільки. Сповіщення не має ламати кошик.
         try {
@@ -265,6 +269,7 @@ class ShoppingCartController extends AbstractController
         InvoiceNotifier $invoiceNotifier,
         EmailService $emailService,
         InvoicePublicLink $invoiceLinks,
+        CampaignTracker $campaignTracker,
     ): JsonResponse
     {
         $language = $localizationService->getLanguage();
@@ -440,6 +445,8 @@ class ShoppingCartController extends AbstractController
                 $discount,
             );
         }
+
+        $campaignTracker->attributeOrder($userOrder, $user);
 
         // Сповіщення менеджерам у групу «Заявки ArtBeton» про щойно створене замовлення.
         $currencyLabel = $language === UserLanguageEnum::UA ? 'грн' : 'USD';

@@ -15,6 +15,7 @@ use App\Exception\RegistrationException;
 use App\Repository\RoleRepository;
 use App\Repository\UserRepository;
 use App\Service\Analytics\ActivityService;
+use App\Service\Campaign\CampaignTracker;
 use App\Service\EmailService;
 use App\Service\ObjectHandler;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,6 +44,7 @@ class SecurityController extends AbstractController
         EntityManagerInterface $entityManager,
         EmailService $emailService,
         ActivityService $activity,
+        CampaignTracker $campaignTracker,
     ): Response {
         /** @var RegistrationUserDto $registrationUserDto */
         $registrationUserDto = $objectHandler->handleRequestByObject(
@@ -89,6 +91,8 @@ class SecurityController extends AbstractController
         $emailService->sendConfirmationEmail($user);
 
         $entityManager->flush();
+
+        $campaignTracker->registered($user);
 
         try {
             $activity->customerSignedIn(

@@ -14,6 +14,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserOrderRepository::class)]
+#[ORM\Index(name: 'idx_user_order_campaign', columns: ['campaign_id'])]
 #[ORM\HasLifecycleCallbacks()]
 class UserOrder
 {
@@ -188,6 +189,22 @@ class UserOrder
 
     #[ORM\Column(name: 'paid_by', type: 'string', length: 255, nullable: true)]
     private ?string $paid_by = null;
+
+    /**
+     * Campaign snapshot (QR / offline campaigns). Written once at order creation by
+     * {@see \App\Service\Campaign\CampaignTracker::attributeOrder()} with raw DBAL;
+     * kept as plain columns so the order never depends on the campaign row's state.
+     */
+    #[ORM\ManyToOne(targetEntity: Campaign::class)]
+    #[ORM\JoinColumn(name: 'campaign_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Campaign $campaign = null;
+
+    #[ORM\Column(name: 'campaign_visitor_id', type: 'string', length: 32, nullable: true)]
+    private ?string $campaign_visitor_id = null;
+
+    /** qr | promocode */
+    #[ORM\Column(name: 'campaign_source', type: 'string', length: 16, nullable: true)]
+    private ?string $campaign_source = null;
 
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     #[ORM\OneToMany(
@@ -551,6 +568,21 @@ class UserOrder
      * transfer confirmed by a manager. SQL mirrors this as UserOrderRepository::PAID_SQL.
      */
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    public function getCampaign(): ?Campaign
+    {
+        return $this->campaign;
+    }
+
+    public function getCampaignVisitorId(): ?string
+    {
+        return $this->campaign_visitor_id;
+    }
+
+    public function getCampaignSource(): ?string
+    {
+        return $this->campaign_source;
+    }
+
     public function isPaid(): bool
     {
         return $this->liq_pay_status === 'success' || $this->paid_at !== null;
