@@ -90,6 +90,8 @@ security:
         - { path: ^/api/v1/event, roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/guide, roles: PUBLIC_ACCESS }
+        # Printed QR codes → scan log + redirect (served on artbeton.market via nginx).
+        - { path: ^/q/, roles: PUBLIC_ACCESS }
         # Публічне (токенізоване) посилання на PDF рахунку — для пересилання бухгалтеру.
         - { path: ^/invoice/, roles: PUBLIC_ACCESS }
         - { path: ^/admin/signed-out, roles: PUBLIC_ACCESS }
