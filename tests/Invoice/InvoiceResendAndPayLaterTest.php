@@ -11,6 +11,7 @@ use App\Entity\UserOrder;
 use App\Invoice\InvoiceCheckout;
 use App\Invoice\InvoicePublicLink;
 use App\Service\Payment\OrderOnlinePayment;
+use App\Service\Payment\PaymentResultUrl;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -86,7 +87,7 @@ class InvoiceResendAndPayLaterTest extends TestCase
     {
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
-        $svc = new OrderOnlinePayment(new NullLogger(), $em, 'pub', 'priv', 'https://api.example/liq/pay', 'https://shop.example/');
+        $svc = new OrderOnlinePayment(new NullLogger(), $em, 'pub', 'priv', 'https://api.example/liq/pay', new PaymentResultUrl('https://shop.example/', 'test-secret'));
 
         $o = $this->invoiceOrder();
         $link = $svc->checkoutLink($o, 'uk');
@@ -102,7 +103,9 @@ class InvoiceResendAndPayLaterTest extends TestCase
         self::assertMatchesRegularExpression('/^42-\d+$/', $data['order_id']);
         self::assertSame(42, (int) $data['order_id'], 'callback maps (int) order_id back to the same order');
         self::assertSame($data['order_id'], $o->getLiqPayOrderId());
-        self::assertSame('https://shop.example/uk/payment-success?order=42', $data['result_url']);
+        self::assertStringStartsWith('https://shop.example/uk/payment-success?order=42&k=', $data['result_url']);
+        parse_str((string) parse_url($data['result_url'], PHP_URL_QUERY), $resultQuery);
+        self::assertTrue((new PaymentResultUrl('https://shop.example/', 'test-secret'))->isValid(42, $resultQuery['k'] ?? null));
         $expires = new \DateTimeImmutable($data['expired_date'], new \DateTimeZone('UTC'));
         self::assertEqualsWithDelta(time() + 3600, $expires->getTimestamp(), 5, 'checkout expires in 60 min (UTC)');
         self::assertStringStartsWith('Оплата згідно рахунку № ABM-2026-00007, замовлення #42', $data['description']);

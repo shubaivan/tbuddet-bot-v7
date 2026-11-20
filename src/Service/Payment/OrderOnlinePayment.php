@@ -27,7 +27,7 @@ class OrderOnlinePayment
         private readonly string $liqpayPublicKey,
         private readonly string $liqpayPrivateKey,
         private readonly string $liqpayServerUrl,
-        private readonly string $frontendUrl,
+        private readonly PaymentResultUrl $paymentResultUrl,
     ) {
     }
 
@@ -66,7 +66,8 @@ class OrderOnlinePayment
             'currency' => self::currency($order, $lang),
             'order_id' => $liqPayOrderId,
             'server_url' => $this->liqpayServerUrl,
-            'result_url' => sprintf('%s/%s/payment-success?order=%d', rtrim($this->frontendUrl, '/'), $lang, $order->getId()),
+            // Signed status link: the buyer may come back without a login (invoice from email/Telegram).
+            'result_url' => $this->paymentResultUrl->build($lang, (int) $order->getId()),
             'description' => self::description($order),
             'language' => $lang,
             'expired_date' => self::expiresAt(),

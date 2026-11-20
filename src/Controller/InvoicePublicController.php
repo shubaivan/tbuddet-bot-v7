@@ -9,6 +9,7 @@ use App\Invoice\InvoiceRequisitesMissingException;
 use App\Invoice\InvoiceService;
 use App\Repository\UserOrderRepository;
 use App\Service\Payment\OrderOnlinePayment;
+use App\Service\Payment\PaymentResultUrl;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -62,7 +63,7 @@ final class InvoicePublicController extends AbstractController
         UserOrderRepository $orders,
         InvoicePublicLink $links,
         OrderOnlinePayment $onlinePayment,
-        string $frontendUrl,
+        PaymentResultUrl $paymentResultUrl,
     ): Response {
         $order = $orders->find($id);
         if (null === $order || !$order->isInvoicePayment() || !$links->isValid($order, $token)) {
@@ -70,7 +71,7 @@ final class InvoicePublicController extends AbstractController
         }
 
         if ($order->isPaid()) {
-            return new RedirectResponse(sprintf('%s/uk/payment-success?order=%d', rtrim($frontendUrl, '/'), $order->getId()));
+            return new RedirectResponse($paymentResultUrl->build('uk', (int) $order->getId()));
         }
         if (!OrderOnlinePayment::canPay($order)) {
             return new Response('Замовлення скасовано — оплата за ним більше не приймається. Зверніться до менеджера.', Response::HTTP_GONE, ['Content-Type' => 'text/plain; charset=UTF-8', 'X-Robots-Tag' => 'noindex']);
