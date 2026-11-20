@@ -60,6 +60,10 @@ class InvoiceResendAndPayLaterTest extends TestCase
         $cancelled->setOrderStatus(OrderStatusEnum::CANCELLED->value);
         self::assertFalse(OrderOnlinePayment::canPay($cancelled), 'cancelled');
 
+        $inFlight = $this->invoiceOrder();
+        $inFlight->setLiqPayStatus('wait_accept');
+        self::assertFalse(OrderOnlinePayment::canPay($inFlight), 'money already taken, final callback pending');
+
         $failedCard = new UserOrder();
         $failedCard->setTotalAmount(500);
         $failedCard->setLiqPayStatus('failure');
@@ -99,6 +103,8 @@ class InvoiceResendAndPayLaterTest extends TestCase
         self::assertSame(42, (int) $data['order_id'], 'callback maps (int) order_id back to the same order');
         self::assertSame($data['order_id'], $o->getLiqPayOrderId());
         self::assertSame('https://shop.example/uk/payment-success?order=42', $data['result_url']);
+        $expires = new \DateTimeImmutable($data['expired_date'], new \DateTimeZone('UTC'));
+        self::assertEqualsWithDelta(time() + 3600, $expires->getTimestamp(), 5, 'checkout expires in 60 min (UTC)');
         self::assertStringStartsWith('Оплата згідно рахунку № ABM-2026-00007, замовлення #42', $data['description']);
     }
 

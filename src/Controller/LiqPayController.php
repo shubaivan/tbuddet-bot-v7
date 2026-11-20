@@ -69,18 +69,61 @@ class LiqPayController extends AbstractController
         $previousStatus = $userOrder->getLiqPaystatus();
         $newStatus = $json_decode['status'];
 
-        // A retried payment can produce a late callback from an earlier, failed
-        // attempt. Never let it downgrade an order LiqPay already confirmed paid.
-        if ($previousStatus === 'success' && in_array($newStatus, ['failure', 'error'], true)) {
-            $logger->warning('liqpay stale failure callback ignored for paid order', [
+        // Several checkouts per order are possible (retry, pay later). Once LiqPay
+        // confirmed the payment, no other attempt may downgrade it — only a refund
+        // (`reversed`) changes a paid order.
+        if ($previousStatus === 'success' && $newStatus !== 'success' && $newStatus !== 'reversed') {
+            $logger->warning('liqpay callback ignored for paid order', [
                 'order_id' => $order_id,
                 'new_status' => $newStatus,
+                'liqpay_order_id' => $json_decode['order_id'] ?? null,
             ]);
 
             return $this->json(['status' => true]);
         }
 
+        // Money arrived twice: a second checkout paid after the first one, or a card
+        // payment after the manager already confirmed the bank transfer → refund alert.
+        $paidAgain = $newStatus === 'success'
+            && ($userOrder->getPaidAt() !== null
+                || ($previousStatus === 'success' && ($json_decode['order_id'] ?? null) !== $userOrder->getLiqPayOrderId()));
+        if ($paidAgain) {
+            $logger->error('liqpay possible double payment', [
+                'order_id' => $order_id,
+                'liqpay_order_id' => $json_decode['order_id'] ?? null,
+                'payment_id' => $json_decode['payment_id'] ?? null,
+                'amount' => $json_decode['amount'] ?? null,
+            ]);
+            $alert = sprintf(
+                "⚠️ <b>Можлива подвійна оплата — замовлення #%d</b>\nLiqPay %s, payment_id %s, сума %s\nЗамовлення вже було оплачене%s. Перевірте в кабінеті LiqPay і зробіть повернення.\n\n<a href=\"%s\">Відкрити замовлення</a>",
+                $userOrder->getId(),
+                htmlspecialchars((string) ($json_decode['order_id'] ?? ''), ENT_QUOTES),
+                htmlspecialchars((string) ($json_decode['payment_id'] ?? ''), ENT_QUOTES),
+                htmlspecialchars((string) ($json_decode['amount'] ?? ''), ENT_QUOTES),
+                $userOrder->getPaidAt() !== null ? ' (банківський переказ підтверджено менеджером)' : '',
+                $request->getSchemeAndHttpHost().'/admin/orders/'.$userOrder->getId(),
+            );
+            foreach ($telegramUserRepository->findByRole(RoleEnum::MANAGER) as $manager) {
+                try {
+                    $bot->sendMessage(text: $alert, chat_id: $manager->getChatId(), parse_mode: ParseMode::HTML);
+                } catch (\Throwable $e) {
+                    $logger->error('Failed to send double-payment alert', ['manager_id' => $manager->getId(), 'error' => $e->getMessage()]);
+                }
+            }
+            try {
+                $activity->orderPaid($userOrder->getId(), $alert);
+            } catch (\Throwable) {
+            }
+
+            return $this->json(['status' => true]);
+        }
+
         $userOrder->setLiqPaystatus($newStatus);
+        if ($newStatus === 'success' && isset($json_decode['order_id'])) {
+            // Remember WHICH attempt paid: a repeated callback of it is harmless,
+            // a success from any other attempt is a double payment (see above).
+            $userOrder->setLiqPayOrderId((string) $json_decode['order_id']);
+        }
         // Invoice order paid online by card («Оплатити онлайн»): same as a confirmed
         // bank transfer — out of «Очікує оплати по рахунку» into the normal queue.
         if ($newStatus === 'success'

@@ -575,6 +575,7 @@ class ShoppingCartController extends AbstractController
         UserOrderRepository $orderRepository,
         InvoiceCheckout $invoiceCheckout,
         RateLimiterFactoryInterface $invoiceResendLimiter,
+        RateLimiterFactoryInterface $invoiceResendDailyLimiter,
     ): JsonResponse {
         $order = $orderRepository->find((int) $id);
         if ($order === null || $order->getClientUserId()?->getId() !== $user->getId() || !$order->getInvoiceNumber()) {
@@ -593,6 +594,16 @@ class ShoppingCartController extends AbstractController
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        // Per account per day as well — the payer email is typed by the buyer, so the
+        // resend must not become a way to mail someone else over and over.
+        $daily = $invoiceResendDailyLimiter->create('user-'.$user->getId())->consume(0);
+        if ($daily->getRemainingTokens() < 1) {
+            return $this->json([
+                'error' => 'too_many_requests',
+                'error_message' => 'Ліміт повторних надсилань на сьогодні вичерпано. Завантажте PDF кнопкою «Завантажити рахунок» або напишіть нам.',
+            ], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
         $limit = $invoiceResendLimiter->create('order-'.$order->getId())->consume(1);
         if (!$limit->isAccepted()) {
             $wait = max(1, $limit->getRetryAfter()->getTimestamp() - time());
@@ -604,10 +615,13 @@ class ShoppingCartController extends AbstractController
             ], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => (string) $wait]);
         }
 
+        $invoiceResendDailyLimiter->create('user-'.$user->getId())->consume(1);
+
         try {
             $result = $invoiceCheckout->resend($order);
         } catch (InvoiceRequisitesMissingException) {
             $this->logger->error('Invoice resend blocked: seller requisites incomplete', ['order' => $order->getId()]);
+            $invoiceResendLimiter->create('order-'.$order->getId())->reset();
 
             return $this->json([
                 'error' => 'invoice_unavailable',

@@ -25,3 +25,8 @@ framework:
             policy: 'fixed_window'
             limit: 1
             interval: '3 minutes'
+        # …і не більше 10 на акаунт за добу (email платника вводить сам покупець).
+        invoice_resend_daily:
+            policy: 'fixed_window'
+            limit: 10
+            interval: '1 day'

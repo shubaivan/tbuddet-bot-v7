@@ -31,10 +31,20 @@ class OrderOnlinePayment
     ) {
     }
 
-    /** Paid, cancelled or zero-sum orders cannot be paid (again). */
+    /** A fresh checkout lives this long — no forgotten tab can be paid days later. */
+    public const CHECKOUT_TTL_MINUTES = 60;
+
+    /**
+     * LiqPay statuses where the money is taken or on its way — no second checkout
+     * until the final callback arrives (https://www.liqpay.ua/en/doc/api/callback).
+     */
+    public const IN_FLIGHT_STATUSES = ['wait_accept', 'hold_wait', 'processing', 'wait_secure', 'wait_compensation', 'prepared'];
+
+    /** Paid, in-flight, cancelled or zero-sum orders cannot be paid (again). */
     public static function canPay(UserOrder $order): bool
     {
         return !$order->isPaid()
+            && !\in_array($order->getLiqPayStatus(), self::IN_FLIGHT_STATUSES, true)
             && $order->getOrderStatus() !== OrderStatusEnum::CANCELLED->value
             && $order->getTotalAmount() > 0;
     }
@@ -59,12 +69,15 @@ class OrderOnlinePayment
             'result_url' => sprintf('%s/%s/payment-success?order=%d', rtrim($this->frontendUrl, '/'), $lang, $order->getId()),
             'description' => self::description($order),
             'language' => $lang,
+            'expired_date' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+                ->modify(sprintf('+%d minutes', self::CHECKOUT_TTL_MINUTES))
+                ->format('Y-m-d H:i:s'),
         ]);
 
         $order->setLiqPayOrderId($liqPayOrderId);
         $this->em->flush();
 
-        return sprintf('%s?data=%s&signature=%s', $cnb['url'], $cnb['data'], $cnb['signature']);
+        return sprintf('%s?data=%s&signature=%s', $cnb['url'], rawurlencode($cnb['data']), rawurlencode($cnb['signature']));
     }
 
     public static function currency(UserOrder $order, string $lang): string
