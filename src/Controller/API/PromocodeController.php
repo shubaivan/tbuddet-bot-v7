@@ -2,6 +2,7 @@
 
 namespace App\Controller\API;
 
+use App\Controller\API\Request\Promocode\PreviewPromocodeRequest;
 use App\Controller\API\Request\Promocode\ValidatePromocodeRequest;
 use App\Entity\Enum\CurrencyEnum;
 use App\Entity\Enum\RoleEnum;
@@ -65,6 +66,41 @@ class PromocodeController extends AbstractController
             'total_after_discount' => $subtotal - $result->discount,
             'currency' => $currency->value,
             'description' => $result->promocode->describeDiscount($result->discount),
+        ]);
+    }
+
+    /**
+     * Quick-buy preview: the discount this code gives on an amount (product ×
+     * quantity), so the pay button shows the sum LiqPay will really ask for.
+     * Preview only — purchaseProduct() re-validates and applies the code.
+     */
+    #[IsGranted(RoleEnum::USER->value)]
+    #[Route('/preview', name: 'promocode_preview', methods: [Request::METHOD_POST])]
+    public function preview(
+        #[MapRequestPayload] PreviewPromocodeRequest $request,
+        #[CurrentUser] User $user,
+        PromocodeService $promocodeService,
+        LocalizationService $localizationService,
+    ): JsonResponse {
+        $currency = CurrencyEnum::fromUserLanguage($localizationService->getLanguage());
+        $amount = (int) round((float) $request->getAmount());
+        $result = $promocodeService->validate((string) $request->getCode(), $amount, $currency, $user, null, null);
+
+        if (!$result->ok) {
+            return $this->json([
+                'ok' => false,
+                'error_code' => $result->error->value,
+                'error_message' => $result->error->userMessage(),
+            ], Response::HTTP_OK);
+        }
+
+        return $this->json([
+            'ok' => true,
+            'code' => $result->promocode->getCode(),
+            'discount' => $result->discount,
+            'subtotal' => $amount,
+            'total_after_discount' => $amount - $result->discount,
+            'currency' => $currency->value,
         ]);
     }
 
