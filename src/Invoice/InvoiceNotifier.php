@@ -86,7 +86,7 @@ class InvoiceNotifier
      * Sends the invoice PDF to the buyer's Telegram (the customer bot) — used when
      * no email was given. Returns true when at least one chat received it.
      */
-    public function sendPdfToBuyer(UserOrder $order, string $pdf, ?string $publicPdfUrl = null): bool
+    public function sendPdfToBuyer(UserOrder $order, string $pdf, ?string $publicPdfUrl = null, ?string $payUrl = null): bool
     {
         $chatIds = self::buyerChatIds($order);
         if ($chatIds === []) {
@@ -101,6 +101,9 @@ class InvoiceNotifier
             $order->getInvoiceDueDate()?->format('d.m.Y') ?? '—',
             TelegramNotifier::esc((string) $order->getInvoiceNumber()),
         );
+        if (null !== $payUrl) {
+            $caption .= sprintf("\n💳 Або оплатіть карткою онлайн: <a href=\"%s\">Оплатити онлайн</a>", TelegramNotifier::esc($payUrl));
+        }
 
         $sent = false;
         foreach ($chatIds as $chatId) {

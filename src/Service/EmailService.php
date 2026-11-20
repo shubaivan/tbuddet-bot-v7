@@ -100,7 +100,7 @@ class EmailService
      * Sends the «Рахунок на оплату» PDF to the payer email. Returns the address
      * it went to, or null when there is none.
      */
-    public function sendInvoiceEmail(UserOrder $order, string $pdf): ?string
+    public function sendInvoiceEmail(UserOrder $order, string $pdf, ?string $payUrl = null): ?string
     {
         $to = $order->getInvoiceEmail();
         if (!$to) {
@@ -116,6 +116,7 @@ class EmailService
                 'order' => $order,
                 'payer' => $order->getInvoicePayer(),
                 'profileUrl' => rtrim($this->frontendUrl, '/') . '/uk/profile',
+                'payUrl' => $payUrl,
             ])
             ->attach($pdf, sprintf('Rahunok-%s.pdf', $order->getInvoiceNumber()), 'application/pdf');
 

@@ -7,6 +7,7 @@ use App\Controller\API\Request\Purchase\CheckoutRequest;
 use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
 use App\Entity\Enum\CurrencyEnum;
+use App\Entity\Enum\OrderStatusEnum;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\PurchaseProduct as EntityPurchaseProduct;
@@ -27,6 +28,7 @@ use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
 use App\Service\Promocode\PromocodeService;
+use App\Service\Payment\OrderOnlinePayment;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
@@ -38,6 +40,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use App\Service\Delivery\CityDelivery;
 use App\Invoice\InvoicePublicLink;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
@@ -559,6 +562,80 @@ class ShoppingCartController extends AbstractController
         ]);
     }
 
+    /**
+     * «Надіслати рахунок ще раз» — the buyer gets the same invoice PDF again in Telegram
+     * (customer bot) and/or by email; while unpaid, with an «Оплатити онлайн» link.
+     * Owner only; one resend per order every few minutes (rate_limiter.invoice_resend).
+     */
+    #[isGranted(RoleEnum::USER->value)]
+    #[Route('/order/{id}/invoice/resend', name: 'order_invoice_resend', methods: [Request::METHOD_POST], requirements: ['id' => '\d+'])]
+    public function resendInvoice(
+        string $id,
+        #[CurrentUser] User $user,
+        UserOrderRepository $orderRepository,
+        InvoiceCheckout $invoiceCheckout,
+        RateLimiterFactoryInterface $invoiceResendLimiter,
+    ): JsonResponse {
+        $order = $orderRepository->find((int) $id);
+        if ($order === null || $order->getClientUserId()?->getId() !== $user->getId() || !$order->getInvoiceNumber()) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+        if ($order->getOrderStatus() === OrderStatusEnum::CANCELLED->value) {
+            return $this->json([
+                'error' => 'order_cancelled',
+                'error_message' => 'Замовлення скасовано — рахунок більше не дійсний.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        if (!InvoiceCheckout::hasChannel($order)) {
+            return $this->json([
+                'error' => 'no_channel',
+                'error_message' => 'Немає куди надіслати: у замовленні немає email, а Telegram не підключено. Завантажте PDF кнопкою «Завантажити рахунок».',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $limit = $invoiceResendLimiter->create('order-'.$order->getId())->consume(1);
+        if (!$limit->isAccepted()) {
+            $wait = max(1, $limit->getRetryAfter()->getTimestamp() - time());
+
+            return $this->json([
+                'error' => 'too_many_requests',
+                'retry_after' => $wait,
+                'error_message' => sprintf('Рахунок щойно надіслано. Повторити можна через %s.', self::humanWait($wait)),
+            ], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => (string) $wait]);
+        }
+
+        try {
+            $result = $invoiceCheckout->resend($order);
+        } catch (InvoiceRequisitesMissingException) {
+            $this->logger->error('Invoice resend blocked: seller requisites incomplete', ['order' => $order->getId()]);
+
+            return $this->json([
+                'error' => 'invoice_unavailable',
+                'error_message' => 'Рахунок тимчасово недоступний. Зверніться до менеджера.',
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        if (null === $result['emailed_to'] && !$result['telegram_sent']) {
+            $invoiceResendLimiter->create('order-'.$order->getId())->reset();
+
+            return $this->json([
+                'error' => 'send_failed',
+                'error_message' => 'Не вдалося надіслати рахунок. Спробуйте пізніше або завантажте PDF.',
+            ], Response::HTTP_BAD_GATEWAY);
+        }
+
+        return $this->json([
+            'emailed_to' => $result['emailed_to'],
+            'telegram_sent' => $result['telegram_sent'],
+            'with_pay_link' => null !== $result['pay_url'],
+        ]);
+    }
+
+    private static function humanWait(int $seconds): string
+    {
+        return $seconds < 60 ? sprintf('%d с', $seconds) : sprintf('%d хв', max(1, (int) round($seconds / 60)));
+    }
+
     /** The buyer downloads the invoice PDF of their own order. */
     #[isGranted(RoleEnum::USER->value)]
     #[Route('/order/{id}/invoice', name: 'order_invoice_pdf', methods: [Request::METHOD_GET], requirements: ['id' => '\d+'])]
@@ -614,8 +691,12 @@ class ShoppingCartController extends AbstractController
             return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
         }
 
-        if ($userOrder->getLiqPayStatus() === 'success') {
+        // Paid by card OR by a bank transfer a manager confirmed — never take the money twice.
+        if ($userOrder->isPaid()) {
             return $this->json(['error' => 'order_already_paid'], Response::HTTP_BAD_REQUEST);
+        }
+        if (!OrderOnlinePayment::canPay($userOrder)) {
+            return $this->json(['error' => 'order_not_payable'], Response::HTTP_BAD_REQUEST);
         }
 
         $language = $localizationService->getLanguage();
@@ -630,11 +711,11 @@ class ShoppingCartController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => $language === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => OrderOnlinePayment::currency($userOrder, $lang),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'result_url' => $resultUrl,
-            'description' => $userOrder->getDescription(),
+            'description' => OrderOnlinePayment::description($userOrder),
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
 

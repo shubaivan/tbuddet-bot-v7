@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Enum\OrderStatusEnum;
 use App\Entity\Enum\RoleEnum;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
@@ -80,6 +81,14 @@ class LiqPayController extends AbstractController
         }
 
         $userOrder->setLiqPaystatus($newStatus);
+        // Invoice order paid online by card («Оплатити онлайн»): same as a confirmed
+        // bank transfer — out of «Очікує оплати по рахунку» into the normal queue.
+        if ($newStatus === 'success'
+            && $userOrder->isInvoicePayment()
+            && $userOrder->getOrderStatus() === OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value
+        ) {
+            $userOrder->setOrderStatus(OrderStatusEnum::NEW->value);
+        }
         $em->flush();
 
         $logger->info('liqpay_callback_processed', [
@@ -142,6 +151,9 @@ class LiqPayController extends AbstractController
                 );
             } else {
                 $amountInfo = sprintf("Сума: %s грн\n", $userOrder->getTotalAmount());
+            }
+            if ($userOrder->isInvoicePayment()) {
+                $amountInfo = sprintf("🧾 Рахунок № %s оплачено карткою онлайн (LiqPay)\n", htmlspecialchars((string) $userOrder->getInvoiceNumber(), ENT_QUOTES)).$amountInfo;
             }
             if ($userOrder->getDeliveryAmount() > 0) {
                 $amountInfo .= sprintf("У т.ч. доставка: %s грн\n🚚 %s\n", $userOrder->getDeliveryAmount(), htmlspecialchars((string) $userOrder->getDeliveryAddress(), ENT_QUOTES));

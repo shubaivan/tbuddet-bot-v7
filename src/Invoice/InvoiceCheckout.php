@@ -9,6 +9,7 @@ use App\Entity\Enum\PaymentMethodEnum;
 use App\Entity\User;
 use App\Entity\UserOrder;
 use App\Service\EmailService;
+use App\Service\Payment\OrderOnlinePayment;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
@@ -104,5 +105,45 @@ class InvoiceCheckout
             'public_url' => $publicUrl,
             'total' => $order->getTotalAmount(),
         ];
+    }
+
+    /**
+     * «Надіслати рахунок ще раз» from the cabinet: the same PDF (same number, same
+     * amount) to every channel the buyer has — the payer email and the customer bot
+     * in Telegram. While the order is unpaid the message also carries an
+     * «Оплатити онлайн» link (fresh LiqPay checkout for this very order).
+     *
+     * @return array{emailed_to: ?string, telegram_sent: bool, pay_url: ?string}
+     *
+     * @throws InvoiceRequisitesMissingException when the PDF cannot be rendered
+     */
+    public function resend(UserOrder $order): array
+    {
+        $pdf = $this->invoiceService->renderPdf($order);
+        $payUrl = OrderOnlinePayment::canPay($order) ? $this->invoiceLinks->payUrl($order) : null;
+
+        $sentTo = null;
+        try {
+            $sentTo = $this->emailService->sendInvoiceEmail($order, $pdf, $payUrl);
+        } catch (\Throwable $e) {
+            $this->logger->error('Invoice resend email failed', ['order' => $order->getId(), 'error' => $e->getMessage()]);
+        }
+
+        $telegramSent = $this->invoiceNotifier->sendPdfToBuyer($order, $pdf, $this->invoiceLinks->url($order), $payUrl);
+
+        $this->logger->info('Invoice resent by the buyer', [
+            'order' => $order->getId(),
+            'invoice' => $order->getInvoiceNumber(),
+            'emailed_to' => $sentTo,
+            'telegram_sent' => $telegramSent,
+        ]);
+
+        return ['emailed_to' => $sentTo, 'telegram_sent' => $telegramSent, 'pay_url' => $payUrl];
+    }
+
+    /** Where a resend can go at all — so the cabinet can say so before the click. */
+    public static function hasChannel(UserOrder $order): bool
+    {
+        return null !== $order->getInvoiceEmail() || [] !== InvoiceNotifier::buyerChatIds($order);
     }
 }

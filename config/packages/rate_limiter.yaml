@@ -20,3 +20,8 @@ framework:
             policy: 'sliding_window'
             limit: 6
             interval: '10 minutes'
+        # «Надіслати рахунок ще раз» з кабінету — per order, щоб не засипати клієнта/бота.
+        invoice_resend:
+            policy: 'fixed_window'
+            limit: 1
+            interval: '3 minutes'

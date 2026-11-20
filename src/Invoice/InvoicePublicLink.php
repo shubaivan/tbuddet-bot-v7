@@ -43,4 +43,19 @@ final class InvoicePublicLink
 
         return rtrim($this->apiBaseUrl, '/').'/invoice/'.$order->getId().'/'.self::token($order->getId(), $number, $this->appSecret).'.pdf';
     }
+
+    /**
+     * «Оплатити онлайн» для того ж рахунку: наш адрес, а не сире посилання LiqPay —
+     * при кожному відкритті формується свіжий checkout, а вже оплачене замовлення
+     * не дасть заплатити вдруге.
+     */
+    public function payUrl(UserOrder $order): ?string
+    {
+        $number = $order->getInvoiceNumber();
+        if (null === $number || null === $order->getId()) {
+            return null;
+        }
+
+        return rtrim($this->apiBaseUrl, '/').'/invoice/'.$order->getId().'/'.self::token($order->getId(), $number, $this->appSecret).'/pay';
+    }
 }
