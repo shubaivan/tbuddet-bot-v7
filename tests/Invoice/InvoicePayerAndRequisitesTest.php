@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Invoice;
 
+use App\Entity\User;
+use App\Entity\UserOrder;
+use App\Invoice\InvoiceNotifier;
 use App\Invoice\InvoicePayer;
 use App\Invoice\InvoiceRequisitesMissingException;
 use App\Invoice\InvoiceService;
@@ -67,6 +70,44 @@ class InvoicePayerAndRequisitesTest extends TestCase
             ['name', 'tax_id', 'address', 'contact_person', 'phone', 'email', 'vat_ipn', 'iban'],
             array_keys($errors)
         );
+    }
+
+    public function testVatSplitOfThePayableAmount(): void
+    {
+        // Order 55 / ABM-2026-00001: 3 × 580 + delivery 800 − 15% on goods (261) = 2279.
+        self::assertSame(['net' => 1899.17, 'vat' => 379.83, 'gross' => 2279.0], InvoiceService::vatSplit(2279));
+        $split = InvoiceService::vatSplit(1234);
+        self::assertSame(1234.0, round($split['net'] + $split['vat'], 2));
+    }
+
+    public function testManagersSeeHowTheBuyerGotThePdf(): void
+    {
+        self::assertStringContainsString('email', InvoiceNotifier::deliveryNote(true, false, 'a@b.ua'));
+        self::assertStringContainsString('Telegram', InvoiceNotifier::deliveryNote(false, true, ''));
+        self::assertStringContainsString('кабінеті', InvoiceNotifier::deliveryNote(false, false, ''));
+        self::assertStringContainsString('НЕ надіслано', InvoiceNotifier::deliveryNote(false, false, 'a@b.ua'));
+    }
+
+    public function testEmailIsOptional(): void
+    {
+        $payer = InvoicePayer::fromArray(self::validPayer(['email' => '  ']));
+
+        self::assertSame([], $payer->validate());
+        self::assertSame('', $payer->toArray()['email']);
+    }
+
+    public function testInvoiceEmailNeverFallsBackToTheSyntheticTelegramAddress(): void
+    {
+        $tgOnly = (new User())->setEmail('tg-223205065@telegram.local');
+        $order = (new UserOrder())->setClientUserId($tgOnly)->setInvoicePayer(['email' => '']);
+        self::assertNull($order->getInvoiceEmail());
+
+        $withMailbox = (new User())->setEmail('buyer@example.com');
+        $order = (new UserOrder())->setClientUserId($withMailbox)->setInvoicePayer(['email' => '']);
+        self::assertSame('buyer@example.com', $order->getInvoiceEmail());
+
+        $order->setInvoicePayer(['email' => 'buh@example.com']);
+        self::assertSame('buh@example.com', $order->getInvoiceEmail());
     }
 
     public function testVatIpnIgnoredWhenNotAVatPayer(): void

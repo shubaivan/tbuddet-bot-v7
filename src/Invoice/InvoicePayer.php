@@ -82,8 +82,10 @@ final class InvoicePayer
             $errors['phone'] = 'Вкажіть телефон у форматі +380XXXXXXXXX.';
         }
 
-        if (!filter_var($this->email, FILTER_VALIDATE_EMAIL) || mb_strlen($this->email) > 180) {
-            $errors['email'] = 'Вкажіть коректний email — на нього надійде рахунок.';
+        // Email is optional: without it the PDF goes to the buyer's Telegram and stays
+        // downloadable on the order page / in the cabinet.
+        if ($this->email !== '' && (!filter_var($this->email, FILTER_VALIDATE_EMAIL) || mb_strlen($this->email) > 180)) {
+            $errors['email'] = 'Перевірте email або залиште поле порожнім.';
         }
 
         if ($this->vatPayer && !UaRequisitesValidator::isValidVatIpn((string) $this->vatIpn)) {

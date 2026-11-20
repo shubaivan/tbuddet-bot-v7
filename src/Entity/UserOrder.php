@@ -612,10 +612,20 @@ class UserOrder
         return $this;
     }
 
-    /** Where the invoice PDF goes: the payer email, falling back to the account email. */
+    /**
+     * Where the invoice PDF goes: the payer email, falling back to the account email.
+     * The synthetic tg-…@telegram.local address of Telegram-only accounts is not a mailbox.
+     */
     public function getInvoiceEmail(): ?string
     {
-        return ($this->invoice_payer['email'] ?? null) ?: $this->client_user_id?->getEmail();
+        $payerEmail = trim((string) ($this->invoice_payer['email'] ?? ''));
+        if ($payerEmail !== '') {
+            return $payerEmail;
+        }
+
+        $accountEmail = (string) $this->client_user_id?->getEmail();
+
+        return $accountEmail !== '' && !str_ends_with($accountEmail, '@telegram.local') ? $accountEmail : null;
     }
 
     public function getInvoiceIssuedAt(): ?\DateTimeImmutable

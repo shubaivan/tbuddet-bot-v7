@@ -11,6 +11,7 @@ use App\Service\Analytics\TelegramNotifier;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
+use SergiX44\Nutgram\Telegram\Types\Internal\InputFile;
 
 /**
  * Telegram side of pay-by-invoice: managers (DM + the shop group topic) and the buyer.
@@ -26,7 +27,13 @@ class InvoiceNotifier
     ) {
     }
 
-    public function invoiceIssued(UserOrder $order, string $adminOrderUrl, bool $emailed, ?string $publicPdfUrl = null): void
+    public function invoiceIssued(
+        UserOrder $order,
+        string $adminOrderUrl,
+        bool $emailed,
+        ?string $publicPdfUrl = null,
+        bool $sentToBuyerTelegram = false,
+    ): void
     {
         $payer = $order->getInvoicePayer();
         $esc = static fn (?string $s): string => TelegramNotifier::esc((string) $s);
@@ -40,10 +47,10 @@ class InvoiceNotifier
             $esc($payer['tax_id'] ?? ''),
             $esc($payer['contact_person'] ?? ''),
             $esc($payer['phone'] ?? ''),
-            $esc($payer['email'] ?? ''),
+            $esc(($payer['email'] ?? '') !== '' ? $payer['email'] : 'email не вказано'),
             $order->getTotalAmount(),
             $order->getInvoiceDueDate()?->format('d.m.Y') ?? '—',
-            $emailed ? '✉️ PDF надіслано платнику на email.' : '⚠️ PDF НЕ надіслано на email — надішліть вручну з адмінки.',
+            self::deliveryNote($emailed, $sentToBuyerTelegram, (string) ($payer['email'] ?? '')),
             $adminOrderUrl,
         );
 
@@ -57,6 +64,87 @@ class InvoiceNotifier
 
         $this->toManagers($text);
         $this->toGroup($text);
+    }
+
+    /** Manager-facing line: how the buyer got the PDF (or that they still need it). */
+    public static function deliveryNote(bool $emailed, bool $sentToBuyerTelegram, string $payerEmail): string
+    {
+        if ($emailed) {
+            return '✉️ PDF надіслано платнику на email.';
+        }
+        if ($sentToBuyerTelegram) {
+            return '📨 PDF надіслано покупцю в Telegram (email не вказано).';
+        }
+        if ($payerEmail === '') {
+            return 'ℹ️ Email не вказано — PDF доступний покупцю на сторінці замовлення та в кабінеті.';
+        }
+
+        return '⚠️ PDF НЕ надіслано на email — надішліть вручну з адмінки.';
+    }
+
+    /**
+     * Sends the invoice PDF to the buyer's Telegram (the customer bot) — used when
+     * no email was given. Returns true when at least one chat received it.
+     */
+    public function sendPdfToBuyer(UserOrder $order, string $pdf, ?string $publicPdfUrl = null): bool
+    {
+        $chatIds = self::buyerChatIds($order);
+        if ($chatIds === []) {
+            return false;
+        }
+
+        $caption = sprintf(
+            "🧾 Рахунок на оплату № %s — замовлення #%d\nСума: %s грн, сплатити до %s.\nУ призначенні платежу вкажіть: «Оплата згідно рахунку № %s».",
+            TelegramNotifier::esc((string) $order->getInvoiceNumber()),
+            $order->getId(),
+            number_format((float) $order->getTotalAmount(), 2, ',', ' '),
+            $order->getInvoiceDueDate()?->format('d.m.Y') ?? '—',
+            TelegramNotifier::esc((string) $order->getInvoiceNumber()),
+        );
+
+        $sent = false;
+        foreach ($chatIds as $chatId) {
+            $stream = fopen('php://temp', 'r+b');
+            if ($stream === false) {
+                break;
+            }
+            fwrite($stream, $pdf);
+            rewind($stream);
+            try {
+                $this->bot->sendDocument(
+                    document: InputFile::make($stream, sprintf('Rahunok-%s.pdf', $order->getInvoiceNumber())),
+                    chat_id: $chatId,
+                    caption: $caption,
+                    parse_mode: ParseMode::HTML,
+                );
+                $sent = true;
+            } catch (\Throwable $e) {
+                $this->logger->error('Invoice PDF to buyer Telegram failed', [
+                    'order' => $order->getId(),
+                    'chat_id' => $chatId,
+                    'error' => $e->getMessage(),
+                ]);
+                if (null !== $publicPdfUrl) {
+                    // The document upload failed — still give the buyer the link.
+                    $this->send($caption."\n📄 ".TelegramNotifier::esc($publicPdfUrl), $chatId);
+                }
+            } finally {
+                if (\is_resource($stream)) {
+                    fclose($stream);
+                }
+            }
+        }
+
+        return $sent;
+    }
+
+    /** @return list<int|string> */
+    public static function buyerChatIds(UserOrder $order): array
+    {
+        return array_values(array_unique(array_filter([
+            $order->getTelegramUserId()?->getChatId(),
+            $order->getClientUserId()?->getTelegramChatId(),
+        ])));
     }
 
     public function invoicePaid(UserOrder $order, string $paidBy, string $adminOrderUrl): void
@@ -77,11 +165,7 @@ class InvoiceNotifier
             TelegramNotifier::esc((string) $order->getInvoiceNumber()),
             $order->getId(),
         );
-        $chatIds = array_values(array_unique(array_filter([
-            $order->getTelegramUserId()?->getChatId(),
-            $order->getClientUserId()?->getTelegramChatId(),
-        ])));
-        foreach ($chatIds as $chatId) {
+        foreach (self::buyerChatIds($order) as $chatId) {
             $this->send($buyerText, $chatId);
         }
     }

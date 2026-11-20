@@ -12,6 +12,8 @@ use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\User;
 use App\Entity\UserOrder;
+use App\Invoice\InvoiceCheckout;
+use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
 use App\Pagination\Paginator;
 use App\Repository\CategoryRepository;
@@ -321,8 +323,13 @@ class ProductController extends AbstractController
         CityDelivery $cityDelivery,
         ActivityService $activity,
         CampaignTracker $campaignTracker,
+        InvoiceCheckout $invoiceCheckout,
     ): JsonResponse
     {
+        if ($purchaseProduct->isInvoice() && !$invoiceCheckout->isAvailable()) {
+            return $this->invoiceUnavailable();
+        }
+
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
@@ -443,6 +450,15 @@ class ProductController extends AbstractController
 
         $userOrder->setDescription($description);
 
+        if ($purchaseProduct->isInvoice()) {
+            $invoiceCheckout->prepare(
+                $userOrder,
+                $purchaseProduct->getPayer() ?? [],
+                $this->quickBuyInvoiceLines($product, $purchaseProduct, $localizationService, $cityDelivery, $deliveryAddress, $deliveryAmount),
+                $purchaseProduct->isRememberPayer() ? $user : null,
+            );
+        }
+
         $this->em->persist($userOrder);
         $this->em->flush();
 
@@ -454,6 +470,10 @@ class ProductController extends AbstractController
         }
 
         $campaignTracker->attributeOrder($userOrder, $user);
+
+        if ($userOrder->isInvoicePayment()) {
+            return $this->invoiceResponse($userOrder, $invoiceCheckout);
+        }
 
         // Доставка по місту з «Купити зараз» — одразу в «Магазин», щоб менеджер побачив адресу ще до оплати.
         if ($deliveryAmount > 0) {
@@ -522,8 +542,14 @@ class ProductController extends AbstractController
         #[MapRequestPayload] PublicPurchaseProduct $publicPurchaseProduct,
         LocalizationService $localizationService,
         CampaignTracker $campaignTracker,
+        InvoiceCheckout $invoiceCheckout,
+        CityDelivery $cityDelivery,
     ): JsonResponse
     {
+        if ($publicPurchaseProduct->isInvoice() && !$invoiceCheckout->isAvailable()) {
+            return $this->invoiceUnavailable();
+        }
+
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
 
@@ -562,10 +588,23 @@ class ProductController extends AbstractController
 
         $userOrder->setDescription($description);
 
+        if ($publicPurchaseProduct->isInvoice()) {
+            // Guest: no account, so the payer requisites are not remembered.
+            $invoiceCheckout->prepare(
+                $userOrder,
+                $publicPurchaseProduct->getPayer() ?? [],
+                $this->quickBuyInvoiceLines($product, $publicPurchaseProduct, $localizationService, $cityDelivery, null, 0),
+            );
+        }
+
         $this->em->persist($userOrder);
         $this->em->flush();
 
         $campaignTracker->attributeOrder($userOrder, null);
+
+        if ($userOrder->isInvoicePayment()) {
+            return $this->invoiceResponse($userOrder, $invoiceCheckout);
+        }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
 
@@ -621,6 +660,54 @@ class ProductController extends AbstractController
     }
 
     #[isGranted(RoleEnum::USER->value)]
+    private function invoiceUnavailable(): JsonResponse
+    {
+        return $this->json([
+            'error' => 'invoice_unavailable',
+            'error_message' => 'Оплата за рахунком тимчасово недоступна. Оберіть оплату карткою або зверніться до менеджера.',
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    private function invoiceResponse(UserOrder $userOrder, InvoiceCheckout $invoiceCheckout): JsonResponse
+    {
+        return $this->json([
+            'order' => $userOrder,
+            'invoice' => $invoiceCheckout->complete($userOrder),
+        ], Response::HTTP_OK, [], [
+            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+        ]);
+    }
+
+    /** Invoice lines for a one-product quick buy (same naming as the cart invoice) + the delivery line. */
+    private function quickBuyInvoiceLines(
+        Product $product,
+        PurchaseProduct $purchaseProduct,
+        LocalizationService $localizationService,
+        CityDelivery $cityDelivery,
+        ?string $deliveryAddress,
+        int $deliveryAmount,
+    ): array {
+        $price = (int) $product->getPrice($localizationService->getLanguage());
+        $options = [];
+        foreach ($purchaseProduct->getProductProperties() as $property) {
+            $price += (int) $property->getPropertyPriceImpact();
+            if ($property->getPropertyName() && $property->getPropertyValue()) {
+                $options[] = $property->getPropertyName().': '.$property->getPropertyValue();
+            }
+        }
+        $name = (string) $product->getProductName(UserLanguageEnum::UA);
+        if ($options !== []) {
+            $name .= ' ('.implode(', ', $options).')';
+        }
+        $qty = (int) $purchaseProduct->getQuantity();
+        $lines = [['name' => $name, 'unit' => 'шт.', 'qty' => $qty, 'price' => $price, 'sum' => $price * $qty]];
+        if ($deliveryAmount > 0) {
+            $lines[] = InvoiceService::deliveryLine($cityDelivery->label().': '.$deliveryAddress, $deliveryAmount);
+        }
+
+        return $lines;
+    }
+
     #[Route('/user-order/view/{id}', name: 'user_order_view_by_id', methods: [Request::METHOD_GET])]
     public function userOrderById(
         string $id,

@@ -11,6 +11,8 @@ use Symfony\Component\Validator\Constraints\Valid;
 #[UserLanguage]
 class PurchaseProduct
 {
+    use InvoicePaymentFields;
+
     #[Type('int')]
     #[NotBlank]
     #[NotNull]

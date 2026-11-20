@@ -7,20 +7,16 @@ use App\Controller\API\Request\Purchase\CheckoutRequest;
 use App\Controller\API\Request\Purchase\ProductProperties;
 use App\Controller\API\Request\Purchase\PurchaseProduct;
 use App\Entity\Enum\CurrencyEnum;
-use App\Entity\Enum\OrderStatusEnum;
-use App\Entity\Enum\PaymentMethodEnum;
 use App\Entity\Enum\RoleEnum;
 use App\Entity\Product;
 use App\Entity\PurchaseProduct as EntityPurchaseProduct;
 use App\Entity\ShoppingCart;
 use App\Entity\User;
 use App\Entity\UserOrder;
-use App\Invoice\InvoiceNotifier;
-use App\Invoice\InvoicePayer;
+use App\Invoice\InvoiceCheckout;
 use App\Invoice\InvoiceRequisitesMissingException;
 use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
-use App\Service\EmailService;
 use App\Repository\ProductRepository;
 use App\Repository\PurchaseProductRepository;
 use App\Repository\UserOrderRepository;
@@ -266,9 +262,7 @@ class ShoppingCartController extends AbstractController
         ActivityService $activity,
         CityDelivery $cityDelivery,
         InvoiceService $invoiceService,
-        InvoiceNotifier $invoiceNotifier,
-        EmailService $emailService,
-        InvoicePublicLink $invoiceLinks,
+        InvoiceCheckout $invoiceCheckout,
         CampaignTracker $campaignTracker,
     ): JsonResponse
     {
@@ -416,19 +410,16 @@ class ShoppingCartController extends AbstractController
         }
 
         if ($checkoutRequest->isInvoice()) {
-            $payer = InvoicePayer::fromArray($checkoutRequest->getPayer() ?? []);
-            $userOrder->setPaymentMethod(PaymentMethodEnum::INVOICE->value);
-            $userOrder->setOrderStatus(OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value);
-            $userOrder->setInvoicePayer($payer->toArray());
             $invoiceLines = $invoiceService->buildLines($orderedPurchaseProducts, UserLanguageEnum::UA);
             if ($deliveryAmount > 0) {
                 $invoiceLines[] = InvoiceService::deliveryLine($cityDelivery->label().': '.$deliveryAddress, $deliveryAmount);
             }
-            $userOrder->setInvoiceLines($invoiceLines);
-            $invoiceService->issue($userOrder);
-            if ($checkoutRequest->isRememberPayer()) {
-                $user->setInvoicePayerProfile($payer->toArray());
-            }
+            $invoiceCheckout->prepare(
+                $userOrder,
+                $checkoutRequest->getPayer() ?? [],
+                $invoiceLines,
+                $checkoutRequest->isRememberPayer() ? $user : null,
+            );
         }
 
         $em->flush();
@@ -468,7 +459,12 @@ class ShoppingCartController extends AbstractController
         );
 
         if ($userOrder->isInvoicePayment()) {
-            return $this->completeInvoiceCheckout($userOrder, $invoiceService, $invoiceNotifier, $emailService, $invoiceLinks);
+            return $this->json([
+                'order' => $userOrder,
+                'invoice' => $invoiceCheckout->complete($userOrder),
+            ], Response::HTTP_OK, [], [
+                AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
+            ]);
         }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
@@ -521,48 +517,6 @@ class ShoppingCartController extends AbstractController
             'order' => $userOrder,
             'liqpay' => $res,
             'link' => $link
-        ], Response::HTTP_OK, [], [
-            AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
-        ]);
-    }
-
-    /**
-     * Invoice branch of checkout: render the PDF, email it to the payer, tell the
-     * managers. The order already exists — a mail/Telegram failure is reported in
-     * the response and to the managers instead of failing the purchase.
-     */
-    private function completeInvoiceCheckout(
-        UserOrder $userOrder,
-        InvoiceService $invoiceService,
-        InvoiceNotifier $invoiceNotifier,
-        EmailService $emailService,
-        InvoicePublicLink $invoiceLinks,
-    ): JsonResponse {
-        $sentTo = null;
-        $publicUrl = $invoiceLinks->url($userOrder);
-        try {
-            $sentTo = $emailService->sendInvoiceEmail($userOrder, $invoiceService->renderPdf($userOrder));
-        } catch (\Throwable $e) {
-            $this->logger->error('Invoice email failed', ['order' => $userOrder->getId(), 'error' => $e->getMessage()]);
-        }
-
-        $invoiceNotifier->invoiceIssued(
-            $userOrder,
-            $this->generateUrl('app_admin_order_detail', ['id' => $userOrder->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            $sentTo !== null,
-            $publicUrl,
-        );
-
-        return $this->json([
-            'order' => $userOrder,
-            'invoice' => [
-                'number' => $userOrder->getInvoiceNumber(),
-                'due_date' => $userOrder->getInvoiceDueDate()?->format('Y-m-d'),
-                'email' => $userOrder->getInvoiceEmail(),
-                'emailed' => $sentTo !== null,
-                'public_url' => $publicUrl,
-                'total' => $userOrder->getTotalAmount(),
-            ],
         ], Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
