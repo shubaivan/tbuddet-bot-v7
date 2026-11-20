@@ -165,6 +165,11 @@ services:
             $appSecret: '%kernel.secret%'
             $apiBaseUrl: '%env(INVOICE_PUBLIC_BASE_URL)%'
 
+    # LiqPay result_url + signed key for the public payment-status check.
+    App\Service\Payment\PaymentResultUrl:
+        arguments:
+            $appSecret: '%kernel.secret%'
+
     # Chat-gate token signing (HMAC over the dialog id).
     App\Service\SupportChat\ChatDialogStore:
         arguments:

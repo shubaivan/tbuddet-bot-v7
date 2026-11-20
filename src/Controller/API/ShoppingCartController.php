@@ -43,6 +43,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use App\Service\Delivery\CityDelivery;
 use App\Invoice\InvoicePublicLink;
+use App\Service\Payment\PaymentResultUrl;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 #[Route(path: 'api/v1/cart')]
@@ -53,7 +54,7 @@ class ShoppingCartController extends AbstractController
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
         private string $liqpayServerUrl,
-        private string $frontendUrl,
+        private readonly PaymentResultUrl $paymentResultUrl,
     ) {}
 
     #[isGranted(RoleEnum::USER->value)]
@@ -496,7 +497,7 @@ class ShoppingCartController extends AbstractController
         $em->flush();
 
         $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en';
-        $resultUrl = sprintf('%s/%s/payment-success?order=%d', $this->frontendUrl, $lang, $userOrder->getId());
+        $resultUrl = $this->paymentResultUrl->build($lang, $userOrder->getId());
 
         $params = array(
             'action' => 'pay',
@@ -719,7 +720,7 @@ class ShoppingCartController extends AbstractController
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
 
         $lang = $language === UserLanguageEnum::UA ? 'uk' : 'en';
-        $resultUrl = sprintf('%s/%s/payment-success?order=%d', $this->frontendUrl, $lang, $userOrder->getId());
+        $resultUrl = $this->paymentResultUrl->build($lang, $userOrder->getId());
 
         $params = array(
             'action' => 'pay',

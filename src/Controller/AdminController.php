@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\Payment\PaymentResultUrl;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\Category;
 use App\Entity\CategoryRelation;
@@ -55,7 +56,6 @@ class AdminController extends AbstractController
         private readonly string $liqpayPublicKey,
         private readonly string $liqpayPrivateKey,
         private readonly string $liqpayServerUrl,
-        private readonly string $frontendUrl,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -523,6 +523,7 @@ class AdminController extends AbstractController
         #[MapEntity(id: 'id')] UserOrder $order,
         EntityManagerInterface $em,
         EmailService $emailService,
+        PaymentResultUrl $paymentResultUrl,
     ): Response {
         if ($order->isPaid()) {
             $this->addFlash('warning', 'Замовлення вже оплачено — посилання не сформовано.');
@@ -532,7 +533,7 @@ class AdminController extends AbstractController
 
         $liqPayOrderID = sprintf('%s-%s', $order->getId(), time());
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
-        $resultUrl = sprintf('%s/uk/payment-success?order=%d', $this->frontendUrl, $order->getId());
+        $resultUrl = $paymentResultUrl->build('uk', $order->getId());
 
         $cnb = $liqpay->cnb_form_raw([
             'action' => 'pay',

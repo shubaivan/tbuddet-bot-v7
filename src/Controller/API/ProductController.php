@@ -15,6 +15,7 @@ use App\Entity\UserOrder;
 use App\Invoice\InvoiceCheckout;
 use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
+use App\Service\Payment\PaymentResultUrl;
 use App\Pagination\Paginator;
 use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
@@ -57,6 +58,7 @@ class ProductController extends AbstractController
         private string $liqpayPublicKey,
         private string $liqpayPrivateKey,
         private string $liqpayServerUrl,
+        private readonly PaymentResultUrl $paymentResultUrl,
     ) {}
 
     #[Route(name: 'public_product_list', methods: [Request::METHOD_GET])]
@@ -515,6 +517,12 @@ class ProductController extends AbstractController
             'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
+            // The FE now opens LiqPay in the same tab (iOS Safari blocks the old
+            // popup), so LiqPay must bring the buyer back to the status page.
+            'result_url' => $this->paymentResultUrl->build(
+                $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en',
+                $userOrder->getId(),
+            ),
             'description' => $description
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
@@ -647,6 +655,12 @@ class ProductController extends AbstractController
             'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
+            // The FE now opens LiqPay in the same tab (iOS Safari blocks the old
+            // popup), so LiqPay must bring the buyer back to the status page.
+            'result_url' => $this->paymentResultUrl->build(
+                $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en',
+                $userOrder->getId(),
+            ),
             'description' => $description
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
@@ -712,6 +726,28 @@ class ProductController extends AbstractController
         }
 
         return $lines;
+    }
+
+    /**
+     * Payment status for the LiqPay return page without a login — a guest quick
+     * buy has no account. Needs the signed key from result_url; answers only the
+     * status, nothing about the buyer or the goods.
+     */
+    #[Route('/order-status/{id}', name: 'public_order_payment_status', requirements: ['id' => '\d+'], methods: [Request::METHOD_GET])]
+    public function publicOrderPaymentStatus(int $id, Request $request, UserOrderRepository $repository): JsonResponse
+    {
+        if (!$this->paymentResultUrl->isValid($id, $request->query->get('k'))) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+        $userOrder = $repository->find($id);
+        if (null === $userOrder) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json([
+            'id' => $userOrder->getId(),
+            'liq_pay_status' => $userOrder->getLiqPayStatus(),
+        ], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
     }
 
     #[isGranted(RoleEnum::USER->value)]
