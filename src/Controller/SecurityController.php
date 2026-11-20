@@ -200,7 +200,7 @@ class SecurityController extends AbstractController
             && $user->getConfirmationTokenExpiresAt() > new \DateTimeImmutable('+24 hours -60 seconds');
 
         if ($user && !$user->isEmailConfirmed() && !$sentRecently) {
-            $emailService->sendConfirmationEmail($user);
+            $emailService->sendConfirmationEmail($user, reuseValidToken: true);
             $entityManager->flush();
         }
 

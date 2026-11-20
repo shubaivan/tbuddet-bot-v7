@@ -20,10 +20,18 @@ class EmailService
     ) {
     }
 
-    public function sendConfirmationEmail(User $user): void
+    /**
+     * @param bool $reuseValidToken resend: keep the token of the first letter (only the
+     *                              expiry moves), so the link the buyer already has still works
+     */
+    public function sendConfirmationEmail(User $user, bool $reuseValidToken = false): void
     {
-        $token = bin2hex(random_bytes(32));
         $expiresAt = new \DateTimeImmutable('+24 hours');
+        $current = $user->getConfirmationToken();
+        $isCurrentValid = null !== $current
+            && null !== $user->getConfirmationTokenExpiresAt()
+            && $user->getConfirmationTokenExpiresAt() > new \DateTimeImmutable();
+        $token = $reuseValidToken && $isCurrentValid ? $current : bin2hex(random_bytes(32));
 
         $user->setConfirmationToken($token);
         $user->setConfirmationTokenExpiresAt($expiresAt);
