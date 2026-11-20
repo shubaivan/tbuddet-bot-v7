@@ -176,6 +176,39 @@ class SecurityController extends AbstractController
         ], Response::HTTP_OK);
     }
 
+    /**
+     * «Надіслати лист ще раз» on the registration success screen. Same answer for
+     * any email (no account enumeration); at most one letter a minute per user.
+     */
+    #[Route(path: '/resend-confirmation', name: 'user_resend_confirmation', methods: [Request::METHOD_POST])]
+    public function resendConfirmation(
+        ObjectHandler $objectHandler,
+        Request $request,
+        UserRepository $userRepository,
+        EntityManagerInterface $entityManager,
+        EmailService $emailService,
+    ): Response {
+        /** @var ForgotPasswordDto $dto */
+        $dto = $objectHandler->handleRequestByObject(
+            AuthExceptionEnum::REGISTRATION_EXCEPTION,
+            ForgotPasswordDto::class,
+            $request
+        );
+
+        $user = $userRepository->findOneBy(['email' => $dto->getEmail()]);
+        $sentRecently = null !== $user?->getConfirmationTokenExpiresAt()
+            && $user->getConfirmationTokenExpiresAt() > new \DateTimeImmutable('+24 hours -60 seconds');
+
+        if ($user && !$user->isEmailConfirmed() && !$sentRecently) {
+            $emailService->sendConfirmationEmail($user);
+            $entityManager->flush();
+        }
+
+        return $this->json([
+            'message' => 'If the account is waiting for confirmation, a new letter has been sent.',
+        ], Response::HTTP_OK);
+    }
+
     #[Route(path: '/forgot-password', name: 'user_forgot_password', methods: [Request::METHOD_POST])]
     public function forgotPassword(
         ObjectHandler $objectHandler,
