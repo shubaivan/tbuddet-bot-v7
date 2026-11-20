@@ -80,8 +80,11 @@ class LiqPay
         ));
 
         $server_output = $this->curlRequester->make_curl_request($url, $postfields, $timeout);
-        $toArray = json_decode($server_output, true);
-        $this->logger->info('server_output', $toArray);
+        $toArray = json_decode((string) $server_output, true);
+        // LiqPay can answer with an empty body or HTML (timeout, maintenance).
+        // Logging that must not throw: the order is already saved and the
+        // buyer still gets the pay link (built locally, without this call).
+        $this->logger->info('server_output', is_array($toArray) ? $toArray : ['raw' => substr((string) $server_output, 0, 500)]);
 
         return $toArray;
     }
