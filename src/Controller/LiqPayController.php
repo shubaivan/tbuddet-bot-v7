@@ -82,6 +82,22 @@ class LiqPayController extends AbstractController
             return $this->json(['status' => true]);
         }
 
+        // A late failure/expiry of an OLDER checkout must not overwrite the status of
+        // the current attempt (each retry gets a new "<id>-<time>" order_id).
+        $currentAttempt = $userOrder->getLiqPayOrderId();
+        if ($newStatus !== 'success' && $newStatus !== 'reversed'
+            && null !== $currentAttempt && '' !== $currentAttempt
+            && ($json_decode['order_id'] ?? null) !== $currentAttempt) {
+            $logger->warning('liqpay callback of an older attempt ignored', [
+                'order_id' => $order_id,
+                'new_status' => $newStatus,
+                'liqpay_order_id' => $json_decode['order_id'] ?? null,
+                'current_attempt' => $currentAttempt,
+            ]);
+
+            return $this->json(['status' => true]);
+        }
+
         // Money arrived twice: a second checkout paid after the first one, or a card
         // payment after the manager already confirmed the bank transfer → refund alert.
         $paidAgain = $newStatus === 'success'

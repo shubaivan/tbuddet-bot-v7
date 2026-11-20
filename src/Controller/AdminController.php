@@ -556,6 +556,7 @@ class AdminController extends AbstractController
         ]);
 
         $order->setLiqPayOrderId($liqPayOrderID);
+        $order->setLiqPayStatus(null); // new attempt — an old failure is not its result
         $em->flush();
 
         $link = sprintf('%s?data=%s&signature=%s', $cnb['url'], rawurlencode($cnb['data']), rawurlencode($cnb['signature']));

@@ -74,6 +74,8 @@ class OrderOnlinePayment
         ]);
 
         $order->setLiqPayOrderId($liqPayOrderId);
+        // New attempt: an old «failure/expired» must not show as this attempt's result.
+        $order->setLiqPaystatus(null);
         $this->em->flush();
 
         return sprintf('%s?data=%s&signature=%s', $cnb['url'], rawurlencode($cnb['data']), rawurlencode($cnb['signature']));

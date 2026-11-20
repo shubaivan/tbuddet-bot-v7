@@ -736,6 +736,9 @@ class ShoppingCartController extends AbstractController
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
 
         $userOrder->setLiqPayOrderId($liqPayOrderID);
+        // New attempt: the old «failure/expired» must not make the result page say
+        // «не пройшов» before this attempt's callback arrives.
+        $userOrder->setLiqPaystatus(null);
         $em->flush();
 
         $link = sprintf(

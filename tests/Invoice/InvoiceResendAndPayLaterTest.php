@@ -126,4 +126,17 @@ class InvoiceResendAndPayLaterTest extends TestCase
         $mail->setInvoicePayer(['email' => 'buh@firma.ua']);
         self::assertTrue(InvoiceCheckout::hasChannel($mail), 'payer email');
     }
+
+    public function testNewCheckoutClearsTheOldAttemptStatus(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $svc = new OrderOnlinePayment(new NullLogger(), $em, 'pub', 'priv', 'https://api.example/liq/pay', new PaymentResultUrl('https://shop.example/', 'test-secret'));
+        $o = $this->invoiceOrder();
+        $o->setLiqPayStatus('failure');
+
+        $svc->checkoutLink($o, 'uk');
+
+        // The result page must wait for THIS attempt's callback, not show the old «failure».
+        self::assertNull($o->getLiqPayStatus());
+    }
 }
