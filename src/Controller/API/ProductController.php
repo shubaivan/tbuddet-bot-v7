@@ -666,7 +666,6 @@ class ProductController extends AbstractController
         ]);
     }
 
-    #[isGranted(RoleEnum::USER->value)]
     private function invoiceUnavailable(): JsonResponse
     {
         return $this->json([
@@ -715,6 +714,7 @@ class ProductController extends AbstractController
         return $lines;
     }
 
+    #[isGranted(RoleEnum::USER->value)]
     #[Route('/user-order/view/{id}', name: 'user_order_view_by_id', methods: [Request::METHOD_GET])]
     public function userOrderById(
         string $id,
