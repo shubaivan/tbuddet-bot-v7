@@ -272,7 +272,7 @@ class ProductController extends AbstractController
 //        );
     }
 
-    #[Route('/view/{id}', name: 'product_view_by_id', methods: [Request::METHOD_GET])]
+    #[Route('/view/{id}', name: 'product_view_by_id', requirements: ['id' => '\d+'], methods: [Request::METHOD_GET])]
     public function viewId(
         string $id,
         ProductRepository $repository,
