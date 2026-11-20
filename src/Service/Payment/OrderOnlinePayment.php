@@ -69,15 +69,21 @@ class OrderOnlinePayment
             'result_url' => sprintf('%s/%s/payment-success?order=%d', rtrim($this->frontendUrl, '/'), $lang, $order->getId()),
             'description' => self::description($order),
             'language' => $lang,
-            'expired_date' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
-                ->modify(sprintf('+%d minutes', self::CHECKOUT_TTL_MINUTES))
-                ->format('Y-m-d H:i:s'),
+            'expired_date' => self::expiresAt(),
         ]);
 
         $order->setLiqPayOrderId($liqPayOrderId);
         $this->em->flush();
 
         return sprintf('%s?data=%s&signature=%s', $cnb['url'], rawurlencode($cnb['data']), rawurlencode($cnb['signature']));
+    }
+
+    /** LiqPay `expired_date`: UTC, "Y-m-d H:i:s", CHECKOUT_TTL_MINUTES from now. */
+    public static function expiresAt(): string
+    {
+        return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+            ->modify(sprintf('+%d minutes', self::CHECKOUT_TTL_MINUTES))
+            ->format('Y-m-d H:i:s');
     }
 
     public static function currency(UserOrder $order, string $lang): string

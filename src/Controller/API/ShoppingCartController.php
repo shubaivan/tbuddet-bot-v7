@@ -730,6 +730,7 @@ class ShoppingCartController extends AbstractController
             'server_url' => $this->liqpayServerUrl,
             'result_url' => $resultUrl,
             'description' => OrderOnlinePayment::description($userOrder),
+            'expired_date' => OrderOnlinePayment::expiresAt(),
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
 
