@@ -534,6 +534,13 @@ class ProductController extends AbstractController
         ]);
     }
 
+    /** Is «Отримати рахунок» offered right now? Public — the guest quick buy needs it too. */
+    #[Route('/invoice/options', name: 'public_invoice_options', methods: [Request::METHOD_GET])]
+    public function publicInvoiceOptions(InvoiceCheckout $invoiceCheckout): JsonResponse
+    {
+        return $this->json(['available' => $invoiceCheckout->isAvailable()]);
+    }
+
     #[Route('/public/purchase/{id}', name: 'public_product_purchase_by_id', methods: [Request::METHOD_POST])]
     public function publicPurchaseProduct(
         string $id,
