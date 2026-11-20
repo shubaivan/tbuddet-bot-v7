@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\Payment\OrderOnlinePayment;
 use App\Service\Payment\PaymentResultUrl;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Entity\Category;
@@ -531,6 +532,13 @@ class AdminController extends AbstractController
             return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
         }
 
+        // In-flight payment or cancelled order: no second checkout (same rule as the cabinet).
+        if (!OrderOnlinePayment::canPay($order)) {
+            $this->addFlash('warning', 'Оплата за цим замовленням зараз неможлива (платіж обробляється або замовлення скасовано).');
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+
         $liqPayOrderID = sprintf('%s-%s', $order->getId(), time());
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
         $resultUrl = $paymentResultUrl->build('uk', $order->getId());
@@ -539,7 +547,8 @@ class AdminController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $order->getTotalAmount(),
-            'currency' => 'UAH',
+            // The order's own currency (a USD order must not be charged its number in UAH).
+            'currency' => OrderOnlinePayment::currency($order, 'uk'),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'result_url' => $resultUrl,
@@ -549,7 +558,7 @@ class AdminController extends AbstractController
         $order->setLiqPayOrderId($liqPayOrderID);
         $em->flush();
 
-        $link = sprintf('%s?data=%s&signature=%s', $cnb['url'], $cnb['data'], $cnb['signature']);
+        $link = sprintf('%s?data=%s&signature=%s', $cnb['url'], rawurlencode($cnb['data']), rawurlencode($cnb['signature']));
 
         try {
             $sentTo = $emailService->sendPaymentLinkEmail($order, $link);

@@ -15,6 +15,7 @@ use App\Entity\UserOrder;
 use App\Invoice\InvoiceCheckout;
 use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
+use App\Service\Payment\OrderOnlinePayment;
 use App\Service\Payment\PaymentResultUrl;
 use App\Pagination\Paginator;
 use App\Repository\CategoryRepository;
@@ -747,7 +748,42 @@ class ProductController extends AbstractController
         return $this->json([
             'id' => $userOrder->getId(),
             'liq_pay_status' => $userOrder->getLiqPayStatus(),
+            // Paid by card OR marked paid by a manager (bank transfer for an invoice).
+            'paid' => $userOrder->isPaid(),
+            'can_pay' => OrderOnlinePayment::canPay($userOrder),
         ], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
+    }
+
+    /**
+     * «Спробувати оплатити ще раз» for a guest on the payment-result page: a fresh
+     * LiqPay checkout for the SAME order (no duplicate order), authorised by the
+     * same signed key as the status. Paid / in-flight / cancelled → 409.
+     */
+    #[Route('/order-status/{id}/pay', name: 'public_order_repay', requirements: ['id' => '\d+'], methods: [Request::METHOD_POST])]
+    public function publicOrderRepay(
+        int $id,
+        Request $request,
+        UserOrderRepository $repository,
+        OrderOnlinePayment $onlinePayment,
+        LocalizationService $localizationService,
+    ): JsonResponse {
+        if (!$this->paymentResultUrl->isValid($id, $request->query->get('k'))) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+        $userOrder = $repository->find($id);
+        if (null === $userOrder) {
+            return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
+        }
+        if ($userOrder->isPaid()) {
+            return $this->json(['error' => 'order_already_paid'], Response::HTTP_CONFLICT);
+        }
+        if (!OrderOnlinePayment::canPay($userOrder)) {
+            return $this->json(['error' => 'order_not_payable'], Response::HTTP_CONFLICT);
+        }
+
+        $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en';
+
+        return $this->json(['link' => $onlinePayment->checkoutLink($userOrder, $lang)], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
     }
 
     #[isGranted(RoleEnum::USER->value)]
