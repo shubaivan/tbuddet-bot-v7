@@ -3,6 +3,7 @@
 namespace App\EventListener;
 
 use App\Entity\Files;
+use App\Service\Image\ProductThumbnailer;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use League\Flysystem\FilesystemOperator;
@@ -20,6 +21,7 @@ class FilePathUploadListener
         private LoggerInterface $logger,
         private string $projectDir,
         private string $telegramWarmupChatId,
+        private ?ProductThumbnailer $thumbnailer = null,
     ) {
     }
 
@@ -98,6 +100,9 @@ class FilePathUploadListener
                     ['visibility' => 'public']
                 );
             }
+            // Small WebP copies for catalog cards / gallery (best effort).
+            $this->thumbnailer?->generate($path, $contents);
+
             $entity
                 ->setPath($path)
                 ->setExtension($ext)
