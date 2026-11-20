@@ -22,6 +22,12 @@ final class ProductThumbnailer
     /** Card / gallery widths (CSS px × DPR are covered by srcset). */
     public const WIDTHS = [400, 800];
     public const QUALITY = 78;
+    /**
+     * Above this many pixels decoding needs >100 MB — skip (the original is
+     * still shown). A fatal out-of-memory would not be caught and would fail
+     * the admin upload itself.
+     */
+    public const MAX_PIXELS = 25_000_000;
 
     private const SOURCE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
 
@@ -77,12 +83,19 @@ final class ProductThumbnailer
 
         try {
             $contents ??= $this->defaultStorage->read($originalPath);
+            $size = @getimagesizefromstring($contents);
+            if (false === $size || $size[0] * $size[1] > self::MAX_PIXELS) {
+                $this->logger->info('thumbnail: skipped (unreadable or too large)', ['path' => $originalPath]);
+
+                return [];
+            }
             $image = @imagecreatefromstring($contents);
             if (false === $image) {
                 $this->logger->warning('thumbnail: cannot decode image', ['path' => $originalPath]);
 
                 return [];
             }
+            $image = $this->applyExifOrientation($image, $contents);
             imagepalettetotruecolor($image);
             imagealphablending($image, true);
             imagesavealpha($image, true);
@@ -116,5 +129,40 @@ final class ProductThumbnailer
 
             return [];
         }
+    }
+
+    /**
+     * Phone photos keep «which way is up» in EXIF; browsers apply it to the
+     * original JPEG, GD does not, and WebP drops EXIF — so rotate the pixels.
+     */
+    private function applyExifOrientation(\GdImage $image, string $contents): \GdImage
+    {
+        if (!function_exists('exif_read_data') || !str_starts_with($contents, "\xFF\xD8")) {
+            return $image;
+        }
+        $stream = fopen('php://memory', 'r+');
+        if (false === $stream) {
+            return $image;
+        }
+        fwrite($stream, $contents);
+        rewind($stream);
+        $exif = @exif_read_data($stream);
+        fclose($stream);
+        $orientation = (int) (is_array($exif) ? ($exif['Orientation'] ?? 1) : 1);
+
+        $rotated = match ($orientation) {
+            3, 4 => imagerotate($image, 180, 0),
+            5, 6 => imagerotate($image, -90, 0),
+            7, 8 => imagerotate($image, 90, 0),
+            default => $image,
+        };
+        if (false === $rotated) {
+            return $image;
+        }
+        if (in_array($orientation, [2, 4, 5, 7], true)) {
+            imageflip($rotated, IMG_FLIP_HORIZONTAL);
+        }
+
+        return $rotated;
     }
 }
