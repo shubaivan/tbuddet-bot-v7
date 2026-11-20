@@ -141,8 +141,11 @@ class InvoiceService
     public function renderSamplePdf(): string
     {
         $issued = new \DateTimeImmutable('now', new \DateTimeZone(self::TZ));
+        // Same shape as a real order (ABM-2026-00001): goods + city delivery,
+        // a 15% promocode on the goods, VAT split of the payable amount.
         $lines = [
-            ['name' => 'Обмежувач руху «Півсфера» Ø500 мм (Колір: Сірий)', 'unit' => 'шт.', 'qty' => 3, 'price' => 2150, 'sum' => 6450],
+            ['name' => 'Обмежувач руху «Півсфера» Ø500 мм (Колір: Натуральний)', 'unit' => 'шт.', 'qty' => 3, 'price' => 580, 'sum' => 1740],
+            self::deliveryLine('Доставка по місту (Черкаси): м. Черкаси, вул. Зразкова, 1', 800),
         ];
 
         return $this->htmlToPdf($this->renderHtml(
@@ -156,15 +159,15 @@ class InvoiceService
                 'address' => '00000, м. Зразкове, вул. Тестова, 1',
                 'contact_person' => 'Тестова Т. Т.',
                 'phone' => '380000000000',
-                'email' => 'payer@example.com',
+                'email' => '',
                 'vat_payer' => false,
                 'vat_ipn' => null,
                 'iban' => 'UA213223130000026007233566001',
             ],
             lines: $lines,
-            discount: 0,
-            promocode: null,
-            total: 6450,
+            discount: 261,
+            promocode: 'ARTBETON15',
+            total: 2279,
             orderId: 0,
             sample: true,
         ));
@@ -184,7 +187,7 @@ class InvoiceService
         bool $sample,
     ): string {
         $subtotal = array_sum(array_column($lines, 'sum'));
-        $vat = $seller->isVatPayer() ? round($total * self::VAT_RATE / (100 + self::VAT_RATE), 2) : null;
+        $vatSplit = $seller->isVatPayer() ? self::vatSplit($total) : null;
 
         return $this->twig->render('invoice/invoice.pdf.html.twig', [
             'seller' => $seller,
@@ -197,12 +200,37 @@ class InvoiceService
             'discount' => $discount,
             'promocode' => $promocode,
             'total' => $total,
-            'vat' => $vat,
+            'vat' => $vatSplit['vat'] ?? null,
+            'net' => $vatSplit['net'] ?? null,
             'vatRate' => self::VAT_RATE,
+            'logo' => self::logoDataUri(),
             'totalInWords' => AmountInWords::uah($total),
             'orderId' => $orderId,
             'sample' => $sample,
         ]);
+    }
+
+    /**
+     * Prices on the site include VAT. The invoice shows the payable amount (after
+     * the discount) split the way accountants expect: net + VAT = gross.
+     *
+     * @return array{net: float, vat: float, gross: float}
+     */
+    public static function vatSplit(int|float $gross): array
+    {
+        $gross = round((float) $gross, 2);
+        $vat = round($gross * self::VAT_RATE / (100 + self::VAT_RATE), 2);
+
+        return ['net' => round($gross - $vat, 2), 'vat' => $vat, 'gross' => $gross];
+    }
+
+    /** Site logo (public/logo-new.svg rendered to PNG) inlined, so dompdf needs no remote fetch. */
+    private static function logoDataUri(): ?string
+    {
+        $path = \dirname(__DIR__, 2).'/templates/invoice/abm-logo.png';
+        $png = is_file($path) ? file_get_contents($path) : false;
+
+        return false === $png ? null : 'data:image/png;base64,'.base64_encode($png);
     }
 
     private function htmlToPdf(string $html): string

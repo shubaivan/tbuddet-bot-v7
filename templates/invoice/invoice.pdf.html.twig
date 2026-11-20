@@ -23,6 +23,12 @@
     .box { border: 1px solid #333; padding: 6px 8px; margin: 8px 0; }
     .watermark { position: fixed; top: 38%; left: 4%; width: 100%; text-align: center;
                  font-size: 110pt; color: rgba(200, 0, 0, 0.16); transform: rotate(-30deg); font-weight: bold; }
+    .head { margin-bottom: 8px; border-bottom: 1.5px solid #111; }
+    .head td { vertical-align: bottom; padding: 0 0 6px 0; }
+    .head-logo { width: 60%; }
+    .logo { height: 15mm; }
+    .head-site { text-align: right; font-size: 8.5pt; color: #333; line-height: 1.35; }
+    .totals tr.grand td { border-top: 1px solid #333; padding-top: 4px; font-size: 10.5pt; }
     .sample-banner { background: #c00; color: #fff; text-align: center; font-weight: bold; padding: 4px; margin-bottom: 6px; }
 </style>
 </head>
@@ -31,6 +37,13 @@
     <div class="watermark">ЗРАЗОК</div>
     <div class="sample-banner">ЗРАЗОК — тестові дані, не є рахунком до сплати</div>
 {% endif %}
+
+<table class="head">
+    <tr>
+        <td class="head-logo">{% if logo %}<img src="{{ logo }}" alt="Art Beton Market" class="logo">{% else %}<b>ART BETON MARKET</b>{% endif %}</td>
+        <td class="head-site">artbeton.market<br>{{ seller.phone }}<br>{{ seller.email }}</td>
+    </tr>
+</table>
 
 <table class="req">
     <tr><td class="label">Постачальник</td><td><b>{{ seller.name }}</b></td></tr>
@@ -52,13 +65,13 @@
         {% if payer.vat_payer and payer.vat_ipn %}<tr><td class="label">ІПН платника ПДВ</td><td>{{ payer.vat_ipn }}</td></tr>{% endif %}
         <tr><td class="label">Юридична адреса</td><td>{{ payer.address }}</td></tr>
         {% if payer.iban %}<tr><td class="label">IBAN</td><td>{{ payer.iban }}</td></tr>{% endif %}
-        <tr><td class="label">Контактна особа</td><td>{{ payer.contact_person }}, +{{ payer.phone }}, {{ payer.email }}</td></tr>
+        <tr><td class="label">Контактна особа</td><td>{{ payer.contact_person }}, +{{ payer.phone }}{% if payer.email is defined and payer.email %}, {{ payer.email }}{% endif %}</td></tr>
     </table>
 </div>
 
 <table class="goods">
     <thead>
-        <tr><th style="width:5%">№</th><th>Найменування товару</th><th style="width:8%">Од.</th><th style="width:8%">К-сть</th><th style="width:14%">Ціна, грн</th><th style="width:15%">Сума, грн</th></tr>
+        <tr><th style="width:5%">№</th><th>Найменування товару</th><th style="width:8%">Од.</th><th style="width:8%">К-сть</th><th style="width:14%">Ціна{% if vat is not null %} з ПДВ{% endif %}, грн</th><th style="width:15%">Сума{% if vat is not null %} з ПДВ{% endif %}, грн</th></tr>
     </thead>
     <tbody>
     {% for line in lines %}
@@ -76,15 +89,21 @@
 
 <table class="totals" style="margin-top:4px">
     {% if discount > 0 %}
-        <tr><td class="label">Разом без знижки:</td><td class="num">{{ m.money(subtotal) }}</td></tr>
-        <tr><td class="label">Знижка{% if promocode %} (промокод {{ promocode }}){% endif %}:</td><td class="num">−{{ m.money(discount) }}</td></tr>
+        <tr><td class="label">Разом за товари та послуги:</td><td class="num">{{ m.money(subtotal) }} грн</td></tr>
+        <tr><td class="label">Знижка{% if promocode %} (промокод {{ promocode }}){% endif %}:</td><td class="num">−{{ m.money(discount) }} грн</td></tr>
     {% endif %}
-    <tr><td class="label"><b>Всього до сплати:</b></td><td class="num"><b>{{ m.money(total) }}</b></td></tr>
-    <tr><td class="label">{% if vat is not null %}У тому числі ПДВ {{ vatRate }}%:{% else %}Без ПДВ{% endif %}</td><td class="num">{% if vat is not null %}{{ m.money(vat) }}{% else %}—{% endif %}</td></tr>
+    {% if vat is not null %}
+        <tr><td class="label">Разом без ПДВ:</td><td class="num">{{ m.money(net) }} грн</td></tr>
+        <tr><td class="label">ПДВ {{ vatRate }}%:</td><td class="num">{{ m.money(vat) }} грн</td></tr>
+        <tr class="grand"><td class="label"><b>Всього з ПДВ (до сплати):</b></td><td class="num"><b>{{ m.money(total) }} грн</b></td></tr>
+    {% else %}
+        <tr class="grand"><td class="label"><b>Всього до сплати (без ПДВ):</b></td><td class="num"><b>{{ m.money(total) }} грн</b></td></tr>
+    {% endif %}
 </table>
 
-<p>Всього найменувань {{ lines|length }}, на суму {{ m.money(total) }} грн.<br>
-<b>{{ totalInWords }}</b>{% if vat is not null %}, у т.ч. ПДВ {{ m.money(vat) }} грн{% else %}, без ПДВ{% endif %}.</p>
+<p>Всього найменувань {{ lines|length }}, на суму {{ m.money(total) }} грн{% if vat is not null %} з ПДВ{% endif %}.<br>
+Сума до сплати: <b>{{ totalInWords }}</b>{% if vat is not null %} з ПДВ.<br>
+Сума без ПДВ: {{ m.money(net) }} грн; ПДВ {{ vatRate }}%: {{ m.money(vat) }} грн.{% else %}, без ПДВ.{% endif %}</p>
 
 <p>Рахунок дійсний до сплати до <b>{{ dueDate ? dueDate|date('d.m.Y') : '—' }}</b>{% if not sample and seller.paymentTermDays > 0 %} ({{ seller.paymentTermLabel }}){% endif %}.
 У призначенні платежу обовʼязково вкажіть: «Оплата згідно рахунку № {{ number }}».<br>
