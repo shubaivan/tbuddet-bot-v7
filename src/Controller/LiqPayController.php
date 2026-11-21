@@ -27,9 +27,9 @@ class LiqPayController extends AbstractController
             $liqpayPrivateKey
             , 1 ));
         if ($request->request->get('signature') !== $sign) {
+            // Never log the expected signature: it is a valid one for the caller's data.
             $logger->error('liqpay sign error', [
                 'actual_sign' => $request->request->get('signature'),
-                'expected_sign' => $sign,
             ]);
 
             return $this->json(['sign' => false], Response::HTTP_UNAUTHORIZED);

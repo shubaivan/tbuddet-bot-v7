@@ -186,7 +186,8 @@ class LiqPayPaymentProcessor
         // Only notify user if status actually changed to success (prevent duplicate messages)
         $alreadyNotified = $previousStatus === 'success';
 
-        if (!$alreadyNotified
+        // A refund (`reversed`) only ever follows a success: the buyer must still hear about it.
+        if ((!$alreadyNotified || $newStatus === 'reversed')
             && $userOrder->getTelegramUserid()
             && $userOrder->getTelegramUserid()->getChatId()
         ) {

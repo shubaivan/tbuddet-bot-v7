@@ -157,6 +157,20 @@ class LiqPayPaymentProcessorTest extends TestCase
         self::assertSame(0, $this->tx);
     }
 
+    public function testARefundOfAPaidOrderIsToldToTheBuyer(): void
+    {
+        $order = $this->order('42-200', 'success');
+        $buyer = new TelegramUser();
+        (new \ReflectionProperty(TelegramUser::class, 'chatId'))->setValue($buyer, 2002);
+        $order->setTelegramUserid($buyer);
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'reversed'], 'https://api.example');
+
+        self::assertSame('reversed', $order->getLiqPayStatus());
+        self::assertSame(['Оплату за замовлення #42 повернено на вашу картку.'], $this->texts);
+        self::assertSame(0, $this->groupPosts, 'no «new paid order» for managers');
+    }
+
     public function testADeclinedCardIsExplainedToTheBuyerInWords(): void
     {
         $order = $this->order('42-200');
