@@ -81,6 +81,8 @@ class GuestCheckoutController extends AbstractController
             $unit = $cartTotalCalculator->unitPrice($line, $priceLanguage, $quoteRequest->isInvoice());
             $pricedLines[] = [
                 'product_id' => $line->getProduct()->getId(),
+                // In the site language: a cart filled on /uk reads in English on /en.
+                'product_name' => (string) $line->getProduct()->getProductName($language),
                 'quantity' => $line->getQuantity(),
                 'unit_price' => $unit,
                 'sum' => $unit * $line->getQuantity(),
