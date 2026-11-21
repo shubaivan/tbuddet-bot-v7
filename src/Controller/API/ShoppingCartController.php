@@ -74,6 +74,9 @@ class ShoppingCartController extends AbstractController
         $objectHandler->entityLookup($id, Product::class, 'id');
         $product = $repository->findOneBy(['id' => $id]);
         $product->checkInputProp($inputPurchaseProduct->getProductProperties());
+        if (!is_numeric($inputPurchaseProduct->getQuantity()) || (int) $inputPurchaseProduct->getQuantity() < 1) {
+            return $this->json(['error' => 'invalid_quantity'], Response::HTTP_BAD_REQUEST);
+        }
 
         $shoppingCart = $user->getShoppingCart();
         if (!$shoppingCart) {
@@ -82,11 +85,14 @@ class ShoppingCartController extends AbstractController
             $em->persist($shoppingCart);
         }
 
-        // Same product with the same options already in the cart → one line, summed quantity.
+        // Same product with the same options already in the cart → one line, summed quantity
+        // (the options are re-saved so a changed option price is taken from this request).
         $properties = $inputPurchaseProduct->getProductPropertiesArray();
         $sameLine = $shoppingCart->findSameUnpurchasedLine($product, $properties);
         if (null !== $sameLine) {
-            $sameLine->setQuantity((int) $sameLine->getQuantity() + (int) $inputPurchaseProduct->getQuantity());
+            $sameLine
+                ->setQuantity((int) $sameLine->getQuantity() + (int) $inputPurchaseProduct->getQuantity())
+                ->setProductProperties($properties);
         } else {
             $entityPurchaseProduct = new EntityPurchaseProduct();
             $entityPurchaseProduct
