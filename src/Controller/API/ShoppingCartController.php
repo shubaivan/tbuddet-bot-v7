@@ -386,16 +386,20 @@ class ShoppingCartController extends AbstractController
 
             $propExplainingSet = [];
             foreach ($productProperties as $productProperty) {
+                // Invoice: the Ukrainian option and its hryvnia surcharge, as on the invoice.
                 $propExplainingSet[] = sprintf(
                     $propExplainingTemplate,
-                    $productProperty->getPropertyName(),
-                    $productProperty->getPropertyValue(),
-                    $productProperty->getPropertyPriceImpact()
+                    ...$product->optionTextIn(
+                        (string) $productProperty->getPropertyName(),
+                        (string) $productProperty->getPropertyValue(),
+                        (int) $productProperty->getPropertyPriceImpact(),
+                        $priceLanguage,
+                    ),
                 );
             }
 
             $description .= sprintf('Ваше замовлення: %s: в кількості: %s одиниць' . PHP_EOL,
-                $product->getProductName($language),
+                $product->getProductName($priceLanguage),
                 $purchaseProduct->getQuantity()
             );
 

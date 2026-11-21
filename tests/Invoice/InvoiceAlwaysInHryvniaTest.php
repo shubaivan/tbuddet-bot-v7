@@ -65,6 +65,10 @@ class InvoiceAlwaysInHryvniaTest extends TestCase
         // Unknown option: keeps the stored surcharge.
         self::assertSame(8255, $cube->unitPriceIn([['property_name' => 'X', 'property_value' => 'Y', 'property_price_impact' => 5]], UserLanguageEnum::UA));
         self::assertSame('Індивідуальний', $cube->optionIn('Color', 'Individual', UserLanguageEnum::UA)['property_value'] ?? null);
+        // Order description / LiqPay text of an invoice: the Ukrainian option with its hryvnia surcharge.
+        self::assertSame(['Колір', 'Індивідуальний', 50], $cube->optionTextIn('Color', 'Individual', 20, UserLanguageEnum::UA));
+        self::assertSame(['Color', 'Individual', 20], $cube->optionTextIn('Color', 'Individual', 20, UserLanguageEnum::EN));
+        self::assertSame(['X', 'Y', 5], $cube->optionTextIn('X', 'Y', 5, UserLanguageEnum::UA));
     }
 
     public function testEnglishCartInvoiceTotalIsTheHryvniaSumOfTheLines(): void
@@ -93,7 +97,12 @@ class InvoiceAlwaysInHryvniaTest extends TestCase
         InvoiceCheckout::assertTotalMatchesLines($ok, $lines);
 
         $usd = (new UserOrder())->setTotalAmount(202);
-        $this->expectException(InvoiceTotalMismatchException::class);
-        InvoiceCheckout::assertTotalMatchesLines($usd, $lines);
+        try {
+            InvoiceCheckout::assertTotalMatchesLines($usd, $lines);
+            self::fail('a USD total next to hryvnia lines must be refused');
+        } catch (InvoiceTotalMismatchException $e) {
+            self::assertSame(422, $e->getStatusCode(), 'a plain 422 for the buyer, not a 500');
+            self::assertStringContainsString('order total 202', $e->details);
+        }
     }
 }

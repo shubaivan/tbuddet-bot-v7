@@ -386,6 +386,8 @@ class ProductController extends AbstractController
             $userOrder->setPhone($purchaseProduct->getContactPhone());
         }
 
+        // Invoices are always in hryvnia, also on /en: price and option texts in UA.
+        $priceLanguage = $purchaseProduct->isInvoice() ? UserLanguageEnum::UA : $localizationService->getLanguage();
         $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
@@ -393,17 +395,17 @@ class ProductController extends AbstractController
             $price += $productProperty->getPropertyPriceImpact();
             $propExplainingSet[] = sprintf(
                 $propExplainingTemplate,
-                $productProperty->getPropertyName(),
-                $productProperty->getPropertyValue(),
-                $productProperty->getPropertyPriceImpact()
+                ...$product->optionTextIn(
+                    (string) $productProperty->getPropertyName(),
+                    (string) $productProperty->getPropertyValue(),
+                    (int) $productProperty->getPropertyPriceImpact(),
+                    $priceLanguage,
+                ),
             );
         }
 
-        // Invoices are always in hryvnia: on /en an invoice quick buy is priced in UAH
-        // (the option surcharges too) — the same number as quickBuyInvoiceLines().
-        $priceLanguage = $localizationService->getLanguage();
+        // Invoice: priced in UAH (the option surcharges too) — the same number as quickBuyInvoiceLines().
         if ($purchaseProduct->isInvoice()) {
-            $priceLanguage = UserLanguageEnum::UA;
             $price = $product->unitPriceIn($purchaseProduct->getProductProperties(), UserLanguageEnum::UA);
         }
 
@@ -444,7 +446,7 @@ class ProductController extends AbstractController
             $userOrder->setPromocodeCodeUsed($appliedPromocode->getCode());
         }
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $product->getProductName($localizationService->getLanguage()),
+            $product->getProductName($priceLanguage),
             $purchaseProduct->getQuantity()
         );
 
@@ -586,6 +588,8 @@ class ProductController extends AbstractController
         $userOrder->setPhone($publicPurchaseProduct->getPhone());
         $userOrder->setProductProperties($publicPurchaseProduct->getProductPropertiesArray());
 
+        // Invoices are always in hryvnia, also on /en: price and option texts in UA.
+        $priceLanguage = $publicPurchaseProduct->isInvoice() ? UserLanguageEnum::UA : $localizationService->getLanguage();
         $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
@@ -593,9 +597,12 @@ class ProductController extends AbstractController
             $price += $productProperty->getPropertyPriceImpact();
             $propExplainingSet[] = sprintf(
                 $propExplainingTemplate,
-                $productProperty->getPropertyName(),
-                $productProperty->getPropertyValue(),
-                $productProperty->getPropertyPriceImpact()
+                ...$product->optionTextIn(
+                    (string) $productProperty->getPropertyName(),
+                    (string) $productProperty->getPropertyValue(),
+                    (int) $productProperty->getPropertyPriceImpact(),
+                    $priceLanguage,
+                ),
             );
         }
 
@@ -608,7 +615,7 @@ class ProductController extends AbstractController
 
         $userOrder->setTotalAmount($total_amount);
         $description = sprintf('Ваше замовлення: %s: в кількості: %s одиниць',
-            $product->getProductName($localizationService->getLanguage()),
+            $product->getProductName($priceLanguage),
             $publicPurchaseProduct->getQuantity()
         );
 

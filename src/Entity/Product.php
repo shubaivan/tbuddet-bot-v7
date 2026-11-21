@@ -381,10 +381,6 @@ class Product implements AttachmentFilesInterface
     }
 
     /**
-     * @param ProductProperties[] $productProperties
-     * @return void
-     */
-    /**
      * Unit price in one language: the base price plus each chosen option's surcharge
      * taken from the catalogue in that language. An option chosen on /en
      * ("Color: Individual", +20 USD) is priced as its hryvnia twin ("Колір:
@@ -439,6 +435,27 @@ class Product implements AttachmentFilesInterface
         return null;
     }
 
+    /**
+     * The chosen option as it reads in $language — [name, value, surcharge] of its
+     * catalogue twin, or the option as given when the catalogue has no twin.
+     *
+     * @return array{0: string, 1: string, 2: int}
+     */
+    public function optionTextIn(string $propertyName, string $propertyValue, int $priceImpact, UserLanguageEnum $language): array
+    {
+        $twin = $this->optionIn($propertyName, $propertyValue, $language);
+
+        return [
+            (string) ($twin['property_name'] ?? $propertyName),
+            (string) ($twin['property_value'] ?? $propertyValue),
+            isset($twin['property_price_impact']) ? (int) $twin['property_price_impact'] : $priceImpact,
+        ];
+    }
+
+    /**
+     * @param ProductProperties[] $productProperties
+     * @return void
+     */
     public function checkInputProp(array $productProperties): void
     {
         foreach ($productProperties as $productProperty) {

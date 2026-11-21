@@ -47,7 +47,12 @@ class InvoiceCheckout
      */
     public function prepare(UserOrder $order, array $payerData, array $lines, ?User $rememberFor = null): void
     {
-        self::assertTotalMatchesLines($order, $lines);
+        try {
+            self::assertTotalMatchesLines($order, $lines);
+        } catch (InvoiceTotalMismatchException $e) {
+            $this->logger->critical('Invoice refused: total does not match the lines', ['details' => $e->details, 'lines' => $lines]);
+            throw $e;
+        }
         $payer = InvoicePayer::fromArray($payerData);
         $order->setPaymentMethod(PaymentMethodEnum::INVOICE->value);
         $order->setOrderStatus(OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value);
