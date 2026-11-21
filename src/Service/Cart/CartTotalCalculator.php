@@ -20,8 +20,10 @@ class CartTotalCalculator
 
     /**
      * @param int[] $purchaseProductIds
+     * @param bool  $catalogueOptionPrices option surcharges from the catalogue in $language instead of the
+     *                                     stored ones (invoices: everything in UAH, as InvoiceService::buildLines)
      */
-    public function calculate(array $purchaseProductIds, UserLanguageEnum $language): int
+    public function calculate(array $purchaseProductIds, UserLanguageEnum $language, bool $catalogueOptionPrices = false): int
     {
         $total = 0;
 
@@ -32,10 +34,13 @@ class CartTotalCalculator
             }
 
             $product = $purchaseProduct->getProduct();
-            $price = (int) $product->getPrice($language);
-
-            foreach ($purchaseProduct->getProductProperties() as $prop) {
-                $price += (int) ($prop['property_price_impact'] ?? 0);
+            if ($catalogueOptionPrices) {
+                $price = $product->unitPriceIn($purchaseProduct->getProductProperties(), $language);
+            } else {
+                $price = (int) $product->getPrice($language);
+                foreach ($purchaseProduct->getProductProperties() as $prop) {
+                    $price += (int) ($prop['property_price_impact'] ?? 0);
+                }
             }
 
             $total += $price * $purchaseProduct->getQuantity();

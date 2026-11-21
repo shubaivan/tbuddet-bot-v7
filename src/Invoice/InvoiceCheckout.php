@@ -43,9 +43,11 @@ class InvoiceCheckout
      * @param array<int, array{name: string, unit: string, qty: int, price: int, sum: int}> $lines
      *
      * @throws InvoiceRequisitesMissingException
+     * @throws InvoiceTotalMismatchException when the order total ≠ the lines minus the discount
      */
     public function prepare(UserOrder $order, array $payerData, array $lines, ?User $rememberFor = null): void
     {
+        self::assertTotalMatchesLines($order, $lines);
         $payer = InvoicePayer::fromArray($payerData);
         $order->setPaymentMethod(PaymentMethodEnum::INVOICE->value);
         $order->setOrderStatus(OrderStatusEnum::AWAITING_INVOICE_PAYMENT->value);
@@ -145,5 +147,29 @@ class InvoiceCheckout
     public static function hasChannel(UserOrder $order): bool
     {
         return null !== $order->getInvoiceEmail() || [] !== InvoiceNotifier::buyerChatIds($order);
+    }
+
+    /**
+     * Safety net: the invoice is always in hryvnia and its lines are what the buyer
+     * sees and pays, so the order total must be exactly their sum minus the discount.
+     *
+     * @param array<int, array{sum: int|float}> $lines
+     */
+    public static function assertTotalMatchesLines(UserOrder $order, array $lines): void
+    {
+        $linesSum = 0;
+        foreach ($lines as $line) {
+            $linesSum += (int) round((float) ($line['sum'] ?? 0));
+        }
+        $expected = $linesSum - (int) $order->getDiscountAmount();
+        if ((int) $order->getTotalAmount() !== $expected) {
+            throw new InvoiceTotalMismatchException(sprintf(
+                'Invoice total mismatch: order total %s, lines %d − discount %d = %d',
+                (string) $order->getTotalAmount(),
+                $linesSum,
+                (int) $order->getDiscountAmount(),
+                $expected,
+            ));
+        }
     }
 }

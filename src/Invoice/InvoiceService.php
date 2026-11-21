@@ -52,12 +52,14 @@ class InvoiceService
         $lines = [];
         foreach ($purchaseProducts as $purchaseProduct) {
             $product = $purchaseProduct->getProduct();
-            $price = (int) $product->getPrice($language);
+            // Option surcharges in the invoice language too (an option picked on /en is
+            // priced as its hryvnia twin) — the same number as CartTotalCalculator for invoices.
+            $price = $product->unitPriceIn($purchaseProduct->getProductProperties(), $language);
             $options = [];
             foreach ($purchaseProduct->getProductProperties() as $prop) {
-                $price += (int) ($prop['property_price_impact'] ?? 0);
                 if (!empty($prop['property_name']) && !empty($prop['property_value'])) {
-                    $options[] = $prop['property_name'] . ': ' . $prop['property_value'];
+                    $twin = $product->optionIn((string) $prop['property_name'], (string) $prop['property_value'], $language);
+                    $options[] = ($twin['property_name'] ?? $prop['property_name']) . ': ' . ($twin['property_value'] ?? $prop['property_value']);
                 }
             }
 

@@ -318,9 +318,13 @@ class ShoppingCartController extends AbstractController
             $deliveryAmount = $cityDelivery->price();
         }
 
+        // Invoices are always in hryvnia (the PDF, «Оплатити онлайн» and the bank transfer):
+        // on /en the order of an invoice is priced in UAH too, options included.
+        $priceLanguage = $checkoutRequest->isInvoice() ? UserLanguageEnum::UA : $language;
+
         // Subtotal uses the shared calculator so the /promocode/validate preview
         // and this final apply step always agree on the number.
-        $subtotal = $cartTotalCalculator->calculate($purchaseProductIds, $language);
+        $subtotal = $cartTotalCalculator->calculate($purchaseProductIds, $priceLanguage, $checkoutRequest->isInvoice());
 
         // Re-validate the promocode server-side even though the FE already previewed it —
         // the cart may have changed, or the code may have been deactivated in between.
@@ -330,7 +334,7 @@ class ShoppingCartController extends AbstractController
             $validation = $promocodeService->validate(
                 $checkoutRequest->getPromocode(),
                 $subtotal,
-                CurrencyEnum::fromUserLanguage($language),
+                CurrencyEnum::fromUserLanguage($priceLanguage),
                 $user,
                 null,
                 null,
@@ -457,7 +461,7 @@ class ShoppingCartController extends AbstractController
         $campaignTracker->attributeOrder($userOrder, $user);
 
         // Сповіщення менеджерам у групу «Заявки ArtBeton» про щойно створене замовлення.
-        $currencyLabel = $language === UserLanguageEnum::UA ? 'грн' : 'USD';
+        $currencyLabel = $priceLanguage === UserLanguageEnum::UA ? 'грн' : 'USD';
         $customerName = trim($user->getFirstName() . ' ' . $user->getLastName());
         if ($user->getPhone()) {
             $customerName = trim($customerName . ', ' . $user->getPhone());

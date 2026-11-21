@@ -384,6 +384,61 @@ class Product implements AttachmentFilesInterface
      * @param ProductProperties[] $productProperties
      * @return void
      */
+    /**
+     * Unit price in one language: the base price plus each chosen option's surcharge
+     * taken from the catalogue in that language. An option chosen on /en
+     * ("Color: Individual", +20 USD) is priced as its hryvnia twin ("Колір:
+     * Індивідуальний", +50) for $language = UA. Options not found in the catalogue
+     * keep the surcharge they were stored with.
+     *
+     * @param iterable<array{property_name?: string, property_value?: string, property_price_impact?: mixed}|ProductProperties> $selected
+     */
+    public function unitPriceIn(iterable $selected, UserLanguageEnum $language): int
+    {
+        $price = (int) $this->getPrice($language);
+        foreach ($selected as $option) {
+            if ($option instanceof ProductProperties) {
+                $option = [
+                    'property_name' => $option->getPropertyName(),
+                    'property_value' => $option->getPropertyValue(),
+                    'property_price_impact' => $option->getPropertyPriceImpact(),
+                ];
+            }
+            $twin = $this->optionIn((string) ($option['property_name'] ?? ''), (string) ($option['property_value'] ?? ''), $language);
+            $price += null !== $twin && isset($twin['property_price_impact'])
+                ? (int) $twin['property_price_impact']
+                : (int) ($option['property_price_impact'] ?? 0);
+        }
+
+        return $price;
+    }
+
+    /**
+     * The catalogue option (matched by name + value in any language) as it reads in $language.
+     *
+     * @return array{property_name?: string, property_value?: string, property_price_impact?: mixed}|null
+     */
+    public function optionIn(string $propertyName, string $propertyValue, UserLanguageEnum $language): ?array
+    {
+        foreach ($this->product_properties as $propertyByLanguage) {
+            if (!\is_array($propertyByLanguage)) {
+                continue;
+            }
+            foreach ($propertyByLanguage as $property) {
+                if (\is_array($property)
+                    && ($property['property_name'] ?? null) === $propertyName
+                    && ($property['property_value'] ?? null) === $propertyValue
+                ) {
+                    $translated = $propertyByLanguage[$language->value] ?? null;
+
+                    return \is_array($translated) ? $translated : null;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function checkInputProp(array $productProperties): void
     {
         foreach ($productProperties as $productProperty) {

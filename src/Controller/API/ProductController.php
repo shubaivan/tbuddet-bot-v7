@@ -399,6 +399,14 @@ class ProductController extends AbstractController
             );
         }
 
+        // Invoices are always in hryvnia: on /en an invoice quick buy is priced in UAH
+        // (the option surcharges too) — the same number as quickBuyInvoiceLines().
+        $priceLanguage = $localizationService->getLanguage();
+        if ($purchaseProduct->isInvoice()) {
+            $priceLanguage = UserLanguageEnum::UA;
+            $price = $product->unitPriceIn($purchaseProduct->getProductProperties(), UserLanguageEnum::UA);
+        }
+
         $subtotal = (int) ($price * $purchaseProduct->getQuantity());
 
         // Promocode (optional). Re-validate server-side even though the FE
@@ -410,7 +418,7 @@ class ProductController extends AbstractController
             $validation = $promocodeService->validate(
                 $purchaseProduct->getPromocode(),
                 $subtotal,
-                CurrencyEnum::fromUserLanguage($localizationService->getLanguage()),
+                CurrencyEnum::fromUserLanguage($priceLanguage),
                 $user,
                 null,
                 null,
@@ -458,7 +466,7 @@ class ProductController extends AbstractController
             $invoiceCheckout->prepare(
                 $userOrder,
                 $purchaseProduct->getPayer() ?? [],
-                $this->quickBuyInvoiceLines($product, $purchaseProduct, $localizationService, $cityDelivery, $deliveryAddress, $deliveryAmount),
+                $this->quickBuyInvoiceLines($product, $purchaseProduct, $cityDelivery, $deliveryAddress, $deliveryAmount),
                 $purchaseProduct->isRememberPayer() ? $user : null,
             );
         }
@@ -591,6 +599,11 @@ class ProductController extends AbstractController
             );
         }
 
+        if ($publicPurchaseProduct->isInvoice()) {
+            // Invoices are always in hryvnia, also on /en (see purchaseProduct()).
+            $price = $product->unitPriceIn($publicPurchaseProduct->getProductProperties(), UserLanguageEnum::UA);
+        }
+
         $total_amount = $price * $publicPurchaseProduct->getQuantity();
 
         $userOrder->setTotalAmount($total_amount);
@@ -610,7 +623,7 @@ class ProductController extends AbstractController
             $invoiceCheckout->prepare(
                 $userOrder,
                 $publicPurchaseProduct->getPayer() ?? [],
-                $this->quickBuyInvoiceLines($product, $publicPurchaseProduct, $localizationService, $cityDelivery, null, 0),
+                $this->quickBuyInvoiceLines($product, $publicPurchaseProduct, $cityDelivery, null, 0),
             );
         }
 
@@ -704,17 +717,17 @@ class ProductController extends AbstractController
     private function quickBuyInvoiceLines(
         Product $product,
         PurchaseProduct $purchaseProduct,
-        LocalizationService $localizationService,
         CityDelivery $cityDelivery,
         ?string $deliveryAddress,
         int $deliveryAmount,
     ): array {
-        $price = (int) $product->getPrice($localizationService->getLanguage());
+        // Always hryvnia, whatever the site language (options as their Ukrainian twins).
+        $price = $product->unitPriceIn($purchaseProduct->getProductProperties(), UserLanguageEnum::UA);
         $options = [];
         foreach ($purchaseProduct->getProductProperties() as $property) {
-            $price += (int) $property->getPropertyPriceImpact();
             if ($property->getPropertyName() && $property->getPropertyValue()) {
-                $options[] = $property->getPropertyName().': '.$property->getPropertyValue();
+                $twin = $product->optionIn($property->getPropertyName(), $property->getPropertyValue(), UserLanguageEnum::UA);
+                $options[] = ($twin['property_name'] ?? $property->getPropertyName()).': '.($twin['property_value'] ?? $property->getPropertyValue());
             }
         }
         $name = (string) $product->getProductName(UserLanguageEnum::UA);
