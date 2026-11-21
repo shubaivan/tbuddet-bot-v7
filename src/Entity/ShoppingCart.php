@@ -64,6 +64,38 @@ class ShoppingCart
         })->toArray());
     }
 
+    /**
+     * The not-yet-ordered line with this product and the same options, if any:
+     * adding the same thing again raises its quantity instead of a second line.
+     */
+    public function findSameUnpurchasedLine(Product $product, array $productProperties): ?PurchaseProduct
+    {
+        $key = self::optionsKey($productProperties);
+        foreach ($this->getUnpurchasedProduct() as $line) {
+            if ($line->getProduct()?->getId() === $product->getId()
+                && self::optionsKey($line->getProductProperties()) === $key
+            ) {
+                return $line;
+            }
+        }
+
+        return null;
+    }
+
+    /** Options compared by name + value, order-insensitive (the price impact follows from them). */
+    private static function optionsKey(array $productProperties): string
+    {
+        $pairs = [];
+        foreach ($productProperties as $property) {
+            if (\is_array($property)) {
+                $pairs[] = [(string) ($property['property_name'] ?? ''), (string) ($property['property_value'] ?? '')];
+            }
+        }
+        sort($pairs);
+
+        return json_encode($pairs, \JSON_UNESCAPED_UNICODE) ?: '';
+    }
+
 
     public function getId(): ?int
     {

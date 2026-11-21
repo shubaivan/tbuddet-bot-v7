@@ -75,13 +75,6 @@ class ShoppingCartController extends AbstractController
         $product = $repository->findOneBy(['id' => $id]);
         $product->checkInputProp($inputPurchaseProduct->getProductProperties());
 
-        $entityPurchaseProduct = new EntityPurchaseProduct();
-        $entityPurchaseProduct
-            ->setQuantity($inputPurchaseProduct->getQuantity())
-            ->setProductProperties($inputPurchaseProduct->getProductPropertiesArray())
-            ->setProduct($product);
-        $em->persist($entityPurchaseProduct);
-
         $shoppingCart = $user->getShoppingCart();
         if (!$shoppingCart) {
             $shoppingCart = new ShoppingCart();
@@ -89,7 +82,20 @@ class ShoppingCartController extends AbstractController
             $em->persist($shoppingCart);
         }
 
-        $shoppingCart->addPurchaseProduct($entityPurchaseProduct);
+        // Same product with the same options already in the cart → one line, summed quantity.
+        $properties = $inputPurchaseProduct->getProductPropertiesArray();
+        $sameLine = $shoppingCart->findSameUnpurchasedLine($product, $properties);
+        if (null !== $sameLine) {
+            $sameLine->setQuantity((int) $sameLine->getQuantity() + (int) $inputPurchaseProduct->getQuantity());
+        } else {
+            $entityPurchaseProduct = new EntityPurchaseProduct();
+            $entityPurchaseProduct
+                ->setQuantity($inputPurchaseProduct->getQuantity())
+                ->setProductProperties($properties)
+                ->setProduct($product);
+            $em->persist($entityPurchaseProduct);
+            $shoppingCart->addPurchaseProduct($entityPurchaseProduct);
+        }
 
         $em->flush();
 
@@ -98,7 +104,7 @@ class ShoppingCartController extends AbstractController
         // Менеджерам — одразу: хто, що й на скільки. Сповіщення не має ламати кошик.
         try {
             $unit = (float) ($product->getPrice(UserLanguageEnum::UA) ?: 0);
-            foreach ($entityPurchaseProduct->getProductProperties() as $property) {
+            foreach ($properties as $property) {
                 $unit += (float) (is_array($property) ? ($property['property_price_impact'] ?? 0) : 0);
             }
             $name = $product->getProductName(UserLanguageEnum::UA);
@@ -109,14 +115,14 @@ class ShoppingCartController extends AbstractController
                     $user->getEmail(),
                 ]))),
                 is_string($name) ? $name : 'товар #'.$product->getId(),
-                $entityPurchaseProduct->getQuantity(),
-                $unit * $entityPurchaseProduct->getQuantity(),
+                (int) $inputPurchaseProduct->getQuantity(),
+                $unit * (int) $inputPurchaseProduct->getQuantity(),
                 $this->generateUrl('app_admin_user_detail', ['source' => 'web', 'id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
             );
         } catch (\Throwable) {
         }
 
-        return $this->json($entityPurchaseProduct, Response::HTTP_OK, [], [
+        return $this->json($sameLine ?? $entityPurchaseProduct, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [EntityPurchaseProduct::GROUP_VIEW],
         ]);
     }
