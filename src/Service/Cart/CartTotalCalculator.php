@@ -3,6 +3,7 @@
 namespace App\Service\Cart;
 
 use App\Controller\API\Request\Enum\UserLanguageEnum;
+use App\Entity\PurchaseProduct;
 use App\Repository\PurchaseProductRepository;
 
 /**
@@ -25,27 +26,46 @@ class CartTotalCalculator
      */
     public function calculate(array $purchaseProductIds, UserLanguageEnum $language, bool $catalogueOptionPrices = false): int
     {
-        $total = 0;
-
+        $lines = [];
         foreach ($purchaseProductIds as $purchaseProductId) {
             $purchaseProduct = $this->purchaseProductRepository->find($purchaseProductId);
-            if ($purchaseProduct === null) {
-                continue;
+            if ($purchaseProduct !== null) {
+                $lines[] = $purchaseProduct;
             }
+        }
 
-            $product = $purchaseProduct->getProduct();
-            if ($catalogueOptionPrices) {
-                $price = $product->unitPriceIn($purchaseProduct->getProductProperties(), $language);
-            } else {
-                $price = (int) $product->getPrice($language);
-                foreach ($purchaseProduct->getProductProperties() as $prop) {
-                    $price += (int) ($prop['property_price_impact'] ?? 0);
-                }
-            }
+        return $this->calculateLines($lines, $language, $catalogueOptionPrices);
+    }
 
-            $total += $price * $purchaseProduct->getQuantity();
+    /**
+     * The same formula for lines that are already loaded — or not saved at all
+     * (a guest cart lives in the browser and arrives with the checkout request).
+     *
+     * @param iterable<PurchaseProduct> $purchaseProducts
+     */
+    public function calculateLines(iterable $purchaseProducts, UserLanguageEnum $language, bool $catalogueOptionPrices = false): int
+    {
+        $total = 0;
+        foreach ($purchaseProducts as $purchaseProduct) {
+            $total += $this->unitPrice($purchaseProduct, $language, $catalogueOptionPrices) * $purchaseProduct->getQuantity();
         }
 
         return $total;
+    }
+
+    /** Price of one unit of a cart line: base price + the option surcharges. */
+    public function unitPrice(PurchaseProduct $purchaseProduct, UserLanguageEnum $language, bool $catalogueOptionPrices = false): int
+    {
+        $product = $purchaseProduct->getProduct();
+        if ($catalogueOptionPrices) {
+            return $product->unitPriceIn($purchaseProduct->getProductProperties(), $language);
+        }
+
+        $price = (int) $product->getPrice($language);
+        foreach ($purchaseProduct->getProductProperties() as $prop) {
+            $price += (int) ($prop['property_price_impact'] ?? 0);
+        }
+
+        return $price;
     }
 }
