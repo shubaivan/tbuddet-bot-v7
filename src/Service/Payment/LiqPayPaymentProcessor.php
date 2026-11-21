@@ -193,7 +193,7 @@ class LiqPayPaymentProcessor
             if ($newStatus === 'success') {
                 $msg = 'Отримали підтвердження оплати! <b>Дякуємо</b>. З Вами зв\'яжеться наш менеджер';
             } else {
-                $msg = 'Статус оплати: <b>'.$newStatus.'</b>';
+                $msg = htmlspecialchars(LiqPayBuyerStatusText::forBuyer((string) $newStatus, (int) $userOrder->getId()), ENT_QUOTES);
             }
             // A blocked bot must not cost the managers their «paid» notification below.
             try {
