@@ -219,6 +219,9 @@ class LiqPayPaymentProcessor
                 if ($tu->getPhoneNumber()) {
                     $clientInfo .= ', ' . $tu->getPhoneNumber();
                 }
+            } elseif ($userOrder->getPhone()) {
+                // Guest (no account): the name + phone typed at checkout / quick buy.
+                $clientInfo = htmlspecialchars(trim(($userOrder->getContactName() ?? '') . ', ' . $userOrder->getPhone(), ', '), ENT_QUOTES) . ' (гість)';
             }
 
             $orderUrl = $baseUrl . '/admin/orders/' . $userOrder->getId();
