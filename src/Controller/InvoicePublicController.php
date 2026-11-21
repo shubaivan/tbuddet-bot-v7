@@ -8,6 +8,7 @@ use App\Invoice\InvoicePublicLink;
 use App\Invoice\InvoiceRequisitesMissingException;
 use App\Invoice\InvoiceService;
 use App\Repository\UserOrderRepository;
+use App\Service\Payment\LiqPayStatusSync;
 use App\Service\Payment\OrderOnlinePayment;
 use App\Service\Payment\PaymentResultUrl;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -64,11 +65,13 @@ final class InvoicePublicController extends AbstractController
         InvoicePublicLink $links,
         OrderOnlinePayment $onlinePayment,
         PaymentResultUrl $paymentResultUrl,
+        LiqPayStatusSync $statusSync,
     ): Response {
         $order = $orders->find($id);
         if (null === $order || !$order->isInvoicePayment() || !$links->isValid($order, $token)) {
             return new Response('Рахунок не знайдено.', Response::HTTP_NOT_FOUND, ['Content-Type' => 'text/plain; charset=UTF-8', 'X-Robots-Tag' => 'noindex']);
         }
+        $statusSync->beforeNewAttempt($order);
 
         if ($order->isPaid()) {
             return new RedirectResponse($paymentResultUrl->build('uk', (int) $order->getId()));

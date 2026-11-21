@@ -28,6 +28,7 @@ use App\Service\Cart\CartTotalCalculator;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
 use App\Service\Promocode\PromocodeService;
+use App\Service\Payment\LiqPayStatusSync;
 use App\Service\Payment\OrderOnlinePayment;
 use Doctrine\ORM\EntityManagerInterface;
 use League\Flysystem\FilesystemOperator;
@@ -696,6 +697,7 @@ class ShoppingCartController extends AbstractController
         ObjectHandler $objectHandler,
         EntityManagerInterface $em,
         LocalizationService $localizationService,
+        LiqPayStatusSync $statusSync,
     ): JsonResponse
     {
         $objectHandler->entityLookup($id, UserOrder::class, 'id');
@@ -705,6 +707,10 @@ class ShoppingCartController extends AbstractController
         if (!$user->getClientOrders()->contains($userOrder)) {
             return $this->json(['error' => 'user not owner of order'], Response::HTTP_BAD_REQUEST);
         }
+
+        // The previous attempt may have been paid without a callback, or its LiqPay
+        // invoice may still be open: check it and cancel the invoice first.
+        $statusSync->beforeNewAttempt($userOrder);
 
         // Paid by card OR by a bank transfer a manager confirmed — never take the money twice.
         if ($userOrder->isPaid()) {

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\Payment\LiqPayStatusSync;
 use App\Service\Payment\OrderOnlinePayment;
 use App\Service\Payment\PaymentResultUrl;
 use App\Controller\API\Request\Enum\UserLanguageEnum;
@@ -525,7 +526,9 @@ class AdminController extends AbstractController
         EntityManagerInterface $em,
         EmailService $emailService,
         PaymentResultUrl $paymentResultUrl,
+        LiqPayStatusSync $statusSync,
     ): Response {
+        $statusSync->beforeNewAttempt($order);
         if ($order->isPaid()) {
             $this->addFlash('warning', 'Замовлення вже оплачено — посилання не сформовано.');
 

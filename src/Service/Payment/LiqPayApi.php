@@ -8,7 +8,8 @@ use App\Liqpay\LiqPay;
 use Psr\Log\LoggerInterface;
 
 /**
- * Server-to-server LiqPay calls (https://www.liqpay.ua/en/doc/api/information/status).
+ * The two server-to-server LiqPay calls the payment guard needs
+ * (https://www.liqpay.ua/en/doc/api/information/status, …/invoice/cancel).
  * A null answer means LiqPay could not be asked (network, empty body).
  */
 class LiqPayApi
@@ -24,6 +25,14 @@ class LiqPayApi
     public function status(string $liqPayOrderId): ?array
     {
         return $this->request(['action' => 'status', 'version' => '3', 'order_id' => $liqPayOrderId]);
+    }
+
+    /** Cancels the LiqPay invoice (`invoice_send`) of this attempt; true when LiqPay confirmed it. */
+    public function cancelInvoice(string $liqPayOrderId): bool
+    {
+        $res = $this->request(['action' => 'invoice_cancel', 'version' => '3', 'order_id' => $liqPayOrderId]);
+
+        return 'ok' === ($res['result'] ?? null);
     }
 
     /** @return array<string, mixed>|null */

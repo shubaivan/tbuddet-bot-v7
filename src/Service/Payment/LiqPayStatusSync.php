@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Payment;
 
 use App\Entity\UserOrder;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 
@@ -12,6 +13,10 @@ use Psr\Log\LoggerInterface;
  * Asks LiqPay itself for the payment state when our callback did not tell us:
  *  - pull: a declined card in the sandbox (and sometimes in live) sends no callback, so
  *    the result page would wait minutes — `syncIfDue()` asks LiqPay `status` instead;
+ *  - guard: before any new checkout for an existing order (`beforeNewAttempt()`) the
+ *    previous attempt is checked (paid / in flight → no new checkout) and its LiqPay
+ *    invoice (`invoice_send`, a link sent by phone) is cancelled, so the old invoice and
+ *    the new checkout cannot both be paid.
  * Results go through LiqPayPaymentProcessor — the same rules and notifications as the callback.
  */
 class LiqPayStatusSync
@@ -31,6 +36,7 @@ class LiqPayStatusSync
     public function __construct(
         private readonly LiqPayApi $api,
         private readonly LiqPayPaymentProcessor $processor,
+        private readonly EntityManagerInterface $em,
         private readonly CacheItemPoolInterface $cache,
         private readonly LoggerInterface $logger,
         private readonly string $liqpayServerUrl,
@@ -94,6 +100,62 @@ class LiqPayStatusSync
         } catch (\Throwable $e) {
             $this->logger->error('liqpay status pull failed', ['order_id' => $order->getId(), 'error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Call right before a new checkout for an existing order is created (cabinet re-pay,
+     * guest re-pay, «Оплатити онлайн» from an invoice, admin payment link). Afterwards the
+     * caller's usual isPaid()/canPay() checks refuse the new checkout when the previous
+     * attempt turned out paid or in flight.
+     */
+    public function beforeNewAttempt(UserOrder $order): void
+    {
+        if ($order->isPaid()) {
+            return;
+        }
+        $current = (string) $order->getLiqPayOrderId();
+        $invoiceAttempt = self::openInvoiceAttempt($order);
+
+        try {
+            foreach (array_unique(array_filter([$current, $invoiceAttempt])) as $attempt) {
+                $this->syncAttempt($attempt);
+                if ($order->isPaid() || !OrderOnlinePayment::canPay($order)) {
+                    return;
+                }
+            }
+        } catch (\Throwable $e) {
+            // LiqPay unreachable: keep the old behaviour (new checkout; a second success is
+            // still caught by the callback's double-payment alert).
+            $this->logger->error('liqpay status check before re-pay failed', ['order_id' => $order->getId(), 'error' => $e->getMessage()]);
+        }
+
+        if (null !== $invoiceAttempt) {
+            if ($this->api->cancelInvoice($invoiceAttempt)) {
+                $response = json_decode((string) $order->getLiqPayResponse(), true);
+                $response['invoice_cancelled_at'] = (new \DateTimeImmutable())->format(\DATE_ATOM);
+                $order->setLiqPayResponse((string) json_encode($response, \JSON_UNESCAPED_UNICODE));
+                $this->em->flush();
+                $this->logger->info('liqpay invoice of the previous attempt cancelled', ['order_id' => $order->getId(), 'liqpay_order_id' => $invoiceAttempt]);
+            } else {
+                $this->logger->warning('liqpay invoice of the previous attempt NOT cancelled', ['order_id' => $order->getId(), 'liqpay_order_id' => $invoiceAttempt]);
+            }
+        }
+    }
+
+    /** The attempt whose LiqPay invoice (`invoice_send`) may still be paid, or null. */
+    public static function openInvoiceAttempt(UserOrder $order): ?string
+    {
+        $response = json_decode((string) $order->getLiqPayResponse(), true);
+        if (!\is_array($response)
+            || 'invoice_wait' !== ($response['status'] ?? null)
+            || isset($response['invoice_cancelled_at'])
+            || !\is_string($response['order_id'] ?? null)
+            || '' === $response['order_id']
+        ) {
+            return null;
+        }
+
+        return $response['order_id'];
     }
 
     /** Seconds since the attempt "<order id>-<unix time>" was created; null for other formats. */

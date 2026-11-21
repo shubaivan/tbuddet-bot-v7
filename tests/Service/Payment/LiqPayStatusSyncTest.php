@@ -9,6 +9,7 @@ use App\Entity\UserOrder;
 use App\Service\Payment\LiqPayApi;
 use App\Service\Payment\LiqPayPaymentProcessor;
 use App\Service\Payment\LiqPayStatusSync;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -46,7 +47,7 @@ class LiqPayStatusSyncTest extends TestCase
 
     private function sync(LiqPayApi $api, LiqPayPaymentProcessor $processor, ?ArrayAdapter $cache = null): LiqPayStatusSync
     {
-        return new LiqPayStatusSync($api, $processor, $cache ?? new ArrayAdapter(), new NullLogger(), 'https://api.example:8443/liq/pay');
+        return new LiqPayStatusSync($api, $processor, $this->createMock(EntityManagerInterface::class), $cache ?? new ArrayAdapter(), new NullLogger(), 'https://api.example:8443/liq/pay');
     }
 
     public function testAttemptAge(): void
@@ -54,6 +55,14 @@ class LiqPayStatusSyncTest extends TestCase
         self::assertSame(30, LiqPayStatusSync::attemptAge('88-1795214515', 1795214545));
         self::assertNull(LiqPayStatusSync::attemptAge('88'));
         self::assertNull(LiqPayStatusSync::attemptAge('ring-88-1795214515'));
+    }
+
+    public function testOpenInvoiceAttempt(): void
+    {
+        self::assertSame('7-100', LiqPayStatusSync::openInvoiceAttempt($this->order('7-200', null, ['status' => 'invoice_wait', 'order_id' => '7-100'])));
+        self::assertNull(LiqPayStatusSync::openInvoiceAttempt($this->order('7-200', null, ['status' => 'invoice_wait', 'order_id' => '7-100', 'invoice_cancelled_at' => 'x'])));
+        self::assertNull(LiqPayStatusSync::openInvoiceAttempt($this->order('7-200', null, ['status' => 'error', 'err_code' => 'x'])));
+        self::assertNull(LiqPayStatusSync::openInvoiceAttempt($this->order('7-200')));
     }
 
     public function testSyncAttemptAppliesAFoundPaymentWithTheApiHost(): void
@@ -108,5 +117,61 @@ class LiqPayStatusSyncTest extends TestCase
         $sync->syncIfDue($this->order(sprintf('42-%d', time() - 60), 'success')); // paid
         $sync->syncIfDue($this->order(sprintf('42-%d', time() - 3 * 86400)));    // long expired
         $sync->syncIfDue($this->order(null));
+    }
+
+    public function testBeforeNewAttemptStopsWhenThePreviousAttemptWasPaid(): void
+    {
+        $order = $this->order('42-200', null, ['status' => 'invoice_wait', 'order_id' => '42-100']);
+        $api = $this->createMock(LiqPayApi::class);
+        $api->method('status')->willReturnMap([
+            ['42-200', ['status' => 'success', 'order_id' => '42-200', 'payment_id' => 5]],
+        ]);
+        $api->expects(self::never())->method('cancelInvoice');
+
+        $this->sync($api, $this->processor($order))->beforeNewAttempt($order);
+
+        self::assertTrue($order->isPaid());
+    }
+
+    public function testBeforeNewAttemptStopsOnAnInFlightInvoicePayment(): void
+    {
+        $order = $this->order('42-200', null, ['status' => 'invoice_wait', 'order_id' => '42-100']);
+        $api = $this->createMock(LiqPayApi::class);
+        $api->method('status')->willReturnMap([
+            ['42-200', ['status' => 'error', 'err_code' => 'payment_not_found']],
+            ['42-100', ['status' => 'processing', 'order_id' => '42-100', 'payment_id' => 6]],
+        ]);
+        $api->expects(self::never())->method('cancelInvoice');
+
+        $this->sync($api, $this->processor($order))->beforeNewAttempt($order);
+
+        self::assertFalse(\App\Service\Payment\OrderOnlinePayment::canPay($order));
+    }
+
+    public function testBeforeNewAttemptCancelsTheOpenInvoiceOnce(): void
+    {
+        $order = $this->order('42-100', null, ['status' => 'invoice_wait', 'order_id' => '42-100', 'currency' => 'UAH']);
+        $api = $this->createMock(LiqPayApi::class);
+        $api->method('status')->willReturn(['status' => 'error', 'err_code' => 'payment_not_found']);
+        $api->expects(self::once())->method('cancelInvoice')->with('42-100')->willReturn(true);
+        $sync = $this->sync($api, $this->createMock(LiqPayPaymentProcessor::class));
+
+        $sync->beforeNewAttempt($order);
+        $sync->beforeNewAttempt($order); // already cancelled → no second call
+
+        $response = json_decode((string) $order->getLiqPayResponse(), true);
+        self::assertArrayHasKey('invoice_cancelled_at', $response);
+        self::assertSame('UAH', $response['currency'], 'currency of the first checkout is kept for re-pay');
+        self::assertTrue(\App\Service\Payment\OrderOnlinePayment::canPay($order));
+    }
+
+    public function testBeforeNewAttemptSkipsPaidOrders(): void
+    {
+        $order = $this->order('42-100', 'success', ['status' => 'invoice_wait', 'order_id' => '42-100']);
+        $api = $this->createMock(LiqPayApi::class);
+        $api->expects(self::never())->method('status');
+        $api->expects(self::never())->method('cancelInvoice');
+
+        $this->sync($api, $this->createMock(LiqPayPaymentProcessor::class))->beforeNewAttempt($order);
     }
 }

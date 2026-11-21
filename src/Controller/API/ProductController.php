@@ -769,6 +769,7 @@ class ProductController extends AbstractController
         UserOrderRepository $repository,
         OrderOnlinePayment $onlinePayment,
         LocalizationService $localizationService,
+        LiqPayStatusSync $statusSync,
     ): JsonResponse {
         if (!$this->paymentResultUrl->isValid($id, $request->query->get('k'))) {
             return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
@@ -777,6 +778,7 @@ class ProductController extends AbstractController
         if (null === $userOrder) {
             return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
         }
+        $statusSync->beforeNewAttempt($userOrder);
         if ($userOrder->isPaid()) {
             return $this->json(['error' => 'order_already_paid'], Response::HTTP_CONFLICT);
         }
