@@ -15,6 +15,7 @@ use App\Entity\UserOrder;
 use App\Invoice\InvoiceCheckout;
 use App\Invoice\InvoiceService;
 use App\Liqpay\LiqPay;
+use App\Service\Payment\LiqPayStatusSync;
 use App\Service\Payment\OrderOnlinePayment;
 use App\Service\Payment\PaymentResultUrl;
 use App\Pagination\Paginator;
@@ -735,7 +736,7 @@ class ProductController extends AbstractController
      * status, nothing about the buyer or the goods.
      */
     #[Route('/order-status/{id}', name: 'public_order_payment_status', requirements: ['id' => '\d+'], methods: [Request::METHOD_GET])]
-    public function publicOrderPaymentStatus(int $id, Request $request, UserOrderRepository $repository): JsonResponse
+    public function publicOrderPaymentStatus(int $id, Request $request, UserOrderRepository $repository, LiqPayStatusSync $statusSync): JsonResponse
     {
         if (!$this->paymentResultUrl->isValid($id, $request->query->get('k'))) {
             return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
@@ -744,6 +745,8 @@ class ProductController extends AbstractController
         if (null === $userOrder) {
             return $this->json(['error' => 'not_found'], Response::HTTP_NOT_FOUND);
         }
+        // No callback yet (a declined card often sends none): ask LiqPay, throttled.
+        $statusSync->syncIfDue($userOrder);
 
         return $this->json([
             'id' => $userOrder->getId(),
