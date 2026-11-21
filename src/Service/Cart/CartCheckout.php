@@ -86,6 +86,14 @@ class CartCheckout
             ?? ($request->getDeliveryCity() ? 'nova_poshta' : 'pickup');
         $deliveryAmount = 0;
         $deliveryAddress = null;
+        if ('nova_poshta' === $deliveryMethod
+            && (trim((string) $request->getDeliveryCity()) === '' || trim((string) $request->getDeliveryDepartment()) === '')
+        ) {
+            throw new CheckoutRejected([
+                'error' => 'delivery_address_invalid',
+                'error_message' => 'Оберіть місто та відділення Нової Пошти.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
         if (CityDelivery::METHOD === $deliveryMethod) {
             if (!$this->cityDelivery->isAvailable($language)) {
                 throw new CheckoutRejected([

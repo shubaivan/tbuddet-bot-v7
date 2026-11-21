@@ -11,15 +11,19 @@ use Symfony\Component\Validator\Constraints\Type;
 trait CartDeliveryFields
 {
     #[Type('string')]
+    #[\Symfony\Component\Validator\Constraints\Length(max: 255, maxMessage: 'Задовге значення (до {{ limit }} символів).')]
     private ?string $deliveryCity = null;
 
     #[Type('string')]
+    #[\Symfony\Component\Validator\Constraints\Length(max: 255, maxMessage: 'Задовге значення (до {{ limit }} символів).')]
     private ?string $deliveryCityRef = null;
 
     #[Type('string')]
+    #[\Symfony\Component\Validator\Constraints\Length(max: 255, maxMessage: 'Задовге значення (до {{ limit }} символів).')]
     private ?string $deliveryDepartment = null;
 
     #[Type('string')]
+    #[\Symfony\Component\Validator\Constraints\Length(max: 255, maxMessage: 'Задовге значення (до {{ limit }} символів).')]
     private ?string $deliveryDepartmentRef = null;
 
     /** nova_poshta | pickup | city_courier. NULL — старий фронт (визначаємо за наявністю міста НП). */
@@ -29,6 +33,7 @@ trait CartDeliveryFields
 
     /** Адреса для доставки по місту (обовʼязкова для city_courier, перевіряється в контролері). */
     #[Type('string')]
+    #[\Symfony\Component\Validator\Constraints\Length(max: 255, maxMessage: 'Задовге значення (до {{ limit }} символів).')]
     private ?string $deliveryAddress = null;
 
     /** Optional promocode supplied by the buyer. Validated server-side before being applied. */

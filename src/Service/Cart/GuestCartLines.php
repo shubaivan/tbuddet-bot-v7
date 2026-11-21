@@ -44,8 +44,10 @@ class GuestCartLines
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
+            // The site language (card) and hryvnia (an invoice is always priced in UAH).
             $price = $product->getPrice($language);
-            if (!is_numeric($price) || (int) $price <= 0) {
+            $uaPrice = $product->getPrice(UserLanguageEnum::UA);
+            if (!is_numeric($price) || (int) $price <= 0 || !is_numeric($uaPrice) || (int) $uaPrice <= 0) {
                 throw new CheckoutRejected([
                     'error' => 'cart_outdated',
                     'item' => $index,

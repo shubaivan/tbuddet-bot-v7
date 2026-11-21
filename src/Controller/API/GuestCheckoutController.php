@@ -8,6 +8,7 @@ use App\Controller\API\Request\Enum\UserLanguageEnum;
 use App\Controller\API\Request\Guest\GuestCheckoutRequest;
 use App\Controller\API\Request\Guest\GuestQuoteRequest;
 use App\Entity\Enum\CurrencyEnum;
+use App\Entity\Enum\PromocodeErrorEnum;
 use App\Entity\UserOrder;
 use App\Invoice\InvoiceCheckout;
 use App\Service\Cart\CartCheckout;
@@ -111,10 +112,13 @@ class GuestCheckoutController extends AbstractController
                     'description' => $result->promocode->describeDiscount($result->discount),
                 ];
             } else {
+                // A code assigned to an account is «not found» for a guest — the quote must
+                // not tell an anonymous caller which personal codes exist.
+                $error = PromocodeErrorEnum::NOT_ASSIGNED_TO_YOU === $result->error ? PromocodeErrorEnum::NOT_FOUND : $result->error;
                 $promocode = [
                     'ok' => false,
-                    'error_code' => $result->error->value,
-                    'error_message' => $result->error->userMessage(),
+                    'error_code' => $error->value,
+                    'error_message' => $error->userMessage(),
                 ];
             }
         }

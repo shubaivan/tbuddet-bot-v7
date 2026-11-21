@@ -109,6 +109,15 @@ class GuestCheckoutTest extends TestCase
     {
         $free = $this->cube();
         (new \ReflectionProperty(Product::class, 'price'))->setValue($free, ['ua' => '0', 'en' => '0']);
+        $noUa = $this->cube();
+        // Priced in dollars only: an invoice (always hryvnia) would charge 1 ₴ for it.
+        (new \ReflectionProperty(Product::class, 'price'))->setValue($noUa, ['en' => '202']);
+        try {
+            $this->lines($noUa)->build([['product_id' => 178, 'quantity' => 1]], UserLanguageEnum::EN);
+            self::fail('no hryvnia price must be refused');
+        } catch (CheckoutRejected $e) {
+            self::assertSame('cart_outdated', $e->payload['error']);
+        }
 
         $this->expectException(CheckoutRejected::class);
         $this->lines($free)->build([['product_id' => 178, 'quantity' => 1]], UserLanguageEnum::UA);
@@ -237,11 +246,13 @@ class GuestCheckoutTest extends TestCase
         $items = [['product_id' => 178, 'quantity' => 1]];
 
         $cases = [
-            'invoice_unavailable' => [(new GuestCheckoutRequest())->setPaymentMethod('invoice'), 422],
-            'delivery_address_invalid' => [(new GuestCheckoutRequest())->setDeliveryMethod('city_courier')->setDeliveryAddress('x'), 422],
-            'promocode_invalid' => [(new GuestCheckoutRequest())->setPromocode('NOPE'), 400],
+            ['invoice_unavailable', (new GuestCheckoutRequest())->setPaymentMethod('invoice'), 422],
+            ['delivery_address_invalid', (new GuestCheckoutRequest())->setDeliveryMethod('city_courier')->setDeliveryAddress('x'), 422],
+            // Nova Poshta without the department: no order without an address.
+            ['delivery_address_invalid', (new GuestCheckoutRequest())->setDeliveryMethod('nova_poshta')->setDeliveryCity('Київ'), 422],
+            ['promocode_invalid', (new GuestCheckoutRequest())->setPromocode('NOPE'), 400],
         ];
-        foreach ($cases as $error => [$request, $status]) {
+        foreach ($cases as [$error, $request, $status]) {
             $sent = [];
             $persisted = [];
             try {

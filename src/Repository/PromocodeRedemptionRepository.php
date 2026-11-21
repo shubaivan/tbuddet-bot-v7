@@ -44,7 +44,11 @@ class PromocodeRedemptionRepository extends ServiceEntityRepository
         } elseif ($telegramUser !== null) {
             $qb->andWhere('r.telegramUser = :tg')->setParameter('tg', $telegramUser);
         } elseif ($guestPhone !== null && $guestPhone !== '') {
-            $qb->andWhere('r.guestPhone = :phone')->setParameter('phone', $guestPhone);
+            // A guest is the phone they typed: count their guest redemptions AND those of
+            // the account with this phone (log out → use the code again as a guest).
+            $qb->leftJoin('r.user', 'ru')
+                ->andWhere('r.guestPhone = :phone OR ru.phone = :phone')
+                ->setParameter('phone', $guestPhone);
         } else {
             // Anonymous-with-no-phone redemptions can't be tracked per-buyer — treat as zero,
             // since max_uses_per_user can't be enforced anyway. The global max_uses still applies.

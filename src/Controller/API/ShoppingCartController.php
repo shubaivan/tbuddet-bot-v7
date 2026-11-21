@@ -220,7 +220,11 @@ class ShoppingCartController extends AbstractController
             $em->flush();
         }
 
-        if ($purchaseProduct->getShoppingCart() !== $user->getShoppingCart()) {
+        // Own cart only, and never a line of a placed order (guest lines have no cart at all).
+        if (null === $purchaseProduct->getShoppingCart()
+            || $purchaseProduct->getShoppingCart() !== $shoppingCart
+            || null !== $purchaseProduct->getUserOrder()
+        ) {
             return $this->json(['error' => 'user not owner of purchase product'], Response::HTTP_BAD_REQUEST);
         }
 
@@ -245,6 +249,14 @@ class ShoppingCartController extends AbstractController
     {
         $objectHandler->entityLookup($purchase_id, EntityPurchaseProduct::class, 'id');
         $entityPurchaseProduct = $repository->findOneBy(['id' => $purchase_id]);
+        // Own, not yet ordered cart line only.
+        $ownCart = $user->getShoppingCart();
+        if (null === $ownCart
+            || $entityPurchaseProduct->getShoppingCart() !== $ownCart
+            || null !== $entityPurchaseProduct->getUserOrder()
+        ) {
+            return $this->json(['error' => 'user not owner of purchase product'], Response::HTTP_BAD_REQUEST);
+        }
         $product = $entityPurchaseProduct->getProduct();
         $product->checkInputProp($inputPurchaseProduct->getProductProperties());
 
@@ -277,13 +289,23 @@ class ShoppingCartController extends AbstractController
         CartCheckout $cartCheckout,
     ): JsonResponse
     {
-        // The saved cart rows (existence checked by MatchId on the request).
+        // The saved cart rows (existence checked by MatchId on the request) — only the
+        // buyer's own, not yet ordered ones: a line id of another cart or of a placed
+        // (e.g. guest) order must never be moved into this order.
+        $cart = $user->getShoppingCart();
         $lines = [];
         foreach ($checkoutRequest->getPurchaseProductIds() as $purchaseProductId) {
             $purchaseProduct = $purchaseProductRepository->find($purchaseProductId);
-            if (null !== $purchaseProduct) {
-                $lines[] = $purchaseProduct;
+            if (null === $purchaseProduct) {
+                continue;
             }
+            if (null === $cart || $purchaseProduct->getShoppingCart() !== $cart || null !== $purchaseProduct->getUserOrder()) {
+                return $this->json([
+                    'error' => 'cart_outdated',
+                    'error_message' => 'Кошик змінився. Оновіть сторінку й спробуйте ще раз.',
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            $lines[] = $purchaseProduct;
         }
 
         try {
