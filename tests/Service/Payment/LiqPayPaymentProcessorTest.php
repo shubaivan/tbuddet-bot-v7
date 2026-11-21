@@ -12,6 +12,8 @@ use App\Repository\UserOrderRepository;
 use App\Service\Analytics\ActivityService;
 use App\Service\Analytics\TelegramNotifier;
 use App\Service\Payment\LiqPayPaymentProcessor;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -25,6 +27,9 @@ class LiqPayPaymentProcessorTest extends TestCase
 {
     private int $groupPosts = 0;
     private int $managerDms = 0;
+    private int $tx = 0;
+    private int $commits = 0;
+    private ?int $failChat = null;
 
     private function order(?string $attempt, ?string $status = null): UserOrder
     {
@@ -49,7 +54,10 @@ class LiqPayPaymentProcessorTest extends TestCase
         $tgUsers->method('findByRole')->willReturn([$manager]);
 
         $bot = $this->createMock(Nutgram::class);
-        $bot->method('sendMessage')->willReturnCallback(function () {
+        $bot->method('sendMessage')->willReturnCallback(function (...$args) {
+            if (null !== $this->failChat && ($args['chat_id'] ?? null) === $this->failChat) {
+                throw new \RuntimeException('Forbidden: bot was blocked by the user');
+            }
             ++$this->managerDms;
 
             return null;
@@ -62,7 +70,16 @@ class LiqPayPaymentProcessorTest extends TestCase
         });
         $activity = new ActivityService(new TelegramNotifier($http, 'token', '-100', new NullLogger()), new ArrayAdapter(), new NullLogger());
 
-        return new LiqPayPaymentProcessor($bot, new NullLogger(), $orders, $tgUsers, $this->createMock(EntityManagerInterface::class), $activity);
+        $this->tx = 0;
+        $connection = $this->createMock(Connection::class);
+        $connection->method('beginTransaction')->willReturnCallback(function () { ++$this->tx; });
+        $connection->method('isTransactionActive')->willReturnCallback(fn () => $this->tx > 0);
+        $connection->method('commit')->willReturnCallback(function () { --$this->tx; ++$this->commits; });
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('getConnection')->willReturn($connection);
+        $em->expects($order ? self::atLeastOnce() : self::never())->method('refresh')->with($order, LockMode::PESSIMISTIC_WRITE);
+
+        return new LiqPayPaymentProcessor($bot, new NullLogger(), $orders, $tgUsers, $em, $activity);
     }
 
     public function testUnknownOrder(): void
@@ -118,5 +135,40 @@ class LiqPayPaymentProcessorTest extends TestCase
 
         self::assertSame('failure', $order->getLiqPayStatus());
         self::assertSame(0, $this->groupPosts);
+        self::assertSame(0, $this->tx, 'the row lock is released');
+    }
+
+    public function testTheSameInFlightAnswerTwiceTellsTheBuyerOnce(): void
+    {
+        $order = $this->order('42-200');
+        $buyer = new TelegramUser();
+        (new \ReflectionProperty(TelegramUser::class, 'chatId'))->setValue($buyer, 2002);
+        $order->setTelegramUserid($buyer);
+        $p = $this->processor($order);
+
+        $p->process(['order_id' => '42-200', 'status' => 'wait_secure'], 'https://api.example');
+        $p->process(['order_id' => '42-200', 'status' => 'wait_secure'], 'https://api.example');
+
+        self::assertSame('wait_secure', $order->getLiqPayStatus());
+        self::assertSame(1, $this->managerDms, 'one «Статус оплати» message to the buyer');
+        self::assertSame(0, $this->tx);
+    }
+
+    public function testABlockedBuyerChatDoesNotCostTheManagerNotification(): void
+    {
+        $order = $this->order('42-200');
+        $buyer = new TelegramUser();
+        (new \ReflectionProperty(TelegramUser::class, 'chatId'))->setValue($buyer, 2002);
+        $buyer->setFirstName('Тест');
+        $buyer->setLastName(null);
+        $buyer->setPhoneNumber(null);
+        $order->setTelegramUserid($buyer);
+        $p = $this->processor($order);
+        $this->failChat = 2002;
+
+        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1], 'https://api.example');
+
+        self::assertTrue($order->isPaid());
+        self::assertSame(1, $this->groupPosts, 'the manager group still hears about the payment');
     }
 }

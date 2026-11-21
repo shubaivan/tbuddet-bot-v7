@@ -6,9 +6,11 @@ namespace App\Service\Payment;
 
 use App\Entity\Enum\OrderStatusEnum;
 use App\Entity\Enum\RoleEnum;
+use App\Entity\UserOrder;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserOrderRepository;
 use App\Service\Analytics\ActivityService;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
@@ -51,8 +53,42 @@ class LiqPayPaymentProcessor
             return false;
         }
 
+        // The callback and the status pull may arrive at the same time: decide on the
+        // freshly read row, locked until the new status is written.
+        $connection = $this->em->getConnection();
+        $connection->beginTransaction();
+        try {
+            $this->em->refresh($userOrder, LockMode::PESSIMISTIC_WRITE); // SELECT … FOR UPDATE
+            $result = $this->apply($userOrder, $json_decode, $baseUrl, $order_id);
+        } catch (\Throwable $e) {
+            if ($connection->isTransactionActive()) {
+                $connection->rollBack();
+            }
+            throw $e;
+        }
+        $this->releaseLock();
+
+        return $result;
+    }
+
+    private function releaseLock(): void
+    {
+        $connection = $this->em->getConnection();
+        if ($connection->isTransactionActive()) {
+            $connection->commit();
+        }
+    }
+
+    private function apply(UserOrder $userOrder, array $json_decode, string $baseUrl, int $order_id): bool
+    {
         $previousStatus = $userOrder->getLiqPaystatus();
         $newStatus = $json_decode['status'];
+
+        // The same answer about the same attempt again (repeated callback, or the pull
+        // while a payment is in flight): nothing changes, nobody is told again.
+        if ($previousStatus === $newStatus && ($json_decode['order_id'] ?? null) === $userOrder->getLiqPayOrderId()) {
+            return true;
+        }
 
         // Several checkouts per order are possible (retry, pay later). Once LiqPay
         // confirmed the payment, no other attempt may downgrade it — only a refund
@@ -89,6 +125,7 @@ class LiqPayPaymentProcessor
             && ($userOrder->getPaidAt() !== null
                 || ($previousStatus === 'success' && ($json_decode['order_id'] ?? null) !== $userOrder->getLiqPayOrderId()));
         if ($paidAgain) {
+            $this->releaseLock();
             $this->logger->error('liqpay possible double payment', [
                 'order_id' => $order_id,
                 'liqpay_order_id' => $json_decode['order_id'] ?? null,
@@ -134,6 +171,7 @@ class LiqPayPaymentProcessor
             $userOrder->setOrderStatus(OrderStatusEnum::NEW->value);
         }
         $this->em->flush();
+        $this->releaseLock();
 
         $this->logger->info('liqpay_callback_processed', [
             'order_id' => $order_id,
@@ -157,11 +195,16 @@ class LiqPayPaymentProcessor
             } else {
                 $msg = 'Статус оплати: <b>'.$newStatus.'</b>';
             }
-            $this->bot->sendMessage(
-                text: $msg,
-                chat_id: $userOrder->getTelegramUserid()->getChatId(),
-                parse_mode: ParseMode::HTML
-            );
+            // A blocked bot must not cost the managers their «paid» notification below.
+            try {
+                $this->bot->sendMessage(
+                    text: $msg,
+                    chat_id: $userOrder->getTelegramUserid()->getChatId(),
+                    parse_mode: ParseMode::HTML
+                );
+            } catch (\Throwable $e) {
+                $this->logger->error('Failed to notify buyer about payment status', ['order_id' => $order_id, 'error' => $e->getMessage()]);
+            }
         }
 
         // Notify managers about new paid order (only once, not on duplicate callbacks)
@@ -233,7 +276,11 @@ class LiqPayPaymentProcessor
             $extraHtml = rtrim($amountInfo)
                 . ($clientInfo ? "\nКлієнт: " . $clientInfo : '')
                 . sprintf("\n\n<a href=\"%s\">Відкрити замовлення</a>", $orderUrl);
-            $this->activity->orderPaid($userOrder->getId(), $extraHtml);
+            try {
+                $this->activity->orderPaid($userOrder->getId(), $extraHtml);
+            } catch (\Throwable $e) {
+                $this->logger->error('Failed to post the payment to the manager group', ['order_id' => $order_id, 'error' => $e->getMessage()]);
+            }
         }
 
         return true;

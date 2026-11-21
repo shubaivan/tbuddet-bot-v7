@@ -39,7 +39,7 @@ class LiqPayApi
     private function request(array $params): ?array
     {
         try {
-            $res = (new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey))->api('request', $params, 10);
+            $res = (new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey))->api('request', $params, 5);
         } catch (\Throwable $e) {
             $this->logger->error('liqpay api call failed', ['action' => $params['action'], 'order_id' => $params['order_id'], 'error' => $e->getMessage()]);
 
