@@ -21,8 +21,12 @@ use Psr\Log\LoggerInterface;
  */
 class LiqPayStatusSync
 {
-    /** LiqPay answers that change our order (others, like payment_not_found / invoice_wait, do not). */
-    public const APPLICABLE_STATUSES = ['success', 'failure', 'error', 'reversed', ...OrderOnlinePayment::IN_FLIGHT_STATUSES];
+    /**
+     * LiqPay answers that change our order (others, like payment_not_found / invoice_wait, do not).
+     * `try_again` is what a declined card gets (seen in the sandbox: err_code "limit"); LiqPay sends
+     * no callback for it because the buyer may still retry on the same LiqPay page.
+     */
+    public const APPLICABLE_STATUSES = ['success', 'failure', 'error', 'reversed', 'try_again', ...OrderOnlinePayment::IN_FLIGHT_STATUSES];
 
     /** Give the callback this long before asking LiqPay ourselves. */
     public const MIN_ATTEMPT_AGE_SECONDS = 20;

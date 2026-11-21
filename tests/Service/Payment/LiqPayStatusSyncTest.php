@@ -76,6 +76,18 @@ class LiqPayStatusSyncTest extends TestCase
         self::assertSame('https://api.example:8443', $seen[0][1]);
     }
 
+    public function testSyncAttemptAppliesADeclineWithoutCallback(): void
+    {
+        $order = $this->order('42-1795273672');
+        $api = $this->createMock(LiqPayApi::class);
+        // Real sandbox answer for card 4000…0002 (no callback is sent for it).
+        $api->method('status')->willReturn(['result' => 'ok', 'payment_id' => 2959383973, 'status' => 'try_again', 'err_code' => 'limit', 'order_id' => '42-1795273672']);
+
+        self::assertSame('try_again', $this->sync($api, $this->processor($order))->syncAttempt('42-1795273672'));
+        self::assertSame('try_again', $order->getLiqPayStatus());
+        self::assertTrue(\App\Service\Payment\OrderOnlinePayment::canPay($order), 'the buyer may pay again');
+    }
+
     public function testSyncAttemptIgnoresNotFoundAndForeignAnswers(): void
     {
         $order = $this->order('42-1795214515');
