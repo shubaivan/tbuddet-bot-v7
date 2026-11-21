@@ -30,3 +30,14 @@ framework:
             policy: 'fixed_window'
             limit: 10
             interval: '1 day'
+        # Гостьове оформлення кошика (без акаунта) — per-IP: замовлення створюється
+        # одразу, тож обмежуємо спроби (помилки адреси/промокоду теж рахуються).
+        guest_checkout:
+            policy: 'sliding_window'
+            limit: 15
+            interval: '10 minutes'
+        # Ціни гостьового кошика + перевірка промокоду — частіше, але не перебір кодів.
+        guest_quote:
+            policy: 'sliding_window'
+            limit: 60
+            interval: '10 minutes'

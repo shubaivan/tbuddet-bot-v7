@@ -87,6 +87,8 @@ security:
         - { route: 'public_category_list', roles: PUBLIC_ACCESS }
         - { route: 'public_product_purchase_by_id', roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/novaposhta, roles: PUBLIC_ACCESS }
+        # Гостьовий кошик: ціни/промокод + оформлення без акаунта (rate limit у контролері).
+        - { path: ^/api/v1/cart/guest/, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/chat, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/event, roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/campaign, roles: PUBLIC_ACCESS }
