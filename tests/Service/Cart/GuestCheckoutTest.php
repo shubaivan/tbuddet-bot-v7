@@ -236,6 +236,14 @@ class GuestCheckoutTest extends TestCase
         $pay = json_decode(base64_decode($q['data']), true);
         self::assertSame([$goods + 20, 'USD', 'pay'], [$pay['amount'], $pay['currency'], $pay['action']]);
 
+        // The first link of a new order lives a week (both the LiqPay invoice and the checkout).
+        foreach ([$checkout->liqpayApiCalls[0]['expired_date'], $pay['expired_date']] as $expiredDate) {
+            $expires = new \DateTimeImmutable($expiredDate, new \DateTimeZone('UTC'));
+            $days = ($expires->getTimestamp() - time()) / 86400;
+            self::assertGreaterThan(6.99, $days);
+            self::assertLessThan(7.01, $days);
+        }
+
         // Managers see dollars, not hryvnias.
         self::assertStringContainsString(sprintf('Сума: %d USD (товари %d + доставка 20)', $goods + 20, $goods), $sent[0]);
         self::assertStringContainsString('Доставка по місту (Черкаси): Shevchenka St, 10 — 20 USD', $sent[0]);

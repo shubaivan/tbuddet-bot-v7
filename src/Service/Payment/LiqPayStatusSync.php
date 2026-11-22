@@ -34,8 +34,11 @@ class LiqPayStatusSync
     /** At most one LiqPay status request per order per this many seconds (the result page polls). */
     public const THROTTLE_SECONDS = 20;
 
-    /** Do not ask about attempts older than this (the checkout lives 60 min). */
-    public const MAX_ATTEMPT_AGE_SECONDS = 2 * 86400;
+    /**
+     * Do not ask about attempts older than this: the first link of an order lives
+     * OrderOnlinePayment::FIRST_CHECKOUT_TTL_DAYS (a week), plus a day for a late callback.
+     */
+    public const MAX_ATTEMPT_AGE_SECONDS = (OrderOnlinePayment::FIRST_CHECKOUT_TTL_DAYS + 1) * 86400;
 
     public function __construct(
         private readonly LiqPayApi $api,

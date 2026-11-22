@@ -19,7 +19,11 @@ use Symfony\Component\Console\Output\OutputInterface;
  * Orders whose last LiqPay attempt never got a final callback (buyer closed the tab,
  * declined card without callback, lost callback): ask LiqPay `status` and apply the
  * answer with the callback's rules (a found payment notifies managers as usual).
- * Possible cron: *\/15 * * * *  → php bin/console app:liqpay:sync-pending --env=prod (as www-data)
+ * Attempts older than the window (--hours, default = LiqPayStatusSync::MAX_ATTEMPT_AGE_SECONDS,
+ * i.e. the 7-day first link + 1 day) are never asked about. --exclude-orders skips given
+ * order ids (prod: #42 and #54 are old test/abandoned attempts that must stay untouched).
+ * Prod cron (/etc/cron.d/artbeton-liqpay-sync, as www-data, hourly):
+ *   php8.5 bin/console app:liqpay:sync-pending --env=prod --exclude-orders=42,54
  */
 #[AsCommand(name: 'app:liqpay:sync-pending', description: 'Ask LiqPay for the status of unpaid orders whose callback never came')]
 final class LiqPaySyncPendingCommand extends Command
@@ -34,14 +38,17 @@ final class LiqPaySyncPendingCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('hours', null, InputOption::VALUE_REQUIRED, 'Only attempts created within this many hours', '48')
+            ->addOption('hours', null, InputOption::VALUE_REQUIRED, 'Only attempts created within this many hours', (string) intdiv(LiqPayStatusSync::MAX_ATTEMPT_AGE_SECONDS, 3600))
+            ->addOption('exclude-orders', null, InputOption::VALUE_REQUIRED, 'Comma-separated order ids never to ask about', '')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'List the orders, do not ask LiqPay');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $maxAge = max(1, (int) $input->getOption('hours')) * 3600;
+        // Never wider than the result page's own limit: an older attempt is out of scope.
+        $maxAge = min(max(1, (int) $input->getOption('hours')) * 3600, LiqPayStatusSync::MAX_ATTEMPT_AGE_SECONDS);
         $dry = (bool) $input->getOption('dry-run');
+        $excluded = array_values(array_filter(array_map('intval', explode(',', (string) $input->getOption('exclude-orders')))));
 
         /** @var UserOrder[] $candidates */
         $candidates = $this->orders->createQueryBuilder('o')
@@ -57,6 +64,9 @@ final class LiqPaySyncPendingCommand extends Command
 
         $checked = $changed = 0;
         foreach ($candidates as $order) {
+            if (\in_array((int) $order->getId(), $excluded, true)) {
+                continue;
+            }
             $attempt = (string) $order->getLiqPayOrderId();
             $age = LiqPayStatusSync::attemptAge($attempt);
             if (null === $age || $age < LiqPayStatusSync::MIN_ATTEMPT_AGE_SECONDS || $age > $maxAge) {

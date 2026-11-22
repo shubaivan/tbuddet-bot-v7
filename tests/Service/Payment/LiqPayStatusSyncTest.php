@@ -127,7 +127,7 @@ class LiqPayStatusSyncTest extends TestCase
         $sync->syncIfDue($this->order(sprintf('42-%d', time() - 5)));            // callback still has time
         $sync->syncIfDue($this->order(sprintf('42-%d', time() - 60), 'failure')); // final answer known
         $sync->syncIfDue($this->order(sprintf('42-%d', time() - 60), 'success')); // paid
-        $sync->syncIfDue($this->order(sprintf('42-%d', time() - 3 * 86400)));    // long expired
+        $sync->syncIfDue($this->order(sprintf('42-%d', time() - 9 * 86400)));    // older than the 7-day first link + 1 day
         $sync->syncIfDue($this->order(null));
     }
 

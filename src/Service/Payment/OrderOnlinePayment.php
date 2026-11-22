@@ -31,8 +31,15 @@ class OrderOnlinePayment
     ) {
     }
 
-    /** A fresh checkout lives this long — no forgotten tab can be paid days later. */
+    /** A repeat checkout (re-pay, «Оплатити онлайн», admin link) lives this long. */
     public const CHECKOUT_TTL_MINUTES = 60;
+
+    /**
+     * The FIRST LiqPay link of a new order (checkout, quick buy) lives a week: the buyer
+     * may pay it later from the LiqPay page or the Privat24 push. Repeat links keep
+     * CHECKOUT_TTL_MINUTES.
+     */
+    public const FIRST_CHECKOUT_TTL_DAYS = 7;
 
     /**
      * LiqPay statuses where the money is taken or on its way — no second checkout
@@ -81,6 +88,14 @@ class OrderOnlinePayment
         $this->em->flush();
 
         return sprintf('%s?data=%s&signature=%s', $cnb['url'], rawurlencode($cnb['data']), rawurlencode($cnb['signature']));
+    }
+
+    /** LiqPay `expired_date` of the first link of a new order: UTC, FIRST_CHECKOUT_TTL_DAYS from now. */
+    public static function firstCheckoutExpiresAt(): string
+    {
+        return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+            ->modify(sprintf('+%d days', self::FIRST_CHECKOUT_TTL_DAYS))
+            ->format('Y-m-d H:i:s');
     }
 
     /** LiqPay `expired_date`: UTC, "Y-m-d H:i:s", CHECKOUT_TTL_MINUTES from now. */

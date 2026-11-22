@@ -17,6 +17,7 @@ use App\Liqpay\LiqPay;
 use App\Service\Analytics\ActivityService;
 use App\Service\Campaign\CampaignTracker;
 use App\Service\Delivery\CityDelivery;
+use App\Service\Payment\OrderOnlinePayment;
 use App\Service\Payment\PaymentResultUrl;
 use App\Service\Promocode\PromocodeService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -304,6 +305,8 @@ class CartCheckout
         $liqpay = $this->newLiqPay();
 
         $phoneNumber = $user?->getPhone() ?? $userOrder->getPhone();
+        // The first link of a new order lives a week (the LiqPay invoice and the checkout).
+        $expiresAt = OrderOnlinePayment::firstCheckoutExpiresAt();
 
         $params = [
             'action' => 'invoice_send',
@@ -314,6 +317,7 @@ class CartCheckout
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description,
+            'expired_date' => $expiresAt,
         ];
         $res = $liqpay->api('request', $params);
         $userOrder->setLiqPayresponse(json_encode($res));
@@ -332,6 +336,7 @@ class CartCheckout
             // Signed status link: a guest has no login to see the order otherwise.
             'result_url' => $this->paymentResultUrl->build($lang, $userOrder->getId()),
             'description' => $description,
+            'expired_date' => $expiresAt,
         ];
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
         $link = sprintf(
