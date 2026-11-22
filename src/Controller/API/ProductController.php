@@ -23,6 +23,7 @@ use App\Repository\CategoryRepository;
 use App\Repository\FilesRepository;
 use App\Repository\ProductRepository;
 use App\Repository\UserOrderRepository;
+use App\Service\Buyer\GuestOrderLinker;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
 use App\Service\Promocode\PromocodeService;
@@ -518,7 +519,9 @@ class ProductController extends AbstractController
             'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
-            'description' => $description
+            'description' => $description,
+            // The first link of a new order lives a week (the LiqPay invoice and the checkout).
+            'expired_date' => OrderOnlinePayment::firstCheckoutExpiresAt(),
         );
         $res = $liqpay->api("request", $params);
         $userOrder->setLiqPayresponse(json_encode($res));
@@ -538,7 +541,8 @@ class ProductController extends AbstractController
                 $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en',
                 $userOrder->getId(),
             ),
-            'description' => $description
+            'description' => $description,
+            'expired_date' => OrderOnlinePayment::firstCheckoutExpiresAt(),
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
         $link = sprintf(
@@ -667,7 +671,9 @@ class ProductController extends AbstractController
             'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
-            'description' => $description
+            'description' => $description,
+            // The first link of a new order lives a week (the LiqPay invoice and the checkout).
+            'expired_date' => OrderOnlinePayment::firstCheckoutExpiresAt(),
         );
         $res = $liqpay->api("request", $params);
         $userOrder->setLiqPayresponse(json_encode($res));
@@ -687,7 +693,8 @@ class ProductController extends AbstractController
                 $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en',
                 $userOrder->getId(),
             ),
-            'description' => $description
+            'description' => $description,
+            'expired_date' => OrderOnlinePayment::firstCheckoutExpiresAt(),
         );
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
         $link = sprintf(
@@ -841,8 +848,12 @@ class ProductController extends AbstractController
     public function userOrders(
         #[CurrentUser] User $user,
         UserOrderRepository $orderRepository,
-        LocalizationService $localizationService
+        LocalizationService $localizationService,
+        GuestOrderLinker $guestOrderLinker,
     ): JsonResponse {
+        // Guest orders of a phone / email this account has verified become its own
+        // (no account is created at a guest checkout — see GuestOrderLinker).
+        $guestOrderLinker->claimFor($user);
         $userOrders = $user->getClientOrders();
         if ($user->getMerge()
             && $user->getMerge()->getTelegramUser()

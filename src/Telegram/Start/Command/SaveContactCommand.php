@@ -36,10 +36,12 @@ class SaveContactCommand
                 return;
             }
 
-            // Accept only the user's OWN contact, never a forwarded one.
-            if ($contact->user_id !== null
-                && $bot->userId() !== null
-                && (int) $contact->user_id !== (int) $bot->userId()) {
+            // Accept only the user's OWN contact, never a forwarded one (a contact without
+            // a Telegram user id is someone's address-book card). The phone is trusted
+            // later: GuestOrderLinker shows guest orders by it.
+            if ($contact->user_id === null
+                || $bot->userId() === null
+                || (int) $contact->user_id !== (int) $bot->userId()) {
                 return;
             }
 

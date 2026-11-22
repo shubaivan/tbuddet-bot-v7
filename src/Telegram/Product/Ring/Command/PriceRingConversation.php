@@ -787,8 +787,13 @@ class PriceRingConversation extends Conversation
 
     public function handlePhone(Nutgram $bot)
     {
-        if ($bot->message() && $bot->message()->contact && $bot->message()->contact->phone_number) {
-            $phone = $bot->message()->contact->phone_number;
+        // Only the buyer's OWN contact (the «Підтвердити телефон» button), never a forwarded
+        // one: this phone is trusted later (GuestOrderLinker shows guest orders by it).
+        $contact = $bot->message()?->contact;
+        if ($contact && $contact->phone_number
+            && null !== $contact->user_id && null !== $bot->userId()
+            && (int) $contact->user_id === (int) $bot->userId()) {
+            $phone = $contact->phone_number;
             $bot->sendMessage(
                 text: '...',
                 reply_markup: ReplyKeyboardRemove::make(true),
