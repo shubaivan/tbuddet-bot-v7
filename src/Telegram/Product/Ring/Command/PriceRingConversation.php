@@ -914,6 +914,7 @@ class PriceRingConversation extends Conversation
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
         $userOrder->setTelegramUserId($this->telegramUserService->getCurrentUser());
+        $userOrder->setCurrency(CurrencyEnum::fromUserLanguage($language)->value);
         $userOrder->setProductProperties($this->selectedProperties);
         $userOrder->setDeliveryCity($this->deliveryCity);
         $userOrder->setDeliveryCityRef($this->deliveryCityRef);
@@ -991,7 +992,7 @@ class PriceRingConversation extends Conversation
             'phone' => $userOrder->getTelegramUserid()->getPhoneNumber(),
             // Discounted total — LiqPay charges the post-discount amount.
             'amount' => $totalAmount,
-            'currency' => $language === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description,

@@ -159,6 +159,8 @@ services:
         arguments:
             $cityDeliveryPriceUah: '%env(int:CITY_DELIVERY_PRICE_UAH)%'
             $cityDeliveryCity: '%env(CITY_DELIVERY_CITY)%'
+            $cityDeliveryPriceUsd: '%env(int:CITY_DELIVERY_PRICE_USD)%'
+            $cityDeliveryCityEn: '%env(CITY_DELIVERY_CITY_EN)%'
 
     App\Invoice\InvoicePublicLink:
         arguments:

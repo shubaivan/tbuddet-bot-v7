@@ -18,9 +18,25 @@ class CityDeliveryTest extends TestCase
             ['available' => true, 'price' => 800, 'currency' => 'UAH', 'city' => 'Черкаси', 'label' => 'Доставка по місту (Черкаси)'],
             $d->options(UserLanguageEnum::UA),
         );
-        self::assertFalse($d->isAvailable(UserLanguageEnum::EN), 'USD orders: no UAH-priced courier');
+        self::assertFalse($d->isAvailable(UserLanguageEnum::EN), 'no USD price configured: hidden on /en');
         self::assertFalse((new CityDelivery(0))->isAvailable(UserLanguageEnum::UA), 'price 0 hides the option');
-        self::assertSame(950, (new CityDelivery(950))->price());
+        self::assertSame(950, (new CityDelivery(950))->price(UserLanguageEnum::UA));
+        self::assertFalse($d->isAvailable(null));
+    }
+
+    public function testEnglishSiteGetsTheFixedDollarPrice(): void
+    {
+        $d = new CityDelivery(800, 'Черкаси', 20, 'Cherkasy');
+        self::assertSame(
+            ['available' => true, 'price' => 20, 'currency' => 'USD', 'city' => 'Cherkasy', 'label' => 'Доставка по місту (Черкаси)'],
+            $d->options(UserLanguageEnum::EN),
+        );
+        self::assertSame(800, $d->price(UserLanguageEnum::UA), '/uk stays 800 UAH');
+        self::assertSame('Черкаси', $d->options(UserLanguageEnum::UA)['city']);
+        self::assertSame('Черкаси', $d->city(), 'orders and managers keep the Ukrainian name');
+        self::assertSame('UAH', $d->currency(UserLanguageEnum::UA));
+        self::assertSame('20 USD', $d->priceText(20, UserLanguageEnum::EN));
+        self::assertSame('800 грн', $d->priceText(800, UserLanguageEnum::UA));
     }
 
     /** @dataProvider addresses */
@@ -49,6 +65,8 @@ class CityDeliveryTest extends TestCase
 
         self::assertTrue($o->isCityDelivery());
         self::assertSame('Доставка по місту (Черкаси): вул. Гоголя, 7 — 800 грн', $o->getDeliverySummary());
+        $o->setCurrency('USD')->setDeliveryAmount(20);
+        self::assertSame('Доставка по місту (Черкаси): вул. Гоголя, 7 — 20 USD', $o->getDeliverySummary());
 
         $np = (new UserOrder())->setDeliveryMethod('nova_poshta');
         $np->setDeliveryCity('Київ');

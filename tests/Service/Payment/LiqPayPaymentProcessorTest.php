@@ -16,6 +16,8 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LogLevel;
 use Psr\Log\NullLogger;
 use SergiX44\Nutgram\Nutgram;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -30,6 +32,8 @@ class LiqPayPaymentProcessorTest extends TestCase
     private int $tx = 0;
     private int $commits = 0;
     private ?int $failChat = null;
+    private ?ArrayAdapter $cache = null;
+    private AbstractLogger $logger;
     /** @var list<string> */
     private array $texts = [];
 
@@ -39,6 +43,7 @@ class LiqPayPaymentProcessorTest extends TestCase
         (new \ReflectionProperty(UserOrder::class, 'id'))->setValue($o, 42);
         $o->setOrderStatus(OrderStatusEnum::NEW->value);
         $o->setTotalAmount(8250);
+        $o->setCurrency('UAH');
         $o->setLiqPayOrderId($attempt);
         $o->setLiqPayStatus($status);
 
@@ -82,7 +87,19 @@ class LiqPayPaymentProcessorTest extends TestCase
         $em->method('getConnection')->willReturn($connection);
         $em->expects($order ? self::atLeastOnce() : self::never())->method('refresh')->with($order, LockMode::PESSIMISTIC_WRITE);
 
-        return new LiqPayPaymentProcessor($bot, new NullLogger(), $orders, $tgUsers, $em, $activity);
+        $this->logger = new class extends AbstractLogger {
+            /** @var list<string> */
+            public array $critical = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                if (LogLevel::CRITICAL === $level) {
+                    $this->critical[] = (string) $message;
+                }
+            }
+        };
+
+        return new LiqPayPaymentProcessor($bot, $this->logger, $orders, $tgUsers, $em, $activity, $this->cache ??= new ArrayAdapter());
     }
 
     public function testUnknownOrder(): void
@@ -95,13 +112,13 @@ class LiqPayPaymentProcessorTest extends TestCase
         $order = $this->order('42-200');
         $p = $this->processor($order);
 
-        self::assertTrue($p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250], 'https://api.example'));
+        self::assertTrue($p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250, 'currency' => 'UAH'], 'https://api.example'));
         self::assertTrue($order->isPaid());
         self::assertSame(1, $this->managerDms);
         self::assertSame(1, $this->groupPosts);
 
         // The callback arriving after the pull (or twice) is harmless.
-        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250], 'https://api.example');
+        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250, 'currency' => 'UAH'], 'https://api.example');
         self::assertSame(1, $this->managerDms);
         self::assertSame(1, $this->groupPosts);
     }
@@ -109,7 +126,7 @@ class LiqPayPaymentProcessorTest extends TestCase
     public function testSuccessOfAnotherAttemptOnAPaidOrderIsADoublePaymentAlert(): void
     {
         $order = $this->order('42-200', 'success');
-        $this->processor($order)->process(['order_id' => '42-100', 'status' => 'success', 'payment_id' => 2, 'amount' => 8250], 'https://api.example');
+        $this->processor($order)->process(['order_id' => '42-100', 'status' => 'success', 'payment_id' => 2, 'amount' => 8250, 'currency' => 'UAH'], 'https://api.example');
 
         self::assertSame('42-200', $order->getLiqPayOrderId(), 'the paying attempt is not overwritten');
         self::assertSame(1, $this->managerDms, 'managers get the refund alert');
@@ -197,9 +214,109 @@ class LiqPayPaymentProcessorTest extends TestCase
         $p = $this->processor($order);
         $this->failChat = 2002;
 
-        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1], 'https://api.example');
+        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250, 'currency' => 'UAH'], 'https://api.example');
 
         self::assertTrue($order->isPaid());
         self::assertSame(1, $this->groupPosts, 'the manager group still hears about the payment');
+    }
+
+    /** @dataProvider mismatches */
+    public function testASuccessWithTheWrongAmountOrCurrencyIsNotPaid(array $payment, string $reason): void
+    {
+        $order = $this->order('42-200');
+        $p = $this->processor($order);
+
+        self::assertTrue($p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 7] + $payment, 'https://api.example'));
+
+        self::assertFalse($order->isPaid());
+        self::assertNull($order->getLiqPayStatus(), 'status untouched');
+        self::assertCount(1, $this->logger->critical);
+        self::assertSame(1, $this->managerDms, 'managers get the alert');
+        self::assertSame(1, $this->groupPosts, 'and the manager group');
+        self::assertStringContainsString('НЕ позначено оплаченим', $this->texts[0]);
+        self::assertStringContainsString($reason, $this->texts[0]);
+        self::assertSame(0, $this->tx, 'the row lock is released');
+
+        // The status pull / a repeated callback brings the same payment again: one alert only.
+        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 7] + $payment, 'https://api.example');
+        self::assertFalse($order->isPaid());
+        self::assertSame(1, $this->managerDms);
+        self::assertSame(1, $this->groupPosts);
+    }
+
+    public static function mismatches(): iterable
+    {
+        yield 'USD instead of UAH' => [['amount' => 8250, 'currency' => 'USD'], 'валюта USD замість UAH'];
+        yield 'smaller amount' => [['amount' => 8249.5, 'currency' => 'UAH'], 'сума 8249.5 замість 8250'];
+        yield 'bigger amount' => [['amount' => '8270.00', 'currency' => 'UAH'], 'сума 8270 замість 8250'];
+        yield 'no amount' => [['currency' => 'UAH'], 'не повідомив суму'];
+        yield 'no currency' => [['amount' => 8250], 'не повідомив валюту'];
+    }
+
+    public function testAUsdOrderPaidInUsdIsPaid(): void
+    {
+        $order = $this->order('42-200');
+        $order->setCurrency('USD');
+        $order->setTotalAmount(120); // goods $100 + Cherkasy delivery $20
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 120.0, 'currency' => 'USD'], 'https://api.example');
+
+        self::assertTrue($order->isPaid());
+        self::assertCount(0, $this->logger->critical);
+        self::assertStringContainsString('Сума: 120 USD', $this->texts[0]);
+    }
+
+    public function testAUsdOrderPaidAsTheSameNumberInUahIsNotPaid(): void
+    {
+        $order = $this->order('42-200');
+        $order->setCurrency('USD');
+        $order->setTotalAmount(120);
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 120, 'currency' => 'UAH'], 'https://api.example');
+
+        self::assertFalse($order->isPaid());
+        self::assertStringContainsString('валюта UAH замість USD', $this->texts[0]);
+    }
+
+    public function testAnOldOrderWithoutCurrencyUsesTheStoredInvoiceSendAnswer(): void
+    {
+        $order = $this->order('42-200');
+        $order->setCurrency(null);
+        $order->setLiqPayResponse('{"status":"invoice_wait","currency":"USD","amount":8250,"order_id":"42-200"}');
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250, 'currency' => 'USD'], 'https://api.example');
+
+        self::assertTrue($order->isPaid());
+    }
+
+    public function testAnOldOrderWithUnknownCurrencyIsLeftForTheManagers(): void
+    {
+        $order = $this->order('42-200');
+        $order->setCurrency(null);
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250, 'currency' => 'UAH'], 'https://api.example');
+
+        self::assertFalse($order->isPaid());
+        self::assertStringContainsString('невідомо, в якій валюті', $this->texts[0]);
+    }
+
+    public function testAnInvoiceOrderIsExpectedInHryvnia(): void
+    {
+        $order = $this->order('42-200');
+        $order->setCurrency(null);
+        $order->setPaymentMethod('invoice');
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 1, 'amount' => 8250, 'currency' => 'UAH'], 'https://api.example');
+
+        self::assertTrue($order->isPaid());
+    }
+
+    public function testAFailureIsNotAmountChecked(): void
+    {
+        $order = $this->order('42-200');
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'failure', 'amount' => 1, 'currency' => 'USD'], 'https://api.example');
+
+        self::assertSame('failure', $order->getLiqPayStatus());
+        self::assertCount(0, $this->logger->critical);
     }
 }

@@ -12,6 +12,7 @@ use App\Repository\UserOrderRepository;
 use App\Service\Analytics\ActivityService;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Properties\ParseMode;
@@ -32,6 +33,7 @@ class LiqPayPaymentProcessor
         private readonly TelegramUserRepository $telegramUserRepository,
         private readonly EntityManagerInterface $em,
         private readonly ActivityService $activity,
+        private readonly CacheItemPoolInterface $cache,
     ) {
     }
 
@@ -156,6 +158,19 @@ class LiqPayPaymentProcessor
             return true;
         }
 
+        // Money check before «paid»: LiqPay must confirm exactly the order total in the
+        // order's currency. Anything else (a USD number charged as UAH, a stale amount)
+        // stays unpaid and goes to the managers for a manual check.
+        if ($newStatus === 'success') {
+            $mismatch = self::paymentMismatch($userOrder, $json_decode);
+            if (null !== $mismatch) {
+                $this->releaseLock();
+                $this->alertMismatch($userOrder, $json_decode, $mismatch, $baseUrl, $order_id);
+
+                return true;
+            }
+        }
+
         $userOrder->setLiqPaystatus($newStatus);
         if ($newStatus === 'success' && isset($json_decode['order_id'])) {
             // Remember WHICH attempt paid: a repeated callback of it is harmless,
@@ -234,21 +249,25 @@ class LiqPayPaymentProcessor
             if ($userOrder->getPromocodeCodeUsed() && $userOrder->getDiscountAmount() > 0) {
                 $subtotal = $userOrder->getSubtotalAmount()
                     ?? ($userOrder->getTotalAmount() + $userOrder->getDiscountAmount());
+                $cur = $userOrder->getCurrencyLabel();
                 $amountInfo = sprintf(
-                    "Сума до сплати: %s грн\nПочаткова сума: %s грн\nПромокод: %s (знижка %s грн)\n",
+                    "Сума до сплати: %s %s\nПочаткова сума: %s %s\nПромокод: %s (знижка %s %s)\n",
                     $userOrder->getTotalAmount(),
+                    $cur,
                     $subtotal,
+                    $cur,
                     $userOrder->getPromocodeCodeUsed(),
-                    $userOrder->getDiscountAmount()
+                    $userOrder->getDiscountAmount(),
+                    $cur,
                 );
             } else {
-                $amountInfo = sprintf("Сума: %s грн\n", $userOrder->getTotalAmount());
+                $amountInfo = sprintf("Сума: %s %s\n", $userOrder->getTotalAmount(), $userOrder->getCurrencyLabel());
             }
             if ($userOrder->isInvoicePayment()) {
                 $amountInfo = sprintf("🧾 Рахунок № %s оплачено карткою онлайн (LiqPay)\n", htmlspecialchars((string) $userOrder->getInvoiceNumber(), ENT_QUOTES)).$amountInfo;
             }
             if ($userOrder->getDeliveryAmount() > 0) {
-                $amountInfo .= sprintf("У т.ч. доставка: %s грн\n🚚 %s\n", $userOrder->getDeliveryAmount(), htmlspecialchars((string) $userOrder->getDeliveryAddress(), ENT_QUOTES));
+                $amountInfo .= sprintf("У т.ч. доставка: %s %s\n🚚 %s\n", $userOrder->getDeliveryAmount(), $userOrder->getCurrencyLabel(), htmlspecialchars((string) $userOrder->getDeliveryAddress(), ENT_QUOTES));
             }
 
             $managerMsg = sprintf(
@@ -290,5 +309,93 @@ class LiqPayPaymentProcessor
         }
 
         return true;
+    }
+    /**
+     * Why this LiqPay success must NOT mark the order paid, or null when amount and
+     * currency are exactly the order's. LiqPay `amount`/`currency` are what the buyer
+     * was asked to pay (`amount_debit`/`currency_debit` are the card side — not used).
+     */
+    public static function paymentMismatch(UserOrder $order, array $payment): ?string
+    {
+        $expectedCurrency = $order->getExpectedPaymentCurrency();
+        $currency = \is_string($payment['currency'] ?? null) ? strtoupper($payment['currency']) : null;
+        $amount = $payment['amount'] ?? null;
+
+        if (!is_numeric($amount)) {
+            return 'LiqPay не повідомив суму платежу';
+        }
+        if (abs((float) $amount - (float) $order->getTotalAmount()) >= 0.01) {
+            return sprintf('сума %s замість %s', self::num($amount), $order->getTotalAmount());
+        }
+        if (null === $currency || '' === $currency) {
+            return 'LiqPay не повідомив валюту платежу';
+        }
+        if (null === $expectedCurrency) {
+            return sprintf('невідомо, в якій валюті оформлене замовлення (LiqPay: %s)', $currency);
+        }
+        if ($currency !== $expectedCurrency) {
+            return sprintf('валюта %s замість %s', $currency, $expectedCurrency);
+        }
+
+        return null;
+    }
+
+    private static function num(mixed $amount): string
+    {
+        $f = (float) $amount;
+
+        return floor($f) === $f ? (string) (int) $f : (string) $f;
+    }
+
+    /** Logged as critical, told to every manager once per LiqPay payment, order left unpaid. */
+    private function alertMismatch(UserOrder $userOrder, array $json_decode, string $reason, string $baseUrl, int $order_id): void
+    {
+        $this->logger->critical('liqpay payment amount/currency mismatch — order NOT marked paid', [
+            'order_id' => $order_id,
+            'liqpay_order_id' => $json_decode['order_id'] ?? null,
+            'payment_id' => $json_decode['payment_id'] ?? null,
+            'amount' => $json_decode['amount'] ?? null,
+            'currency' => $json_decode['currency'] ?? null,
+            'order_total' => $userOrder->getTotalAmount(),
+            'order_currency' => $userOrder->getExpectedPaymentCurrency(),
+            'reason' => $reason,
+        ]);
+
+        // The status pull and repeated callbacks bring the same success again: alert once per payment.
+        $key = 'liqpay_mismatch_'.md5((string) ($json_decode['payment_id'] ?? '').'|'.(string) ($json_decode['order_id'] ?? ''));
+        try {
+            $item = $this->cache->getItem($key);
+            if ($item->isHit()) {
+                return;
+            }
+            $item->set(time())->expiresAfter(30 * 86400);
+            $this->cache->save($item);
+        } catch (\Throwable $e) {
+            $this->logger->error('liqpay mismatch alert dedup failed', ['order_id' => $order_id, 'error' => $e->getMessage()]);
+        }
+
+        $alert = sprintf(
+            "⚠️ <b>Оплата не збігається із замовленням #%d — НЕ позначено оплаченим</b>\nLiqPay %s, payment_id %s: %s %s\nОчікувалось: %s %s\nПричина: %s\nПеревірте платіж у кабінеті LiqPay (за потреби — повернення) і підтвердіть оплату вручну.\n\n<a href=\"%s\">Відкрити замовлення</a>",
+            $userOrder->getId(),
+            htmlspecialchars((string) ($json_decode['order_id'] ?? ''), ENT_QUOTES),
+            htmlspecialchars((string) ($json_decode['payment_id'] ?? ''), ENT_QUOTES),
+            htmlspecialchars((string) ($json_decode['amount'] ?? '?'), ENT_QUOTES),
+            htmlspecialchars((string) ($json_decode['currency'] ?? '?'), ENT_QUOTES),
+            $userOrder->getTotalAmount(),
+            htmlspecialchars((string) ($userOrder->getExpectedPaymentCurrency() ?? '?'), ENT_QUOTES),
+            htmlspecialchars($reason, ENT_QUOTES),
+            $baseUrl.'/admin/orders/'.$userOrder->getId(),
+        );
+        foreach ($this->telegramUserRepository->findByRole(RoleEnum::MANAGER) as $manager) {
+            try {
+                $this->bot->sendMessage(text: $alert, chat_id: $manager->getChatId(), parse_mode: ParseMode::HTML);
+            } catch (\Throwable $e) {
+                $this->logger->error('Failed to send payment-mismatch alert', ['manager_id' => $manager->getId(), 'error' => $e->getMessage()]);
+            }
+        }
+        try {
+            $this->activity->paymentAlert($alert);
+        } catch (\Throwable) {
+        }
     }
 }

@@ -144,10 +144,19 @@ class UserOrder
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $delivery_address = null;
 
-    /** Вартість доставки (UAH), окремим рядком і вже включена в total_amount. Знімок на момент замовлення. */
+    /** Вартість доставки у валюті замовлення (currency), окремим рядком і вже включена в total_amount. Знімок на момент замовлення. */
     #[ORM\Column(name: 'delivery_amount', type: 'integer', nullable: false, options: ['default' => 0])]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private int $delivery_amount = 0;
+
+    /**
+     * Currency the order total is priced in — and the only currency LiqPay may confirm
+     * a payment of it in: UAH (/uk, every invoice) or USD (/en card orders).
+     * NULL on rows created before 22.11.2026 (see getExpectedPaymentCurrency()).
+     */
+    #[ORM\Column(name: 'currency', type: 'string', length: 3, nullable: true)]
+    #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
+    private ?string $currency = null;
 
     #[ORM\Column(type: 'string', length: 50, options: ['default' => 'new'])]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
@@ -482,6 +491,47 @@ class UserOrder
         return $this;
     }
 
+    public function getCurrency(): ?string
+    {
+        return $this->currency;
+    }
+
+    public function setCurrency(?string $currency): self
+    {
+        $this->currency = $currency;
+
+        return $this;
+    }
+
+    /**
+     * The currency a LiqPay payment of this order must be in, or null when it cannot
+     * be told (an old card order whose first LiqPay answer is gone).
+     */
+    public function getExpectedPaymentCurrency(): ?string
+    {
+        if (null !== $this->currency && '' !== $this->currency) {
+            return $this->currency;
+        }
+        if ($this->isInvoicePayment()) {
+            return 'UAH';
+        }
+        // Old rows: the invoice_send answer we stored at checkout carries the currency we asked for
+        // (a status-pull answer would carry LiqPay's own currency — not a proof, so not used).
+        $first = json_decode((string) $this->liq_pay_response, true);
+        if (\is_array($first) && 'invoice_wait' === ($first['status'] ?? null)
+            && \in_array($first['currency'] ?? null, ['UAH', 'USD'], true)) {
+            return $first['currency'];
+        }
+
+        return null;
+    }
+
+    /** «грн» / «USD» — next to amounts in manager notifications and the admin. */
+    public function getCurrencyLabel(): string
+    {
+        return 'USD' === $this->currency ? 'USD' : 'грн';
+    }
+
     public function isCityDelivery(): bool
     {
         return 'city_courier' === $this->delivery_method;
@@ -492,7 +542,7 @@ class UserOrder
     {
         if ($this->isCityDelivery()) {
             return trim('Доставка по місту ('.($this->delivery_city ?? 'Черкаси').'): '.($this->delivery_address ?? ''), ': ')
-                .($this->delivery_amount > 0 ? ' — '.$this->delivery_amount.' грн' : '');
+                .($this->delivery_amount > 0 ? ' — '.$this->delivery_amount.' '.$this->getCurrencyLabel() : '');
         }
         if (null !== $this->delivery_city && '' !== $this->delivery_city) {
             return 'Нова Пошта: '.$this->delivery_city.($this->delivery_department ? ', '.$this->delivery_department : '');

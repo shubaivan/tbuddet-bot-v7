@@ -49,12 +49,12 @@
             <div class="info-grid">
                 <div class="info-item">
                     <label>Сума</label>
-                    <div class="value"><strong>{{ order.totalAmount }} грн</strong></div>
+                    <div class="value"><strong>{{ order.totalAmount }} {{ order.currencyLabel }}</strong></div>
                 </div>
                 {% if order.deliveryAmount > 0 %}
                 <div class="info-item">
                     <label>У т.ч. доставка</label>
-                    <div class="value">{{ order.deliveryAmount }} грн (товари: {{ order.totalAmount - order.deliveryAmount }} грн)</div>
+                    <div class="value">{{ order.deliveryAmount }} {{ order.currencyLabel }} (товари: {{ order.totalAmount - order.deliveryAmount }} {{ order.currencyLabel }})</div>
                 </div>
                 {% endif %}
                 <div class="info-item">
@@ -161,7 +161,7 @@
                 </div>
                 <div class="info-item">
                     <label>Вартість доставки</label>
-                    <div class="value"><strong>{{ order.deliveryAmount }} грн</strong></div>
+                    <div class="value"><strong>{{ order.deliveryAmount }} {{ order.currencyLabel }}</strong></div>
                 </div>
             </div>
         </div>

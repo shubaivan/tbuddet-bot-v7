@@ -520,11 +520,12 @@ class ShoppingCartController extends AbstractController
         $lang = $language === UserLanguageEnum::UA ? 'uk' : 'en';
         $resultUrl = $this->paymentResultUrl->build($lang, $userOrder->getId());
 
+        $currency = OrderOnlinePayment::currency($userOrder, $lang);
         $params = array(
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => OrderOnlinePayment::currency($userOrder, $lang),
+            'currency' => $currency,
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'result_url' => $resultUrl,
@@ -534,6 +535,7 @@ class ShoppingCartController extends AbstractController
         $cnb_form_raw = $liqpay->cnb_form_raw($params);
 
         $userOrder->setLiqPayOrderId($liqPayOrderID);
+        OrderOnlinePayment::rememberCurrency($userOrder, $currency);
         // New attempt: the old «failure/expired» must not make the result page say
         // «не пройшов» before this attempt's callback arrives.
         $userOrder->setLiqPaystatus(null);

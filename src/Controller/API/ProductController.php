@@ -339,7 +339,10 @@ class ProductController extends AbstractController
 
         $product->checkInputProp($purchaseProduct->getProductProperties());
 
-        // Ті самі правила доставки по місту, що й у кошику (ShoppingCartController::checkoutAction).
+        // Invoices are always in hryvnia, also on /en: price, option texts and delivery in UA.
+        $priceLanguage = $purchaseProduct->isInvoice() ? UserLanguageEnum::UA : $localizationService->getLanguage();
+
+        // Ті самі правила доставки по місту, що й у кошику (CartCheckout).
         $deliveryMethod = $purchaseProduct->getDeliveryMethod() ?? 'pickup';
         if (!\in_array($deliveryMethod, CityDelivery::METHODS, true)) {
             return $this->json(['error' => 'delivery_method_invalid', 'error_message' => 'Невідомий спосіб доставки.'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -347,7 +350,7 @@ class ProductController extends AbstractController
         $deliveryAmount = 0;
         $deliveryAddress = null;
         if (CityDelivery::METHOD === $deliveryMethod) {
-            if (!$cityDelivery->isAvailable($localizationService->getLanguage())) {
+            if (!$cityDelivery->isAvailable($priceLanguage)) {
                 return $this->json([
                     'error' => 'delivery_unavailable',
                     'error_message' => 'Доставка по місту зараз недоступна. Оберіть Нову Пошту або самовивіз.',
@@ -358,13 +361,15 @@ class ProductController extends AbstractController
                 return $this->json(['error' => 'delivery_address_invalid', 'error_message' => $addressError], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
             $deliveryAddress = $cityDelivery->normalizeAddress((string) $purchaseProduct->getDeliveryAddress());
-            $deliveryAmount = $cityDelivery->price();
+            // In the order's currency: 800 UAH on /uk, a fixed $20 on /en (card).
+            $deliveryAmount = $cityDelivery->price($priceLanguage);
         }
 
         $userOrder = new UserOrder();
         $userOrder->setProductId($product);
         $userOrder->setQuantityProduct($localizationService->getLanguage(), $purchaseProduct->getQuantity());
         $userOrder->setClientUserId($user);
+        $userOrder->setCurrency(CurrencyEnum::fromUserLanguage($priceLanguage)->value);
         $userOrder->setProductProperties($purchaseProduct->getProductPropertiesArray());
 
         // Quick-buy delivery info: only persist NP fields when method is nova_poshta.
@@ -386,8 +391,6 @@ class ProductController extends AbstractController
             $userOrder->setPhone($purchaseProduct->getContactPhone());
         }
 
-        // Invoices are always in hryvnia, also on /en: price and option texts in UA.
-        $priceLanguage = $purchaseProduct->isInvoice() ? UserLanguageEnum::UA : $localizationService->getLanguage();
         $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
@@ -459,7 +462,7 @@ class ProductController extends AbstractController
         }
 
         if ($deliveryAmount > 0) {
-            $description .= PHP_EOL . sprintf('%s: %s — %d грн', $cityDelivery->label(), $deliveryAddress, $deliveryAmount);
+            $description .= PHP_EOL . sprintf('%s: %s — %s', $cityDelivery->label(), $deliveryAddress, $cityDelivery->priceText($deliveryAmount, $priceLanguage));
         }
 
         $userOrder->setDescription($description);
@@ -493,7 +496,7 @@ class ProductController extends AbstractController
         if ($deliveryAmount > 0) {
             $activity->orderPlaced(
                 $userOrder->getId(),
-                sprintf('Сума: %s грн (товар %s + доставка %s)', $total_amount, $total_amount - $deliveryAmount, $deliveryAmount)
+                sprintf('Сума: %s %s (товар %s + доставка %s)', $total_amount, $userOrder->getCurrencyLabel(), $total_amount - $deliveryAmount, $deliveryAmount)
                     ."\n🚚 ".$userOrder->getDeliverySummary(),
                 ActivityService::customerLabel($user),
                 1,
@@ -512,7 +515,7 @@ class ProductController extends AbstractController
             'version' => '3',
             'phone' => $phoneNumber,
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
@@ -526,7 +529,7 @@ class ProductController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             // The FE now opens LiqPay in the same tab (iOS Safari blocks the old
@@ -590,6 +593,7 @@ class ProductController extends AbstractController
 
         // Invoices are always in hryvnia, also on /en: price and option texts in UA.
         $priceLanguage = $publicPurchaseProduct->isInvoice() ? UserLanguageEnum::UA : $localizationService->getLanguage();
+        $userOrder->setCurrency(CurrencyEnum::fromUserLanguage($priceLanguage)->value);
         $price = $product->getPrice($localizationService->getLanguage());
         $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
         $propExplainingSet = [];
@@ -660,7 +664,7 @@ class ProductController extends AbstractController
             'version' => '3',
             'phone' => $phoneNumber,
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'description' => $description
@@ -674,7 +678,7 @@ class ProductController extends AbstractController
             'action' => 'pay',
             'version' => '3',
             'amount' => $userOrder->getTotalAmount(),
-            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
+            'currency' => $userOrder->getCurrency(),
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             // The FE now opens LiqPay in the same tab (iOS Safari blocks the old

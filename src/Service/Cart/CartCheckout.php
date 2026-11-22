@@ -81,6 +81,10 @@ class CartCheckout
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        // Invoices are always in hryvnia (the PDF, «Оплатити онлайн» and the bank transfer):
+        // on /en the order of an invoice is priced in UAH too, options included.
+        $priceLanguage = $request->isInvoice() ? UserLanguageEnum::UA : $language;
+
         // Спосіб доставки. Старий фронт його не шле — тоді НП, якщо є місто, інакше самовивіз.
         $deliveryMethod = $request->getDeliveryMethod()
             ?? ($request->getDeliveryCity() ? 'nova_poshta' : 'pickup');
@@ -95,7 +99,7 @@ class CartCheckout
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
         if (CityDelivery::METHOD === $deliveryMethod) {
-            if (!$this->cityDelivery->isAvailable($language)) {
+            if (!$this->cityDelivery->isAvailable($priceLanguage)) {
                 throw new CheckoutRejected([
                     'error' => 'delivery_unavailable',
                     'error_message' => 'Доставка по місту зараз недоступна. Оберіть Нову Пошту або самовивіз.',
@@ -109,12 +113,9 @@ class CartCheckout
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
             $deliveryAddress = $this->cityDelivery->normalizeAddress((string) $request->getDeliveryAddress());
-            $deliveryAmount = $this->cityDelivery->price();
+            // In the order's currency: 800 UAH on /uk, a fixed $20 on /en (card).
+            $deliveryAmount = $this->cityDelivery->price($priceLanguage);
         }
-
-        // Invoices are always in hryvnia (the PDF, «Оплатити онлайн» and the bank transfer):
-        // on /en the order of an invoice is priced in UAH too, options included.
-        $priceLanguage = $request->isInvoice() ? UserLanguageEnum::UA : $language;
 
         // Subtotal uses the shared calculator so the promocode preview and this
         // final apply step always agree on the number.
@@ -146,6 +147,7 @@ class CartCheckout
 
         $userOrder = new UserOrder();
         $userOrder->setClientUserId($user);
+        $userOrder->setCurrency(CurrencyEnum::fromUserLanguage($priceLanguage)->value);
         if (null !== $guest) {
             $userOrder->setPhone($guest->phone);
             $userOrder->setContactName($guest->name);
@@ -209,7 +211,7 @@ class CartCheckout
         }
 
         if ($deliveryAmount > 0) {
-            $description .= sprintf('%s%s: %s — %d грн', PHP_EOL, $this->cityDelivery->label(), $deliveryAddress, $deliveryAmount);
+            $description .= sprintf('%s%s: %s — %s', PHP_EOL, $this->cityDelivery->label(), $deliveryAddress, $this->cityDelivery->priceText($deliveryAmount, $priceLanguage));
         } elseif ('nova_poshta' === $deliveryMethod && $request->getDeliveryCity()) {
             $description .= sprintf('%sДоставка: %s, %s',
                 PHP_EOL,
@@ -296,9 +298,10 @@ class CartCheckout
         }
 
         $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
-        $currency = $language === UserLanguageEnum::UA ? 'UAH' : 'USD';
+        // The currency the order is priced in (card orders: the site language).
+        $currency = (string) $userOrder->getCurrency();
 
-        $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
+        $liqpay = $this->newLiqPay();
 
         $phoneNumber = $user?->getPhone() ?? $userOrder->getPhone();
 
@@ -343,5 +346,11 @@ class CartCheckout
             'liqpay' => $res,
             'link' => $link,
         ];
+    }
+
+    /** Seam for tests (the LiqPay client calls the LiqPay API over curl). */
+    protected function newLiqPay(): LiqPay
+    {
+        return new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
     }
 }

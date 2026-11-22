@@ -25,6 +25,8 @@ use App\Service\Cart\CartTotalCalculator;
 use App\Service\Cart\CheckoutRejected;
 use App\Service\Cart\GuestCartLines;
 use App\Service\Cart\GuestContact;
+use App\Liqpay\CurlRequester;
+use App\Liqpay\LiqPay;
 use App\Service\Delivery\CityDelivery;
 use App\Service\Payment\PaymentResultUrl;
 use App\Service\Promocode\PromocodeService;
@@ -157,7 +159,7 @@ class GuestCheckoutTest extends TestCase
         });
         $activity = new ActivityService(new TelegramNotifier($http, 'token', '-100', new NullLogger()), new ArrayAdapter(), new NullLogger());
 
-        return new CartCheckout(
+        return new class(
             new NullLogger(),
             'pub',
             'priv',
@@ -167,11 +169,109 @@ class GuestCheckoutTest extends TestCase
             new CartTotalCalculator($this->createMock(PurchaseProductRepository::class)),
             $promocodes,
             $activity,
-            new CityDelivery(300),
+            new CityDelivery(300, 'Черкаси', 20),
             $invoiceService,
             $invoiceCheckout,
             $this->createMock(CampaignTracker::class),
-        );
+        ) extends CartCheckout {
+            /** @var list<array<string, mixed>> what was sent to the LiqPay API */
+            public array $liqpayApiCalls = [];
+
+            protected function newLiqPay(): LiqPay
+            {
+                $liqpay = new LiqPay(new NullLogger(), 'pub', 'priv');
+                $calls = &$this->liqpayApiCalls;
+                $liqpay->curlRequester = new class($calls) extends CurlRequester {
+                    public function __construct(private array &$calls)
+                    {
+                        parent::__construct(new NullLogger());
+                    }
+
+                    public function make_curl_request($url, $postfields, $timeout = 5)
+                    {
+                        parse_str($postfields, $f);
+                        $this->calls[] = json_decode(base64_decode($f['data']), true);
+
+                        return '{"result":"ok","status":"invoice_wait"}';
+                    }
+                };
+
+                return $liqpay;
+            }
+        };
+    }
+
+    /** /en card order with Cherkasy delivery: a fixed $20, everything in USD end to end. */
+    public function testEnglishCardOrderWithCityDeliveryIsInDollars(): void
+    {
+        $promocodes = $this->createMock(PromocodeService::class);
+        $invoiceService = $this->createMock(InvoiceService::class);
+        $invoiceCheckout = $this->createMock(InvoiceCheckout::class);
+        $invoiceCheckout->expects(self::never())->method('prepare');
+
+        $request = (new GuestCheckoutRequest())
+            ->setItems([['product_id' => 178, 'quantity' => 2, 'product_properties' => [['property_name' => 'Color', 'property_value' => 'Individual']]]])
+            ->setPhone('380671234567')->setName('Olena')
+            ->setDeliveryMethod('city_courier')->setDeliveryAddress('Shevchenka St, 10');
+
+        $sent = [];
+        $persisted = [];
+        $checkout = $this->checkout($sent, $persisted, $promocodes, $invoiceCheckout, $invoiceService);
+        $lines = $this->lines()->build($request->getItems(), UserLanguageEnum::EN);
+        $result = $checkout->place($request, $lines, UserLanguageEnum::EN, null, new GuestContact('380671234567', 'Olena'));
+
+        $order = $result['order'];
+        $goods = (202 + 20) * 2;
+        self::assertSame('USD', $order->getCurrency());
+        self::assertSame(20, $order->getDeliveryAmount());
+        self::assertSame($goods, $order->getSubtotalAmount());
+        self::assertSame($goods + 20, (int) $order->getTotalAmount());
+        self::assertSame('Черкаси', $order->getDeliveryCity());
+        self::assertStringContainsString('— 20 USD', $order->getDescription());
+
+        // LiqPay: the invoice by phone and the checkout link — both the full total, in USD.
+        self::assertCount(1, $checkout->liqpayApiCalls);
+        self::assertSame([$goods + 20, 'USD'], [$checkout->liqpayApiCalls[0]['amount'], $checkout->liqpayApiCalls[0]['currency']]);
+        parse_str((string) parse_url($result['link'], PHP_URL_QUERY), $q);
+        $pay = json_decode(base64_decode($q['data']), true);
+        self::assertSame([$goods + 20, 'USD', 'pay'], [$pay['amount'], $pay['currency'], $pay['action']]);
+
+        // Managers see dollars, not hryvnias.
+        self::assertStringContainsString(sprintf('Сума: %d USD (товари %d + доставка 20)', $goods + 20, $goods), $sent[0]);
+        self::assertStringContainsString('Доставка по місту (Черкаси): Shevchenka St, 10 — 20 USD', $sent[0]);
+    }
+
+    /** An invoice placed on /en is priced in hryvnia — its city delivery too, never the $20. */
+    public function testEnglishInvoiceWithCityDeliveryIsInHryvnia(): void
+    {
+        $invoiceService = $this->createMock(InvoiceService::class);
+        $invoiceService->method('isAvailable')->willReturn(true);
+        $realLines = (new \ReflectionClass(InvoiceService::class))->newInstanceWithoutConstructor();
+        $invoiceService->method('buildLines')->willReturnCallback(fn (iterable $pp, UserLanguageEnum $l) => $realLines->buildLines($pp, $l));
+        $invoiceCheckout = $this->createMock(InvoiceCheckout::class);
+        $invoiceCheckout->expects(self::once())->method('prepare')
+            ->willReturnCallback(function (UserOrder $order, array $payer, array $lines): void {
+                InvoiceCheckout::assertTotalMatchesLines($order, $lines);
+                self::assertSame(300, end($lines)['sum']);
+                $order->setPaymentMethod('invoice');
+            });
+        $invoiceCheckout->method('complete')->willReturn(['number' => 'ABM-2026-0003']);
+
+        $request = (new GuestCheckoutRequest())
+            ->setItems([['product_id' => 178, 'quantity' => 1]])
+            ->setPhone('380671234567')->setName('Olena')
+            ->setDeliveryMethod('city_courier')->setDeliveryAddress('вул. Гоголя, 7')
+            ->setPaymentMethod('invoice')->setPayer(['name' => 'ТОВ Тест']);
+
+        $sent = [];
+        $persisted = [];
+        $checkout = $this->checkout($sent, $persisted, $this->createMock(PromocodeService::class), $invoiceCheckout, $invoiceService);
+        $result = $checkout->place($request, $this->lines()->build($request->getItems(), UserLanguageEnum::EN), UserLanguageEnum::EN, null, new GuestContact('380671234567', 'Olena'));
+
+        self::assertSame('UAH', $result['order']->getCurrency());
+        self::assertSame(300, $result['order']->getDeliveryAmount());
+        self::assertSame(8250 + 300, (int) $result['order']->getTotalAmount());
+        self::assertSame([], $checkout->liqpayApiCalls);
     }
 
     public function testGuestInvoiceOrderWithCityDeliveryAndPromocode(): void

@@ -57,13 +57,14 @@ class OrderOnlinePayment
         $lang = 'en' === $lang ? 'en' : 'uk';
         $liqPayOrderId = sprintf('%d-%d', $order->getId(), time());
 
+        // Invoices are always in hryvnia; card orders keep the currency they were placed in.
+        $currency = self::currency($order, $lang);
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
         $cnb = $liqpay->cnb_form_raw([
             'action' => 'pay',
             'version' => '3',
             'amount' => $order->getTotalAmount(),
-            // Invoices are always in hryvnia; card orders keep the currency they were placed in.
-            'currency' => self::currency($order, $lang),
+            'currency' => $currency,
             'order_id' => $liqPayOrderId,
             'server_url' => $this->liqpayServerUrl,
             // Signed status link: the buyer may come back without a login (invoice from email/Telegram).
@@ -74,6 +75,7 @@ class OrderOnlinePayment
         ]);
 
         $order->setLiqPayOrderId($liqPayOrderId);
+        self::rememberCurrency($order, $currency);
         // New attempt: an old «failure/expired» must not show as this attempt's result.
         $order->setLiqPaystatus(null);
         $this->em->flush();
@@ -89,17 +91,31 @@ class OrderOnlinePayment
             ->format('Y-m-d H:i:s');
     }
 
+    /**
+     * The currency of a new checkout for this order: the one it is priced in. Old rows
+     * without user_order.currency get it remembered here (rememberCurrency()), so the
+     * callback can check that the payment came in exactly this currency.
+     */
     public static function currency(UserOrder $order, string $lang): string
     {
-        if ($order->isInvoicePayment()) {
-            return 'UAH';
+        $expected = $order->getExpectedPaymentCurrency();
+        if (null !== $expected) {
+            return $expected;
         }
         $first = json_decode((string) $order->getLiqPayResponse(), true);
-        if (\is_array($first) && \in_array($first['currency'] ?? null, ['UAH', 'USD', 'EUR'], true)) {
+        if (\is_array($first) && \in_array($first['currency'] ?? null, ['UAH', 'USD'], true)) {
             return $first['currency'];
         }
 
         return 'en' === $lang ? 'USD' : 'UAH';
+    }
+
+    /** An old order (currency NULL) keeps the currency its new checkout was created in. */
+    public static function rememberCurrency(UserOrder $order, string $currency): void
+    {
+        if (null === $order->getCurrency() || '' === $order->getCurrency()) {
+            $order->setCurrency($currency);
+        }
     }
 
     public static function description(UserOrder $order): string

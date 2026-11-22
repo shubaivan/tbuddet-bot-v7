@@ -546,12 +546,13 @@ class AdminController extends AbstractController
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
         $resultUrl = $paymentResultUrl->build('uk', $order->getId());
 
+        // The order's own currency (a USD order must not be charged its number in UAH).
+        $currency = OrderOnlinePayment::currency($order, 'uk');
         $cnb = $liqpay->cnb_form_raw([
             'action' => 'pay',
             'version' => '3',
             'amount' => $order->getTotalAmount(),
-            // The order's own currency (a USD order must not be charged its number in UAH).
-            'currency' => OrderOnlinePayment::currency($order, 'uk'),
+            'currency' => $currency,
             'order_id' => $liqPayOrderID,
             'server_url' => $this->liqpayServerUrl,
             'result_url' => $resultUrl,
@@ -559,6 +560,7 @@ class AdminController extends AbstractController
         ]);
 
         $order->setLiqPayOrderId($liqPayOrderID);
+        OrderOnlinePayment::rememberCurrency($order, $currency);
         $order->setLiqPayStatus(null); // new attempt — an old failure is not its result
         $em->flush();
 

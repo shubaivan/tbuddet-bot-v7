@@ -190,6 +190,12 @@ final class ActivityService
         $this->notifier->send('💰 <b>Оплата отримана — замовлення #'.$orderId.'</b>'."\n".$extraHtml);
     }
 
+    /** A payment problem for the manager group (the HTML carries its own headline). */
+    public function paymentAlert(string $html): void
+    {
+        $this->notifier->send($html);
+    }
+
     private function counterKey(string $type): string
     {
         return 'activity_'.$type;
