@@ -24,7 +24,8 @@ use App\Repository\UserOrderRepository;
 use App\Service\Analytics\ActivityService;
 use App\Service\Campaign\CampaignTracker;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use App\Service\Cart\CartTotalCalculator;
+use App\Service\Cart\CartCheckout;
+use App\Service\Cart\CheckoutRejected;
 use App\Service\LocalizationService;
 use App\Service\ObjectHandler;
 use App\Service\Promocode\PromocodeService;
@@ -219,7 +220,11 @@ class ShoppingCartController extends AbstractController
             $em->flush();
         }
 
-        if ($purchaseProduct->getShoppingCart() !== $user->getShoppingCart()) {
+        // Own cart only, and never a line of a placed order (guest lines have no cart at all).
+        if (null === $purchaseProduct->getShoppingCart()
+            || $purchaseProduct->getShoppingCart() !== $shoppingCart
+            || null !== $purchaseProduct->getUserOrder()
+        ) {
             return $this->json(['error' => 'user not owner of purchase product'], Response::HTTP_BAD_REQUEST);
         }
 
@@ -244,6 +249,14 @@ class ShoppingCartController extends AbstractController
     {
         $objectHandler->entityLookup($purchase_id, EntityPurchaseProduct::class, 'id');
         $entityPurchaseProduct = $repository->findOneBy(['id' => $purchase_id]);
+        // Own, not yet ordered cart line only.
+        $ownCart = $user->getShoppingCart();
+        if (null === $ownCart
+            || $entityPurchaseProduct->getShoppingCart() !== $ownCart
+            || null !== $entityPurchaseProduct->getUserOrder()
+        ) {
+            return $this->json(['error' => 'user not owner of purchase product'], Response::HTTP_BAD_REQUEST);
+        }
         $product = $entityPurchaseProduct->getProduct();
         $product->checkInputProp($inputPurchaseProduct->getProductProperties());
 
@@ -272,277 +285,36 @@ class ShoppingCartController extends AbstractController
         #[MapRequestPayload] CheckoutRequest $checkoutRequest,
         #[CurrentUser] User $user,
         PurchaseProductRepository $purchaseProductRepository,
-        EntityManagerInterface $em,
         LocalizationService $localizationService,
-        CartTotalCalculator $cartTotalCalculator,
-        PromocodeService $promocodeService,
-        ActivityService $activity,
-        CityDelivery $cityDelivery,
-        InvoiceService $invoiceService,
-        InvoiceCheckout $invoiceCheckout,
-        CampaignTracker $campaignTracker,
+        CartCheckout $cartCheckout,
     ): JsonResponse
     {
-        $language = $localizationService->getLanguage();
-        $purchaseProductIds = $checkoutRequest->getPurchaseProductIds();
-
-        // Pay-by-invoice is offered only once the seller requisites are filled in;
-        // the FE hides the option, this guards direct API calls.
-        if ($checkoutRequest->isInvoice() && !$invoiceService->isAvailable()) {
-            return $this->json([
-                'error' => 'invoice_unavailable',
-                'error_message' => 'Оплата за рахунком тимчасово недоступна. Оберіть оплату карткою або зверніться до менеджера.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
-
-        // Спосіб доставки. Старий фронт його не шле — тоді НП, якщо є місто, інакше самовивіз.
-        $deliveryMethod = $checkoutRequest->getDeliveryMethod()
-            ?? ($checkoutRequest->getDeliveryCity() ? 'nova_poshta' : 'pickup');
-        $deliveryAmount = 0;
-        $deliveryAddress = null;
-        if (CityDelivery::METHOD === $deliveryMethod) {
-            if (!$cityDelivery->isAvailable($language)) {
-                return $this->json([
-                    'error' => 'delivery_unavailable',
-                    'error_message' => 'Доставка по місту зараз недоступна. Оберіть Нову Пошту або самовивіз.',
-                ], Response::HTTP_BAD_REQUEST);
+        // The saved cart rows (existence checked by MatchId on the request) — only the
+        // buyer's own, not yet ordered ones: a line id of another cart or of a placed
+        // (e.g. guest) order must never be moved into this order.
+        $cart = $user->getShoppingCart();
+        $lines = [];
+        foreach ($checkoutRequest->getPurchaseProductIds() as $purchaseProductId) {
+            $purchaseProduct = $purchaseProductRepository->find($purchaseProductId);
+            if (null === $purchaseProduct) {
+                continue;
             }
-            $addressError = $cityDelivery->validateAddress($checkoutRequest->getDeliveryAddress());
-            if (null !== $addressError) {
+            if (null === $cart || $purchaseProduct->getShoppingCart() !== $cart || null !== $purchaseProduct->getUserOrder()) {
                 return $this->json([
-                    'error' => 'delivery_address_invalid',
-                    'error_message' => $addressError,
+                    'error' => 'cart_outdated',
+                    'error_message' => 'Кошик змінився. Оновіть сторінку й спробуйте ще раз.',
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
-            $deliveryAddress = $cityDelivery->normalizeAddress((string) $checkoutRequest->getDeliveryAddress());
-            $deliveryAmount = $cityDelivery->price();
+            $lines[] = $purchaseProduct;
         }
 
-        // Invoices are always in hryvnia (the PDF, «Оплатити онлайн» and the bank transfer):
-        // on /en the order of an invoice is priced in UAH too, options included.
-        $priceLanguage = $checkoutRequest->isInvoice() ? UserLanguageEnum::UA : $language;
-
-        // Subtotal uses the shared calculator so the /promocode/validate preview
-        // and this final apply step always agree on the number.
-        $subtotal = $cartTotalCalculator->calculate($purchaseProductIds, $priceLanguage, $checkoutRequest->isInvoice());
-
-        // Re-validate the promocode server-side even though the FE already previewed it —
-        // the cart may have changed, or the code may have been deactivated in between.
-        $appliedPromocode = null;
-        $discount = 0;
-        if ($checkoutRequest->getPromocode() !== null && $checkoutRequest->getPromocode() !== '') {
-            $validation = $promocodeService->validate(
-                $checkoutRequest->getPromocode(),
-                $subtotal,
-                CurrencyEnum::fromUserLanguage($priceLanguage),
-                $user,
-                null,
-                null,
-            );
-            if (!$validation->ok) {
-                return $this->json([
-                    'error' => 'promocode_invalid',
-                    'error_code' => $validation->error->value,
-                    'error_message' => $validation->error->userMessage(),
-                ], Response::HTTP_BAD_REQUEST);
-            }
-            $appliedPromocode = $validation->promocode;
-            $discount = $validation->discount;
+        try {
+            $result = $cartCheckout->place($checkoutRequest, $lines, $localizationService->getLanguage(), $user);
+        } catch (CheckoutRejected $e) {
+            return $this->json($e->payload, $e->status);
         }
 
-        $userOrder = new UserOrder();
-        $userOrder->setClientUserId($user);
-        $userOrder->setDeliveryMethod($deliveryMethod);
-        if ('nova_poshta' === $deliveryMethod) {
-            $userOrder->setDeliveryCity($checkoutRequest->getDeliveryCity());
-            $userOrder->setDeliveryCityRef($checkoutRequest->getDeliveryCityRef());
-            $userOrder->setDeliveryDepartment($checkoutRequest->getDeliveryDepartment());
-            $userOrder->setDeliveryDepartmentRef($checkoutRequest->getDeliveryDepartmentRef());
-        } elseif (CityDelivery::METHOD === $deliveryMethod) {
-            $userOrder->setDeliveryCity($cityDelivery->city());
-            $userOrder->setDeliveryAddress($deliveryAddress);
-            $userOrder->setDeliveryAmount($deliveryAmount);
-        }
-        $em->persist($userOrder);
-
-        $description = '';
-        $orderedPurchaseProducts = [];
-        $propExplainingTemplate = 'Назва: %s, Значення: %s, Плюс до ціни продкта: %s';
-
-        foreach ($purchaseProductIds as $purchaseProductId) {
-            $purchaseProduct = $purchaseProductRepository->find($purchaseProductId);
-            $purchaseProduct->setUserOrder($userOrder);
-            $orderedPurchaseProducts[] = $purchaseProduct;
-
-            $product = $purchaseProduct->getProduct();
-
-            $productProperties = array_map(function (array $prop) {
-                return (new ProductProperties())
-                    ->setPropertyPriceImpact($prop['property_price_impact'])
-                    ->setPropertyValue($prop['property_value'])
-                    ->setPropertyName($prop['property_name']);
-            }, $purchaseProduct->getProductProperties());
-            $product->checkInputProp($productProperties);
-
-            $propExplainingSet = [];
-            foreach ($productProperties as $productProperty) {
-                // Invoice: the Ukrainian option and its hryvnia surcharge, as on the invoice.
-                $propExplainingSet[] = sprintf(
-                    $propExplainingTemplate,
-                    ...$product->optionTextIn(
-                        (string) $productProperty->getPropertyName(),
-                        (string) $productProperty->getPropertyValue(),
-                        (int) $productProperty->getPropertyPriceImpact(),
-                        $priceLanguage,
-                    ),
-                );
-            }
-
-            $description .= sprintf('Ваше замовлення: %s: в кількості: %s одиниць' . PHP_EOL,
-                $product->getProductName($priceLanguage),
-                $purchaseProduct->getQuantity()
-            );
-
-            if (count($propExplainingSet)) {
-                $description .= PHP_EOL . implode(PHP_EOL, $propExplainingSet) . PHP_EOL;
-            }
-        }
-
-        if ($deliveryAmount > 0) {
-            $description .= sprintf('%s%s: %s — %d грн', PHP_EOL, $cityDelivery->label(), $deliveryAddress, $deliveryAmount);
-        } elseif ('nova_poshta' === $deliveryMethod && $checkoutRequest->getDeliveryCity()) {
-            $description .= sprintf('%sДоставка: %s, %s',
-                PHP_EOL,
-                $checkoutRequest->getDeliveryCity(),
-                $checkoutRequest->getDeliveryDepartment() ?? ''
-            );
-        }
-
-        if ($appliedPromocode !== null) {
-            // User-visible line in LiqPay description so the buyer sees exactly which
-            // code applied and how much was knocked off.
-            $description .= PHP_EOL . $appliedPromocode->describeDiscount($discount);
-        }
-
-        // Знижка промокоду — лише на товари; доставка окремим рядком поверх.
-        $total_amount = $subtotal - $discount + $deliveryAmount;
-        $userOrder->setSubtotalAmount($subtotal);
-        $userOrder->setDiscountAmount($discount);
-        $userOrder->setTotalAmount($total_amount);
-        $userOrder->setDescription($description);
-        if ($appliedPromocode !== null) {
-            $userOrder->setPromocodeCodeUsed($appliedPromocode->getCode());
-        }
-
-        if ($checkoutRequest->isInvoice()) {
-            $invoiceLines = $invoiceService->buildLines($orderedPurchaseProducts, UserLanguageEnum::UA);
-            if ($deliveryAmount > 0) {
-                $invoiceLines[] = InvoiceService::deliveryLine($cityDelivery->label().': '.$deliveryAddress, $deliveryAmount);
-            }
-            $invoiceCheckout->prepare(
-                $userOrder,
-                $checkoutRequest->getPayer() ?? [],
-                $invoiceLines,
-                $checkoutRequest->isRememberPayer() ? $user : null,
-            );
-        }
-
-        $em->flush();
-
-        if ($appliedPromocode !== null) {
-            // Records the ledger row + bumps times_used. UNIQUE constraint catches
-            // accidental double-apply on retried POSTs (treated as idempotent).
-            $promocodeService->redeem(
-                $appliedPromocode,
-                $userOrder,
-                $user,
-                null,
-                null,
-                $discount,
-            );
-        }
-
-        $campaignTracker->attributeOrder($userOrder, $user);
-
-        // Сповіщення менеджерам у групу «Заявки ArtBeton» про щойно створене замовлення.
-        $currencyLabel = $priceLanguage === UserLanguageEnum::UA ? 'грн' : 'USD';
-        $customerName = trim($user->getFirstName() . ' ' . $user->getLastName());
-        if ($user->getPhone()) {
-            $customerName = trim($customerName . ', ' . $user->getPhone());
-        }
-        $amountLine = sprintf('Сума: %s %s', $total_amount, $currencyLabel)
-            .($userOrder->isInvoicePayment() ? ' · 🧾 оплата за рахунком № '.$userOrder->getInvoiceNumber() : '');
-        if ($deliveryAmount > 0) {
-            $amountLine .= sprintf(' (товари %s + доставка %s)', $total_amount - $deliveryAmount, $deliveryAmount)
-                ."\n🚚 ".$userOrder->getDeliverySummary();
-        }
-        $activity->orderPlaced(
-            $userOrder->getId(),
-            $amountLine,
-            $customerName !== '' ? $customerName : null,
-            count($purchaseProductIds),
-        );
-
-        if ($userOrder->isInvoicePayment()) {
-            return $this->json([
-                'order' => $userOrder,
-                'invoice' => $invoiceCheckout->complete($userOrder),
-            ], Response::HTTP_OK, [], [
-                AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
-            ]);
-        }
-
-        $liqPayOrderID = sprintf('%s-%s', $userOrder->getId(), time());
-
-        $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
-
-        if ($userOrder->getClientUserId()) {
-            $phoneNumber = $userOrder->getClientUserId()->getPhone();
-        } elseif ($userOrder->getPhone()) {
-            $phoneNumber = $userOrder->getPhone();
-        }
-
-        $params = array(
-            'action' => 'invoice_send',
-            'version' => '3',
-            'phone' => $phoneNumber,
-            'amount' => $userOrder->getTotalAmount(),
-            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
-            'order_id' => $liqPayOrderID,
-            'server_url' => $this->liqpayServerUrl,
-            'description' => $description
-        );
-        $res = $liqpay->api("request", $params);
-        $userOrder->setLiqPayresponse(json_encode($res));
-        $userOrder->setLiqPayorderid($liqPayOrderID);
-        $em->flush();
-
-        $lang = $localizationService->getLanguage() === UserLanguageEnum::UA ? 'uk' : 'en';
-        $resultUrl = $this->paymentResultUrl->build($lang, $userOrder->getId());
-
-        $params = array(
-            'action' => 'pay',
-            'version' => '3',
-            'amount' => $userOrder->getTotalAmount(),
-            'currency' => $localizationService->getLanguage() === UserLanguageEnum::UA ? 'UAH' : 'USD',
-            'order_id' => $liqPayOrderID,
-            'server_url' => $this->liqpayServerUrl,
-            'result_url' => $resultUrl,
-            'description' => $description
-        );
-        $cnb_form_raw = $liqpay->cnb_form_raw($params);
-        $link = sprintf(
-            '%s?%s&%s',
-            $cnb_form_raw['url'],
-            'data=' . $cnb_form_raw['data'],
-            'signature=' . $cnb_form_raw['signature'],
-        );
-
-        return $this->json([
-            'order' => $userOrder,
-            'liqpay' => $res,
-            'link' => $link
-        ], Response::HTTP_OK, [], [
+        return $this->json($result, Response::HTTP_OK, [], [
             AbstractNormalizer::GROUPS => [UserOrder::PROTECTED_ORDER_VIEW_GROUP],
         ]);
     }

@@ -213,13 +213,17 @@ class LiqPayPaymentProcessor
             $clientInfo = '';
             if ($userOrder->getClientUserId()) {
                 $cu = $userOrder->getClientUserId();
-                $clientInfo = trim($cu->getFirstName() . ' ' . $cu->getLastName()) . ', ' . $cu->getPhone();
+                $clientInfo = htmlspecialchars(trim($cu->getFirstName() . ' ' . $cu->getLastName()) . ', ' . $cu->getPhone(), ENT_QUOTES);
             } elseif ($userOrder->getTelegramUserid()) {
                 $tu = $userOrder->getTelegramUserid();
                 $clientInfo = trim($tu->getFirstName() . ' ' . ($tu->getLastName() ?? ''));
                 if ($tu->getPhoneNumber()) {
                     $clientInfo .= ', ' . $tu->getPhoneNumber();
                 }
+                $clientInfo = htmlspecialchars($clientInfo, ENT_QUOTES);
+            } elseif ($userOrder->getPhone()) {
+                // Guest (no account): the name + phone typed at checkout / quick buy.
+                $clientInfo = htmlspecialchars(trim(($userOrder->getContactName() ?? '') . ', ' . $userOrder->getPhone(), ', '), ENT_QUOTES) . ' (гість)';
             }
 
             $orderUrl = $baseUrl . '/admin/orders/' . $userOrder->getId();
@@ -251,8 +255,9 @@ class LiqPayPaymentProcessor
                 "<b>Нове замовлення #%d</b>\n%s%s%sКлієнт: %s\n\n<a href=\"%s\">Відкрити замовлення</a>",
                 $userOrder->getId(),
                 $amountInfo,
-                $userOrder->getDeliveryCity() ? 'Місто: ' . $userOrder->getDeliveryCity() . "\n" : '',
-                $userOrder->getDeliveryDepartment() ? 'Відділення: ' . $userOrder->getDeliveryDepartment() . "\n" : '',
+                // Typed by the buyer (Nova Poshta fields are free text) — escaped for parse_mode HTML.
+                $userOrder->getDeliveryCity() ? 'Місто: ' . htmlspecialchars($userOrder->getDeliveryCity(), ENT_QUOTES) . "\n" : '',
+                $userOrder->getDeliveryDepartment() ? 'Відділення: ' . htmlspecialchars($userOrder->getDeliveryDepartment(), ENT_QUOTES) . "\n" : '',
                 $clientInfo ?: 'Невідомий',
                 $orderUrl
             );

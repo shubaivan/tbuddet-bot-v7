@@ -26,7 +26,7 @@ class PurchaseProduct
 
     #[ORM\ManyToOne(targetEntity: ShoppingCart::class, inversedBy: 'purchaseProduct')]
     #[ORM\JoinColumn(name: 'shopping_cart_id', referencedColumnName: 'id', onDelete: "CASCADE")]
-    private ShoppingCart $shoppingCart;
+    private ?ShoppingCart $shoppingCart = null;
 
     #[Groups([UserOrder::PROTECTED_ORDER_VIEW_GROUP, self::GROUP_VIEW, ShoppingCart::GROUP_VIEW])]
     #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: 'purchaseProduct')]
@@ -35,7 +35,7 @@ class PurchaseProduct
 
     #[ORM\ManyToOne(targetEntity: UserOrder::class, inversedBy: 'purchaseProduct')]
     #[ORM\JoinColumn(name: 'user_order_id', referencedColumnName: 'id', nullable: true, onDelete: "CASCADE")]
-    private ?UserOrder $userOrder;
+    private ?UserOrder $userOrder = null;
 
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups([ShoppingCart::GROUP_VIEW, self::GROUP_VIEW, UserOrder::PROTECTED_ORDER_VIEW_GROUP])]
@@ -53,7 +53,8 @@ class PurchaseProduct
         return $this->id;
     }
 
-    public function getShoppingCart(): ShoppingCart
+    /** NULL for a guest order: the guest cart lives in the browser, the lines are saved with the order. */
+    public function getShoppingCart(): ?ShoppingCart
     {
         return $this->shoppingCart;
     }

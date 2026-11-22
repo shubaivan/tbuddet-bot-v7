@@ -110,6 +110,14 @@ class UserOrder
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $phone;
 
+    /** Guest cart checkout (no account): the name the buyer typed. NULL for account / bot orders. */
+    #[ORM\Column(name: 'contact_name', type: 'string', length: 255, nullable: true)]
+    private ?string $contact_name = null;
+
+    /** Guest cart checkout: optional email the buyer typed. */
+    #[ORM\Column(name: 'contact_email', type: 'string', length: 180, nullable: true)]
+    private ?string $contact_email = null;
+
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $delivery_city = null;
@@ -398,6 +406,30 @@ class UserOrder
     public function setPhone(?string $phone): UserOrder
     {
         $this->phone = $phone;
+
+        return $this;
+    }
+
+    public function getContactName(): ?string
+    {
+        return $this->contact_name;
+    }
+
+    public function setContactName(?string $contactName): UserOrder
+    {
+        $this->contact_name = $contactName;
+
+        return $this;
+    }
+
+    public function getContactEmail(): ?string
+    {
+        return $this->contact_email;
+    }
+
+    public function setContactEmail(?string $contactEmail): UserOrder
+    {
+        $this->contact_email = $contactEmail;
 
         return $this;
     }

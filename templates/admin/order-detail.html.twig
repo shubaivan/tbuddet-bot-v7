@@ -129,10 +129,22 @@
                         </div>
                     {% endif %}
                 {% endif %}
+                {% if order.contactName %}
+                    <div class="info-item">
+                        <label>Ім'я (гість, без акаунта)</label>
+                        <div class="value">{{ order.contactName }}</div>
+                    </div>
+                {% endif %}
                 {% if order.phone %}
                     <div class="info-item">
                         <label>Телефон (замовлення)</label>
                         <div class="value">{{ order.phone }}</div>
+                    </div>
+                {% endif %}
+                {% if order.contactEmail %}
+                    <div class="info-item">
+                        <label>Email (гість)</label>
+                        <div class="value">{{ order.contactEmail }}</div>
                     </div>
                 {% endif %}
             </div>
