@@ -8,7 +8,7 @@ use App\Entity\Enum\PromocodePurposeEnum;
 use App\Entity\Promocode;
 use App\Entity\User;
 use App\Repository\PromocodeRepository;
-use App\Repository\UserOrderRepository;
+use App\Service\Buyer\BuyerHistory;
 use App\Service\Promocode\FirstOrderPromocodeService;
 use App\Service\Promocode\PromocodeCodeGenerator;
 use App\Service\Promocode\PromocodeDeliveryService;
@@ -22,7 +22,7 @@ use PHPUnit\Framework\TestCase;
 class FirstOrderPromocodeServiceTest extends TestCase
 {
     private PromocodeRepository&MockObject $promocodeRepository;
-    private UserOrderRepository&MockObject $userOrderRepository;
+    private BuyerHistory&MockObject $buyerHistory;
     private PromocodeCodeGenerator&MockObject $codeGenerator;
     private PromocodeDeliveryService&MockObject $deliveryService;
     private EntityManagerInterface&MockObject $em;
@@ -31,14 +31,14 @@ class FirstOrderPromocodeServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->promocodeRepository = $this->createMock(PromocodeRepository::class);
-        $this->userOrderRepository = $this->createMock(UserOrderRepository::class);
+        $this->buyerHistory = $this->createMock(BuyerHistory::class);
         $this->codeGenerator = $this->createMock(PromocodeCodeGenerator::class);
         $this->deliveryService = $this->createMock(PromocodeDeliveryService::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
 
         $this->service = new FirstOrderPromocodeService(
             $this->promocodeRepository,
-            $this->userOrderRepository,
+            $this->buyerHistory,
             $this->codeGenerator,
             $this->deliveryService,
             $this->em,
@@ -47,7 +47,7 @@ class FirstOrderPromocodeServiceTest extends TestCase
 
     public function testNoOfferWhenUserAlreadyHasPaidOrder(): void
     {
-        $this->userOrderRepository->method('countPaidOrdersFor')->willReturn(1);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(true);
         $this->promocodeRepository->expects($this->never())->method('findLatestFirstOrderFor');
 
         $this->assertNull($this->service->getActiveOfferForUser($this->makeUser()));
@@ -57,7 +57,7 @@ class FirstOrderPromocodeServiceTest extends TestCase
     {
         $existing = $this->makeFirstOrderCode()->setValidTo(new \DateTime('+10 days'));
 
-        $this->userOrderRepository->method('countPaidOrdersFor')->willReturn(0);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(false);
         $this->promocodeRepository->method('findLatestFirstOrderFor')->willReturn($existing);
         $this->codeGenerator->expects($this->never())->method('generate');
 
@@ -66,7 +66,7 @@ class FirstOrderPromocodeServiceTest extends TestCase
 
     public function testMintsFreshCodeWhenNoneExists(): void
     {
-        $this->userOrderRepository->method('countPaidOrdersFor')->willReturn(0);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(false);
         $this->promocodeRepository->method('findLatestFirstOrderFor')->willReturn(null);
         $this->codeGenerator->method('generate')->willReturn('ABM-AAAA-BBBB');
         $this->em->expects($this->once())->method('persist');
@@ -91,7 +91,7 @@ class FirstOrderPromocodeServiceTest extends TestCase
     {
         $expired = $this->makeFirstOrderCode()->setValidTo(new \DateTime('-1 day'));
 
-        $this->userOrderRepository->method('countPaidOrdersFor')->willReturn(0);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(false);
         $this->promocodeRepository->method('findLatestFirstOrderFor')->willReturn($expired);
         $this->codeGenerator->method('generate')->willReturn('ABM-NEWC-ODE9');
 
@@ -104,7 +104,7 @@ class FirstOrderPromocodeServiceTest extends TestCase
 
     public function testTelegramOfferIsNotAutoDelivered(): void
     {
-        $this->userOrderRepository->method('countPaidOrdersFor')->willReturn(0);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(false);
         $this->promocodeRepository->method('findLatestFirstOrderFor')->willReturn(null);
         $this->codeGenerator->method('generate')->willReturn('ABM-TGTG-1234');
         $this->deliveryService->expects($this->never())->method('deliver');
@@ -121,13 +121,13 @@ class FirstOrderPromocodeServiceTest extends TestCase
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn(12);
 
-        $this->userOrderRepository->method('countPaidOrdersFor')->willReturn(5);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(true);
         $this->promocodeRepository->method('findLatestFirstOrderFor')->willReturn(null);
         $this->codeGenerator->method('generate')->willReturn('ABM-WLST-0001');
 
         $service = new FirstOrderPromocodeService(
             $this->promocodeRepository,
-            $this->userOrderRepository,
+            $this->buyerHistory,
             $this->codeGenerator,
             $this->deliveryService,
             $this->em,

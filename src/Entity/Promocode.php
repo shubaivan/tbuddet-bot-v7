@@ -249,6 +249,12 @@ class Promocode
         return $this;
     }
 
+    /** Works only for a buyer who has not ordered before (personal first-order and public welcome codes). */
+    public function isFirstOrderOnly(): bool
+    {
+        return PromocodePurposeEnum::FIRST_ORDER === $this->purpose || PromocodePurposeEnum::WELCOME === $this->purpose;
+    }
+
     public function getAssignedUser(): ?User
     {
         return $this->assignedUser;

@@ -9,6 +9,8 @@ use App\Entity\Promocode;
 use App\Entity\User;
 use App\Repository\PromocodeRedemptionRepository;
 use App\Repository\PromocodeRepository;
+use App\Entity\Enum\PromocodePurposeEnum;
+use App\Service\Buyer\BuyerHistory;
 use App\Service\Promocode\PromocodeService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -24,6 +26,7 @@ class PromocodeServiceTest extends TestCase
     private PromocodeRepository&MockObject $promocodeRepository;
     private PromocodeRedemptionRepository&MockObject $redemptionRepository;
     private EntityManagerInterface&MockObject $em;
+    private BuyerHistory&MockObject $buyerHistory;
     private PromocodeService $service;
 
     protected function setUp(): void
@@ -31,11 +34,13 @@ class PromocodeServiceTest extends TestCase
         $this->promocodeRepository = $this->createMock(PromocodeRepository::class);
         $this->redemptionRepository = $this->createMock(PromocodeRedemptionRepository::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->buyerHistory = $this->createMock(BuyerHistory::class);
 
         $this->service = new PromocodeService(
             $this->promocodeRepository,
             $this->redemptionRepository,
             $this->em,
+            $this->buyerHistory,
         );
     }
 
@@ -141,8 +146,8 @@ class PromocodeServiceTest extends TestCase
         $user = $this->makeUser(42);
         $p = $this->makePromocode()->setMaxUsesPerUser(2);
         $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
-        $this->redemptionRepository
-            ->method('countRedemptionsForBuyer')
+        $this->buyerHistory
+            ->method('countRedemptions')
             ->willReturn(2);
 
         $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, $user, null, null);
@@ -175,6 +180,76 @@ class PromocodeServiceTest extends TestCase
         $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, null, $tgUser, null);
 
         $this->assertTrue($result->ok);
+    }
+
+    public function testPerBuyerLimitCountsTheGuestPhone(): void
+    {
+        $p = $this->makePromocode()->setMaxUsesPerUser(1);
+        $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
+        $this->buyerHistory->expects($this->once())
+            ->method('countRedemptions')
+            ->with($p, null, null, '380671234567')
+            ->willReturn(1);
+
+        $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, null, null, '380671234567');
+
+        $this->assertSame(PromocodeErrorEnum::USER_LIMIT_REACHED, $result->error);
+    }
+
+    public function testWelcomeCodeNeedsAPhoneFromAGuest(): void
+    {
+        $p = $this->makePromocode()->setPurpose(PromocodePurposeEnum::WELCOME);
+        $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
+        $this->buyerHistory->expects($this->never())->method('hasPreviousOrders');
+
+        $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, null, null, null);
+
+        $this->assertSame(PromocodeErrorEnum::PHONE_REQUIRED, $result->error);
+    }
+
+    public function testWelcomeCodeRefusedForAPhoneWithAnOrder(): void
+    {
+        $p = $this->makePromocode()->setPurpose(PromocodePurposeEnum::WELCOME);
+        $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
+        $this->buyerHistory->method('hasPreviousOrders')->with(null, null, '380671234567')->willReturn(true);
+
+        $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, null, null, '380671234567');
+
+        $this->assertSame(PromocodeErrorEnum::FIRST_ORDER_ONLY, $result->error);
+    }
+
+    public function testWelcomeCodeWorksForAFirstTimeGuest(): void
+    {
+        $p = $this->makePromocode()->setPurpose(PromocodePurposeEnum::WELCOME)
+            ->setDiscountType(DiscountTypeEnum::PERCENT)->setValue(10);
+        $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
+        $this->buyerHistory->method('hasPreviousOrders')->willReturn(false);
+
+        $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, null, null, '380671234567');
+
+        $this->assertTrue($result->ok);
+        $this->assertSame(100, $result->discount);
+    }
+
+    public function testPersonalFirstOrderCodeRefusedWhenTheAccountOrderedBefore(): void
+    {
+        $user = $this->makeUser(42);
+        $p = $this->makePromocode()->setPurpose(PromocodePurposeEnum::FIRST_ORDER)->setAssignedUser($user);
+        $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
+        $this->buyerHistory->method('hasPreviousOrders')->with($user, null, null)->willReturn(true);
+
+        $result = $this->service->validate('TEST', 1000, CurrencyEnum::UAH, $user, null, null);
+
+        $this->assertSame(PromocodeErrorEnum::FIRST_ORDER_ONLY, $result->error);
+    }
+
+    public function testGenericCodeIgnoresOrderHistory(): void
+    {
+        $p = $this->makePromocode();
+        $this->promocodeRepository->method('findActiveByCode')->willReturn($p);
+        $this->buyerHistory->expects($this->never())->method('hasPreviousOrders');
+
+        $this->assertTrue($this->service->validate('TEST', 1000, CurrencyEnum::UAH, null, null, null)->ok);
     }
 
     private function makePromocode(): Promocode

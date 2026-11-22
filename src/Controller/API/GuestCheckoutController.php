@@ -11,6 +11,7 @@ use App\Entity\Enum\CurrencyEnum;
 use App\Entity\Enum\PromocodeErrorEnum;
 use App\Entity\UserOrder;
 use App\Invoice\InvoiceCheckout;
+use App\Repository\PromocodeRepository;
 use App\Service\Cart\CartCheckout;
 use App\Service\Cart\CartTotalCalculator;
 use App\Service\Cart\CheckoutRejected;
@@ -51,6 +52,11 @@ class GuestCheckoutController extends AbstractController
     /**
      * Today's prices of the guest cart + an optional promocode preview: exactly the
      * subtotal and discount the checkout will use. Saves nothing.
+     *
+     * Without a code but with a phone that has no orders behind it, `welcome_offer`
+     * carries the public first-order code (purpose WELCOME) already checked for this
+     * cart and phone — the page applies it, as the account checkout does with the
+     * personal first-order code.
      */
     #[Route('/quote', name: 'guest_checkout_quote', methods: [Request::METHOD_POST])]
     public function quote(
@@ -60,6 +66,7 @@ class GuestCheckoutController extends AbstractController
         GuestCartLines $guestCartLines,
         CartTotalCalculator $cartTotalCalculator,
         PromocodeService $promocodeService,
+        PromocodeRepository $promocodeRepository,
         RateLimiterFactoryInterface $guestQuoteLimiter,
     ): JsonResponse {
         if (!$guestQuoteLimiter->create($request->getClientIp() ?? 'anon')->consume(1)->isAccepted()) {
@@ -123,6 +130,23 @@ class GuestCheckoutController extends AbstractController
             }
         }
 
+        $welcomeOffer = null;
+        if (null === $promocode && null !== $quoteRequest->getPhone()) {
+            $welcome = $promocodeRepository->findOfferableWelcomeCode($currency);
+            $check = null !== $welcome
+                ? $promocodeService->validate($welcome->getCode(), $subtotal, $currency, null, null, $quoteRequest->getPhone())
+                : null;
+            if (null !== $check && $check->ok && $check->discount > 0) {
+                $welcomeOffer = [
+                    'code' => $check->promocode->getCode(),
+                    'discount' => $check->discount,
+                    'discount_type' => $check->promocode->getDiscountType()->value,
+                    'discount_value' => $check->promocode->getValue(),
+                    'description' => $check->promocode->describeDiscount($check->discount),
+                ];
+            }
+        }
+
         return $this->json([
             'lines' => $pricedLines,
             'subtotal' => $subtotal,
@@ -130,6 +154,7 @@ class GuestCheckoutController extends AbstractController
             'total_after_discount' => $subtotal - $discount,
             'currency' => $currency->value,
             'promocode' => $promocode,
+            'welcome_offer' => $welcomeOffer,
         ], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
     }
 

@@ -9,16 +9,18 @@ use App\Entity\Promocode;
 use App\Entity\TelegramUser;
 use App\Entity\User;
 use App\Repository\PromocodeRepository;
-use App\Repository\UserOrderRepository;
+use App\Service\Buyer\BuyerHistory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
  * Issues and rotates a personal "first order" promocode for buyers who have not
- * yet placed a paid order.
+ * placed an order yet.
  *
  * Behaviour ({@see resolve()}):
- *   1. Buyer already has a paid order  → no offer (they have converted).
+ *   1. Buyer already has an order (paid, or an issued invoice) under any of their
+ *      identities — account, linked bot user, or phone (also as a guest) → no offer
+ *      ({@see BuyerHistory::hasPreviousOrders()}).
  *   2. Buyer has a still-valid personal code → return the same code every visit.
  *   3. Code missing or expired → retire the stale one and mint a fresh 30-day code.
  *
@@ -40,7 +42,7 @@ class FirstOrderPromocodeService
      */
     public function __construct(
         private readonly PromocodeRepository $promocodeRepository,
-        private readonly UserOrderRepository $userOrderRepository,
+        private readonly BuyerHistory $buyerHistory,
         private readonly PromocodeCodeGenerator $codeGenerator,
         private readonly PromocodeDeliveryService $deliveryService,
         private readonly EntityManagerInterface $em,
@@ -77,11 +79,11 @@ class FirstOrderPromocodeService
         bool $deliverOnMint,
         CurrencyEnum $currency,
     ): ?Promocode {
-        // 1. A buyer who has already paid for an order has converted — offer over.
-        //    QA-whitelisted IDs skip this check so the flow can be tested by an
-        //    account that already has real orders.
+        // 1. A buyer who has already ordered (also as a guest with the same phone) is
+        //    not a first-time buyer — offer over. QA-whitelisted IDs skip this check so
+        //    the flow can be tested by an account that already has real orders.
         if (!$this->isTestWhitelisted($user, $telegramUser)
-            && $this->userOrderRepository->countPaidOrdersFor($user, $telegramUser) > 0) {
+            && $this->buyerHistory->hasPreviousOrders($user, $telegramUser, null)) {
             return null;
         }
 

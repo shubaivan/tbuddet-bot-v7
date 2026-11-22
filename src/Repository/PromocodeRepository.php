@@ -70,4 +70,29 @@ class PromocodeRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getOneOrNullResult();
     }
+
+    /**
+     * The public «first order» code (purpose WELCOME) in the given currency that can be
+     * offered right now: active, inside its dates, not used up. Newest first.
+     */
+    public function findOfferableWelcomeCode(CurrencyEnum $currency): ?Promocode
+    {
+        $now = new \DateTime();
+
+        return $this->createQueryBuilder('p')
+            ->where('p.purpose = :purpose')
+            ->andWhere('p.currency = :currency')
+            ->andWhere('p.isActive = true')
+            ->andWhere('p.assignedUser IS NULL AND p.assignedTelegramUser IS NULL')
+            ->andWhere('p.validFrom IS NULL OR p.validFrom <= :now')
+            ->andWhere('p.validTo IS NULL OR p.validTo >= :now')
+            ->andWhere('p.maxUses IS NULL OR p.timesUsed < p.maxUses')
+            ->setParameter('purpose', PromocodePurposeEnum::WELCOME)
+            ->setParameter('currency', $currency)
+            ->setParameter('now', $now)
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

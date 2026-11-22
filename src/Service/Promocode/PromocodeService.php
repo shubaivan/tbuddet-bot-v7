@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Entity\UserOrder;
 use App\Repository\PromocodeRedemptionRepository;
 use App\Repository\PromocodeRepository;
+use App\Service\Buyer\BuyerHistory;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -30,6 +31,7 @@ class PromocodeService
         private readonly PromocodeRepository $promocodeRepository,
         private readonly PromocodeRedemptionRepository $redemptionRepository,
         private readonly EntityManagerInterface $em,
+        private readonly BuyerHistory $buyerHistory,
     ) {
     }
 
@@ -37,8 +39,10 @@ class PromocodeService
      * Stateless check — returns whether $code can be applied to a $subtotal-UAH cart
      * for the given buyer identity. Does NOT persist anything.
      *
-     * Identity precedence: $user > $telegramUser > $guestPhone. Pass whichever the
-     * caller has — anonymous web purchases pass only $guestPhone (normalized E.164).
+     * Pass every identity the caller has — anonymous web purchases pass only $guestPhone.
+     * Per-buyer limits and the first-order rule look at ALL identities of the same
+     * person ({@see BuyerHistory}): the account, its bot user and the phone, so a code
+     * used as a guest counts for the account with that phone and vice versa.
      */
     public function validate(
         string $code,
@@ -81,8 +85,20 @@ class PromocodeService
             return PromocodeValidationResult::failure(PromocodeErrorEnum::EXHAUSTED);
         }
 
+        // First-order codes (personal and the public WELCOME one): only for a buyer
+        // without a previous order under any identity. Without any identity (a guest
+        // who has not typed the phone yet) there is nothing to check against.
+        if ($promocode->isFirstOrderOnly()) {
+            if ($user === null && $telegramUser === null && ($guestPhone === null || trim($guestPhone) === '')) {
+                return PromocodeValidationResult::failure(PromocodeErrorEnum::PHONE_REQUIRED);
+            }
+            if ($this->buyerHistory->hasPreviousOrders($user, $telegramUser, $guestPhone)) {
+                return PromocodeValidationResult::failure(PromocodeErrorEnum::FIRST_ORDER_ONLY);
+            }
+        }
+
         if ($promocode->getMaxUsesPerUser() !== null) {
-            $usedByBuyer = $this->redemptionRepository->countRedemptionsForBuyer(
+            $usedByBuyer = $this->buyerHistory->countRedemptions(
                 $promocode,
                 $user,
                 $telegramUser,
