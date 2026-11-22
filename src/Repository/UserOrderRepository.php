@@ -134,6 +134,9 @@ class UserOrderRepository extends ServiceEntityRepository
                 GROUP_CONCAT(cui.firstName, \' \', cui.lastName, \' \', cui.phone, \' \', cui.email) as c_user_info,
                 IDENTITY(o.telegram_user_id) as t_user_id,
                 IDENTITY(o.client_user_id) as c_user_id,
+                o.contact_name as guest_name,
+                o.phone as guest_phone,
+                o.currency as currency,
                 date_format(o.created_at, \'%Y-%m-%d %H:%i:%s\') as created_at
                 FROM App\Entity\UserOrder o
                 LEFT JOIN o.product_id as p
@@ -167,6 +170,10 @@ class UserOrderRepository extends ServiceEntityRepository
             $or[] = 'ILIKE(cui.lastName, :var_search) = TRUE';
             $or[] = 'ILIKE(cui.phone, :var_search) = TRUE';
             $or[] = 'ILIKE(cui.email, :var_search) = TRUE';
+
+            // Guest orders (no account): the name and phone typed at checkout.
+            $or[] = 'ILIKE(o.contact_name, :var_search) = TRUE';
+            $or[] = 'ILIKE(o.phone, :var_search) = TRUE';
 
             $bindParams['var_search'] = '%'.$parameterBag->get('search').'%';
             $conditions[] = '(' . implode(' OR ', $or) .')';

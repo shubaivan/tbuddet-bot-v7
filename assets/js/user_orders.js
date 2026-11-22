@@ -19,7 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
         render: (data, type, row) => {
             if (type !== 'display') return data;
             const v = Math.round(Number(data) || 0).toLocaleString('uk-UA');
-            return '<span class="order-amount">₴' + v + '</span>';
+            // USD orders (/en card) are stored in dollars; older rows have no currency → ₴.
+            return '<span class="order-amount">' + (row.currency === 'USD' ? '$' : '₴') + v + '</span>';
         },
     });
 
@@ -85,6 +86,11 @@ document.addEventListener("DOMContentLoaded", function () {
         render: (data, type, row) => {
             const id = row.c_user_id;
             const label = (data || '').trim();
+            if (!id && !label && !row.t_user_id) {
+                // Guest order (no account): the name + phone typed at checkout.
+                const guest = [row.guest_name, row.guest_phone].map((v) => (v || '').trim()).filter(Boolean).join(', ');
+                return guest ? '<span class="guest-ref" title="Гість (без акаунта)">👤 ' + escapeHtml(guest) + '</span>' : '';
+            }
             if (!id) return label ? '<span class="muted">' + escapeHtml(label) + '</span>' : '';
             return '<a class="user-ref" href="/admin/users/web/' + id + '" target="_blank">' + escapeHtml(label || ('Web #' + id)) + '</a>';
         },
