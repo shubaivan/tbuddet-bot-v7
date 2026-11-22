@@ -25,7 +25,8 @@ final class TelegramUserServicePhoneMergeTest extends TestCase
         $telegramUsers = $this->createMock(TelegramUserRepository::class);
         $telegramUsers->method('getByTelegramId')->willReturn((new TelegramUser())->setTelegramId('5551'));
         $users = $this->createMock(UserRepository::class);
-        $users->method('matchUserByPhone')->willReturn($matched);
+        $users->method('findOneBy')->willReturn($matched);
+        $users->expects(self::never())->method('matchUserByPhone');
 
         $service = new TelegramUserService($telegramUsers, $users, $merges ?? $this->createMock(UserMergeRepository::class), $em);
         $service->initUser(['id' => '5551']);

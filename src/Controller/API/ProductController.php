@@ -282,7 +282,8 @@ class ProductController extends AbstractController
         FilesystemOperator $defaultStorage,
     ): JsonResponse
     {
-        $product = $repository->find((int) $id);
+        // Ids beyond the integer column are unknown products too (not a 500 from Postgres).
+        $product = \strlen($id) <= 10 && (int) $id <= 2147483647 ? $repository->find((int) $id) : null;
         // An unknown product (old link, removed product) is an expected answer, not an
         // error: 200 + flag keeps the browser console clean; the FE shows «not found»
         // (noindex) exactly as it did for the former 422.

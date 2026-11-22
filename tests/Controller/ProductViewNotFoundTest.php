@@ -40,5 +40,11 @@ final class ProductViewNotFoundTest extends TestCase
         self::assertSame(200, $response->getStatusCode());
         self::assertSame(['not_found' => true], json_decode((string) $response->getContent(), true));
         self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+
+        // An id beyond the integer column never reaches the database.
+        $untouched = $this->createMock(ProductRepository::class);
+        $untouched->expects(self::never())->method('find');
+        $huge = $controller->viewId('99999999999', $untouched, $this->createMock(FilesystemOperator::class));
+        self::assertSame(['not_found' => true], json_decode((string) $huge->getContent(), true));
     }
 }

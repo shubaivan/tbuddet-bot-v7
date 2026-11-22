@@ -69,13 +69,11 @@ class TelegramUserService
     public function savePhone(string $phone_number): void
     {
         if ($this->currentUser) {
-            $normalizePhone = substr($phone_number, -10);
-            $user = $this->userRepository->matchUserByPhone($normalizePhone);
-            // A web account's profile phone is typed in, never verified: link the bot
-            // user to it only when the account already belongs to this Telegram user
-            // (logged in with Telegram / linked from the profile). Otherwise anyone who
-            // registered with a stranger's number would get the stranger's bot orders
-            // and Telegram login.
+            // A web account's profile phone is typed in, never verified: the bot user is
+            // linked only to the account that already belongs to this Telegram user
+            // (logged in with Telegram / linked from the profile) — found by its Telegram
+            // id, never by a phone match (anyone could register with a stranger's number).
+            $user = $this->userRepository->findOneBy(['telegramChatId' => (int) $this->currentUser->getTelegramId()]);
             if ($user && self::isOwnAccount($user, $this->currentUser)) {
                 $merge = $this->userMergeRepository->getByUser($user);
                 if (!$merge) {
