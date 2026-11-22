@@ -60,6 +60,11 @@ class TelegramUserService
         return $this->currentUser;
     }
 
+    /**
+     * Callers pass only the user's OWN contact (contact.user_id === sender, checked in
+     * SaveContactCommand and PriceRingConversation::handlePhone) — so the phone is
+     * marked verified (GuestOrderLinker trusts only verified phones).
+     */
     public function savePhone(string $phone_number): void
     {
         if ($this->currentUser) {
@@ -76,6 +81,7 @@ class TelegramUserService
         }
 
         $this->currentUser->setPhoneNumber($phone_number);
+        $this->currentUser->setPhoneVerifiedAt(new \DateTimeImmutable());
     }
 
     public function getCurrentUser(): ?TelegramUser

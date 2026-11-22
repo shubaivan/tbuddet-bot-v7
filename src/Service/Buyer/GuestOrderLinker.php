@@ -14,7 +14,9 @@ use Psr\Log\LoggerInterface;
  * has PROVEN the same contact, the first time that account opens its orders:
  *  - a phone verified by Telegram: the bot user of the account's own Telegram identity
  *    (client_user.telegram_chat_id — set by the Telegram login or the profile link
- *    token) shared their OWN contact with the bot (SaveContactCommand / checkout);
+ *    token) shared their OWN contact with the bot (SaveContactCommand / checkout),
+ *    recorded in telegram_user.phone_verified_at (phones stored before 22.11.2026,
+ *    when forwarded contacts were still accepted, are not trusted);
  *  - a confirmed email equal to the email typed at the guest checkout.
  *
  * No account is created and nobody is messaged: the order keeps its phone, and any
@@ -98,7 +100,7 @@ class GuestOrderLinker
             return [];
         }
         $phones = $this->em->getConnection()->fetchFirstColumn(
-            'SELECT phone_number FROM telegram_user WHERE telegram_id = :telegramId AND phone_number IS NOT NULL',
+            'SELECT phone_number FROM telegram_user WHERE telegram_id = :telegramId AND phone_number IS NOT NULL AND phone_verified_at IS NOT NULL',
             ['telegramId' => (string) $user->getTelegramChatId()],
         );
 

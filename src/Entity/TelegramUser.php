@@ -43,6 +43,9 @@ class TelegramUser implements UserInterface
     private ?string $telegram_id;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $phone_number;
+    /** When the phone came from the user's OWN contact (checked user_id) — only then it is trusted. */
+    #[ORM\Column(name: 'phone_verified_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $phoneVerifiedAt = null;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $first_name;
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
@@ -114,6 +117,18 @@ class TelegramUser implements UserInterface
     public function setPhoneNumber(?string $phone_number): TelegramUser
     {
         $this->phone_number = $phone_number;
+
+        return $this;
+    }
+
+    public function getPhoneVerifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->phoneVerifiedAt;
+    }
+
+    public function setPhoneVerifiedAt(?\DateTimeImmutable $phoneVerifiedAt): TelegramUser
+    {
+        $this->phoneVerifiedAt = $phoneVerifiedAt;
 
         return $this;
     }

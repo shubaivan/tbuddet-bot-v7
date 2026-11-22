@@ -45,7 +45,9 @@ class SaveContactCommand
                 return;
             }
 
-            if (!$tgUser->getPhoneNumber()) {
+            // A phone saved before own-contact checks existed is not verified: take the
+            // own contact again to verify it.
+            if (!$tgUser->getPhoneNumber() || null === $tgUser->getPhoneVerifiedAt()) {
                 $this->telegramUserService->savePhone($contact->phone_number);
                 $this->em->flush();
             }
