@@ -152,9 +152,9 @@ class UserOrder
     /**
      * Currency the order total is priced in — and the only currency LiqPay may confirm
      * a payment of it in: UAH (/uk, every invoice) or USD (/en card orders).
-     * NULL on rows created before 22.11.2026 (see getExpectedPaymentCurrency()).
+     * Backfilled for older rows; NULL only when it could not be told (see getExpectedPaymentCurrency()).
      */
-    #[ORM\Column(name: 'currency', type: 'string', length: 3, nullable: true)]
+    #[ORM\Column(name: 'currency', type: 'string', length: 3, nullable: true, options: ['comment' => 'Currency the order total is priced in: UAH or USD'])]
     #[Groups([self::PROTECTED_ORDER_VIEW_GROUP])]
     private ?string $currency = null;
 
@@ -529,7 +529,7 @@ class UserOrder
     /** «грн» / «USD» — next to amounts in manager notifications and the admin. */
     public function getCurrencyLabel(): string
     {
-        return 'USD' === $this->currency ? 'USD' : 'грн';
+        return 'USD' === $this->getExpectedPaymentCurrency() ? 'USD' : 'грн';
     }
 
     public function isCityDelivery(): bool

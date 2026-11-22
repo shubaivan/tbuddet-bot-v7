@@ -90,11 +90,16 @@ class LiqPayPaymentProcessorTest extends TestCase
         $this->logger = new class extends AbstractLogger {
             /** @var list<string> */
             public array $critical = [];
+            /** @var list<string> */
+            public array $warning = [];
 
             public function log($level, \Stringable|string $message, array $context = []): void
             {
                 if (LogLevel::CRITICAL === $level) {
                     $this->critical[] = (string) $message;
+                }
+                if (LogLevel::WARNING === $level) {
+                    $this->warning[] = (string) $message;
                 }
             }
         };
@@ -242,6 +247,37 @@ class LiqPayPaymentProcessorTest extends TestCase
         self::assertFalse($order->isPaid());
         self::assertSame(1, $this->managerDms);
         self::assertSame(1, $this->groupPosts);
+        self::assertCount(1, $this->logger->critical, 'a repeat is a warning, not another critical');
+        self::assertCount(1, $this->logger->warning);
+    }
+
+    public function testARefundOfAMismatchedPaymentIsStoredButNeverPays(): void
+    {
+        $order = $this->order('42-200');
+        $p = $this->processor($order);
+        $p->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 7, 'amount' => 8250, 'currency' => 'USD'], 'https://api.example');
+        $p->process(['order_id' => '42-200', 'status' => 'reversed', 'payment_id' => 7, 'amount' => 8250, 'currency' => 'USD'], 'https://api.example');
+
+        self::assertFalse($order->isPaid());
+        self::assertSame('reversed', $order->getLiqPayStatus());
+    }
+
+    public function testAMismatchAfterAnInFlightStatusKeepsTheOrderUnpaid(): void
+    {
+        $order = $this->order('42-200', 'wait_secure');
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'success', 'payment_id' => 7, 'amount' => 100, 'currency' => 'UAH'], 'https://api.example');
+
+        self::assertFalse($order->isPaid());
+        self::assertSame('wait_secure', $order->getLiqPayStatus());
+        self::assertSame(1, $this->managerDms);
+    }
+
+    public function testOldUsdOrderIsLabelledInDollarsFromItsStoredAnswer(): void
+    {
+        $order = $this->order('42-200');
+        $order->setCurrency(null);
+        $order->setLiqPayResponse('{"status":"invoice_wait","currency":"USD"}');
+        self::assertSame('USD', $order->getCurrencyLabel());
     }
 
     public static function mismatches(): iterable

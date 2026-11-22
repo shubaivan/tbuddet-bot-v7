@@ -542,6 +542,13 @@ class AdminController extends AbstractController
             return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
         }
 
+        // Never guess the currency for a manager link (the number of a USD order charged in UAH).
+        if (null === $order->getExpectedPaymentCurrency()) {
+            $this->addFlash('warning', 'Невідомо, в якій валюті оформлене замовлення — посилання не сформовано. Зверніться до розробника.');
+
+            return $this->redirectToRoute('app_admin_order_detail', ['id' => $order->getId()]);
+        }
+
         $liqPayOrderID = sprintf('%s-%s', $order->getId(), time());
         $liqpay = new LiqPay($this->logger, $this->liqpayPublicKey, $this->liqpayPrivateKey);
         $resultUrl = $paymentResultUrl->build('uk', $order->getId());

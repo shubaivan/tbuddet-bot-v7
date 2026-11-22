@@ -350,7 +350,7 @@ class LiqPayPaymentProcessor
     /** Logged as critical, told to every manager once per LiqPay payment, order left unpaid. */
     private function alertMismatch(UserOrder $userOrder, array $json_decode, string $reason, string $baseUrl, int $order_id): void
     {
-        $this->logger->critical('liqpay payment amount/currency mismatch — order NOT marked paid', [
+        $context = [
             'order_id' => $order_id,
             'liqpay_order_id' => $json_decode['order_id'] ?? null,
             'payment_id' => $json_decode['payment_id'] ?? null,
@@ -359,13 +359,16 @@ class LiqPayPaymentProcessor
             'order_total' => $userOrder->getTotalAmount(),
             'order_currency' => $userOrder->getExpectedPaymentCurrency(),
             'reason' => $reason,
-        ]);
+        ];
 
-        // The status pull and repeated callbacks bring the same success again: alert once per payment.
-        $key = 'liqpay_mismatch_'.md5((string) ($json_decode['payment_id'] ?? '').'|'.(string) ($json_decode['order_id'] ?? ''));
+        // The status pull and repeated callbacks bring the same success again: critical log
+        // and alert once per payment, a warning for every repeat.
+        $key = 'liqpay_mismatch_'.md5(implode('|', [(string) ($json_decode['payment_id'] ?? ''), (string) ($json_decode['order_id'] ?? ''), (string) $order_id]));
         try {
             $item = $this->cache->getItem($key);
             if ($item->isHit()) {
+                $this->logger->warning('liqpay payment amount/currency mismatch (repeat, already alerted)', $context);
+
                 return;
             }
             $item->set(time())->expiresAfter(30 * 86400);
@@ -373,6 +376,7 @@ class LiqPayPaymentProcessor
         } catch (\Throwable $e) {
             $this->logger->error('liqpay mismatch alert dedup failed', ['order_id' => $order_id, 'error' => $e->getMessage()]);
         }
+        $this->logger->critical('liqpay payment amount/currency mismatch — order NOT marked paid', $context);
 
         $alert = sprintf(
             "⚠️ <b>Оплата не збігається із замовленням #%d — НЕ позначено оплаченим</b>\nLiqPay %s, payment_id %s: %s %s\nОчікувалось: %s %s\nПричина: %s\nПеревірте платіж у кабінеті LiqPay (за потреби — повернення) і підтвердіть оплату вручну.\n\n<a href=\"%s\">Відкрити замовлення</a>",
