@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Liqpay\LiqPayLogSummary;
 use App\Service\Payment\LiqPayPaymentProcessor;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,26 +21,30 @@ class LiqPayController extends AbstractController
         string $liqpayPrivateKey,
     ): JsonResponse
     {
-        $logger->info('liqpay_response_content', ['content' => $request->getContent()]);
         $sign = base64_encode( sha1(
             $liqpayPrivateKey .
             $request->request->get('data') .
             $liqpayPrivateKey
             , 1 ));
         if ($request->request->get('signature') !== $sign) {
+            // Never log the expected signature: it is a valid one for the caller's data.
             $logger->error('liqpay sign error', [
                 'actual_sign' => $request->request->get('signature'),
-                'expected_sign' => $sign,
             ]);
 
             return $this->json(['sign' => false], Response::HTTP_UNAUTHORIZED);
         }
         $base64_decode = base64_decode($request->request->get('data'));
         $json_decode = json_decode($base64_decode, true);
+        if (!\is_array($json_decode)) {
+            $logger->error('liqpay callback data is not JSON');
+
+            return $this->json(['sign' => false], Response::HTTP_BAD_REQUEST);
+        }
+        // Not the full payload: it carries the buyer's card mask, phone, name and IP.
+        $logger->info('liqpay_callback', LiqPayLogSummary::of($json_decode));
         if (!isset($json_decode['order_id'])) {
-            $logger->error('liqpay error order_id was not present', [
-                'json_decode' => $json_decode,
-            ]);
+            $logger->error('liqpay error order_id was not present', LiqPayLogSummary::of($json_decode));
 
             return $this->json(['sign' => false], Response::HTTP_BAD_REQUEST);
         }

@@ -84,7 +84,10 @@ class LiqPay
         // LiqPay can answer with an empty body or HTML (timeout, maintenance).
         // Logging that must not throw: the order is already saved and the
         // buyer still gets the pay link (built locally, without this call).
-        $this->logger->info('server_output', is_array($toArray) ? $toArray : ['raw' => substr((string) $server_output, 0, 500)]);
+        // Only the fields needed to follow the order — no card/phone/name.
+        $this->logger->info('server_output', is_array($toArray)
+            ? LiqPayLogSummary::of($toArray)
+            : ['raw' => substr((string) $server_output, 0, 200)]);
 
         return $toArray;
     }

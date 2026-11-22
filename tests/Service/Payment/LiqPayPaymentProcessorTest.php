@@ -30,6 +30,8 @@ class LiqPayPaymentProcessorTest extends TestCase
     private int $tx = 0;
     private int $commits = 0;
     private ?int $failChat = null;
+    /** @var list<string> */
+    private array $texts = [];
 
     private function order(?string $attempt, ?string $status = null): UserOrder
     {
@@ -59,6 +61,7 @@ class LiqPayPaymentProcessorTest extends TestCase
                 throw new \RuntimeException('Forbidden: bot was blocked by the user');
             }
             ++$this->managerDms;
+            $this->texts[] = (string) ($args['text'] ?? $args[0] ?? '');
 
             return null;
         });
@@ -152,6 +155,34 @@ class LiqPayPaymentProcessorTest extends TestCase
         self::assertSame('wait_secure', $order->getLiqPayStatus());
         self::assertSame(1, $this->managerDms, 'one «Статус оплати» message to the buyer');
         self::assertSame(0, $this->tx);
+    }
+
+    public function testARefundOfAPaidOrderIsToldToTheBuyer(): void
+    {
+        $order = $this->order('42-200', 'success');
+        $buyer = new TelegramUser();
+        (new \ReflectionProperty(TelegramUser::class, 'chatId'))->setValue($buyer, 2002);
+        $order->setTelegramUserid($buyer);
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'reversed'], 'https://api.example');
+
+        self::assertSame('reversed', $order->getLiqPayStatus());
+        self::assertSame(['Оплату за замовлення #42 повернено на вашу картку.'], $this->texts);
+        self::assertSame(0, $this->groupPosts, 'no «new paid order» for managers');
+    }
+
+    public function testADeclinedCardIsExplainedToTheBuyerInWords(): void
+    {
+        $order = $this->order('42-200');
+        $buyer = new TelegramUser();
+        (new \ReflectionProperty(TelegramUser::class, 'chatId'))->setValue($buyer, 2002);
+        $order->setTelegramUserid($buyer);
+
+        $this->processor($order)->process(['order_id' => '42-200', 'status' => 'try_again'], 'https://api.example');
+
+        self::assertCount(1, $this->texts);
+        self::assertStringContainsString('Банк відхилив оплату за замовлення #42', $this->texts[0]);
+        self::assertStringNotContainsString('try_again', $this->texts[0]);
     }
 
     public function testABlockedBuyerChatDoesNotCostTheManagerNotification(): void
