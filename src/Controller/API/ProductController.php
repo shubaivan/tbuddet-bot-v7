@@ -279,12 +279,16 @@ class ProductController extends AbstractController
     public function viewId(
         string $id,
         ProductRepository $repository,
-        ObjectHandler $objectHandler,
         FilesystemOperator $defaultStorage,
     ): JsonResponse
     {
-        $objectHandler->entityLookup($id, Product::class, 'id');
-        $product = $repository->findOneBy(['id' => $id]);
+        $product = $repository->find((int) $id);
+        // An unknown product (old link, removed product) is an expected answer, not an
+        // error: 200 + flag keeps the browser console clean; the FE shows «not found»
+        // (noindex) exactly as it did for the former 422.
+        if (null === $product) {
+            return $this->json(['not_found' => true], Response::HTTP_OK, ['Cache-Control' => 'no-store']);
+        }
 
         $path = [];
         foreach ($product->getFiles() as $file) {
@@ -847,7 +851,6 @@ class ProductController extends AbstractController
     #[Route('/user-orders', name: 'user_orders', methods: [Request::METHOD_GET])]
     public function userOrders(
         #[CurrentUser] User $user,
-        UserOrderRepository $orderRepository,
         LocalizationService $localizationService,
         GuestOrderLinker $guestOrderLinker,
     ): JsonResponse {
@@ -864,9 +867,10 @@ class ProductController extends AbstractController
                 $userOrders->add($order);
             }
         }
-        if ($user->getPhone()) {
-            $userOrdersByPhone = $orderRepository->findBy(['phone' => $user->getPhone()]);
-            foreach ($userOrdersByPhone as $order) {
+        // Older guest orders of a VERIFIED phone (an unverified profile phone is not
+        // proof of anything — anyone could type a stranger's number).
+        foreach ($guestOrderLinker->unlinkedOrdersOfVerifiedPhones($user) as $order) {
+            if (!$userOrders->contains($order)) {
                 $userOrders->add($order);
             }
         }
