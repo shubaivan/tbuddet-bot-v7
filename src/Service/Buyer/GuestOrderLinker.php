@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Buyer;
 
 use App\Entity\User;
+use App\Entity\UserOrder;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -91,6 +92,33 @@ class GuestOrderLinker
         }
 
         return $linked;
+    }
+
+    /**
+     * Older guest orders (before LINK_SINCE, so never linked) placed with a phone this
+     * account has verified: shown in the cabinet, not moved. A typed-in profile phone
+     * is not trusted.
+     *
+     * @return list<UserOrder>
+     */
+    public function unlinkedOrdersOfVerifiedPhones(User $user): array
+    {
+        $phoneKeys = $this->verifiedPhoneKeys($user);
+        if ([] === $phoneKeys) {
+            return [];
+        }
+        $ids = $this->em->getConnection()->fetchFirstColumn(
+            'SELECT o.id FROM user_order o
+             WHERE o.client_user_id IS NULL AND o.telegram_user_id IS NULL
+               AND '.PhoneKey::sql('o.phone').' IN (:phoneKeys)',
+            ['phoneKeys' => $phoneKeys],
+            ['phoneKeys' => ArrayParameterType::STRING],
+        );
+        if ([] === $ids) {
+            return [];
+        }
+
+        return $this->em->getRepository(UserOrder::class)->findBy(['id' => array_map('intval', $ids)], ['id' => 'ASC']);
     }
 
     /** @return list<string> phone keys verified through the account's own Telegram identity */

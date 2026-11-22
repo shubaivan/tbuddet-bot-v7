@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\TelegramUser;
+use App\Entity\User;
 use App\Entity\UserMerge;
 use App\Repository\TelegramUserRepository;
 use App\Repository\UserMergeRepository;
@@ -70,7 +71,12 @@ class TelegramUserService
         if ($this->currentUser) {
             $normalizePhone = substr($phone_number, -10);
             $user = $this->userRepository->matchUserByPhone($normalizePhone);
-            if ($user) {
+            // A web account's profile phone is typed in, never verified: link the bot
+            // user to it only when the account already belongs to this Telegram user
+            // (logged in with Telegram / linked from the profile). Otherwise anyone who
+            // registered with a stranger's number would get the stranger's bot orders
+            // and Telegram login.
+            if ($user && self::isOwnAccount($user, $this->currentUser)) {
                 $merge = $this->userMergeRepository->getByUser($user);
                 if (!$merge) {
                     $merge = new UserMerge();
@@ -87,5 +93,12 @@ class TelegramUserService
     public function getCurrentUser(): ?TelegramUser
     {
         return $this->currentUser;
+    }
+
+    /** The web account's own Telegram identity is this bot user (set by the Telegram login or the profile link). */
+    public static function isOwnAccount(User $user, TelegramUser $telegramUser): bool
+    {
+        return null !== $user->getTelegramChatId()
+            && (string) $user->getTelegramChatId() === (string) $telegramUser->getTelegramId();
     }
 }
